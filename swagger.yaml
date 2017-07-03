@@ -35,6 +35,12 @@ parameters:
     schema:
       $ref: '#/definitions/Dimension'
     required: true
+  s3File:
+    name: S3File
+    description: "A S3 file to include in the import job"
+    in: body
+    schema:
+      $ref: '#/definitions/S3File'
   pageSize:
     name: pageSize
     description: "Pagination size for the number of import jobs returned"
@@ -138,7 +144,50 @@ paths:
           description: "InstanceId does not match any import jobs"
         500:
           description: "Failed to process the request due to an internal error"
-  /import/{instanceId}/event:
+  /import/{instanceId}/s3file:
+    put:
+      tags:
+      - "External Interface"
+      summary: "Add a file to the import job"
+      description: "Add a file into the import job. The alias name should link up with the data baker process"
+      parameters:
+      - $ref: '#/parameters/instanceId'
+      - $ref: '#/parameters/s3File'
+      produces:
+      - "application/json"
+      security:
+      - FlorenceAPIKey: []
+      responses:
+        200:
+          description: "The file was added to the import job"
+        400:
+          description: "Invalid json message was sent to the API"
+        404:
+          description: "InstanceId does not match any import jobs"
+        500:
+          description: "Failed to process the request due to an internal error"
+  /import/{instanceId}/start:
+    post:
+      tags:
+      - "External Interface"
+      summary: "Start importing the dataset"
+      description: "Once this is called the job is placed into a queue to be imported"
+      parameters:
+      - $ref: '#/parameters/instanceId'
+      produces:
+      - "application/json"
+      security:
+      - FlorenceAPIKey: []
+      responses:
+        200:
+          description: "The import job is in a queue"
+        400:
+          description: "Invalid json message was sent to the API"
+        404:
+          description: "InstanceId does not match any import jobs"
+        500:
+          description: "Failed to process the request due to an internal error"
+  /import/{instanceId}/events:
     put:
       tags:
        - "Internal Interface"
@@ -244,17 +293,6 @@ definitions:
       dataset:
         type: string
         description: "The name of the dataset"
-      edition:
-        type: string
-        description: "The edition of the dataset"
-      version:
-        type: string
-        description: "The version of the dataset"
-      S3Url:
-        type: array
-        items:
-          type: string
-          description: "A list of full qualified S3 path to files"
   ImportJobState:
     type: object
     properties:
@@ -264,12 +302,11 @@ definitions:
       dataset:
         type: string
         description: "The name of the dataset"
-      edition:
-        type: string
-        description: "The edition of the dataset"
-      version:
-        type: string
-        description: "The version of the dataset"
+      s3Files:
+        type: array
+        description: "A list of all S3 files to be used for the import job"
+        items:
+          $ref: '#/definitions/S3File'
       state:
         type: string
         description: |
@@ -348,3 +385,12 @@ definitions:
         description: "A list of all dimensions within an import job"
         items:
           $ref: '#/definitions/Dimension'
+  S3File:
+    type: object
+    properties:
+      aliasName:
+        description: "An alias name for the file"
+        type: string
+      URL:
+        description: "The full S3 path including zone, and bucket"
+        type: string
