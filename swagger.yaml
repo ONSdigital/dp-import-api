@@ -149,7 +149,7 @@ paths:
       tags:
       - "External Interface"
       summary: "Add a file to the import job"
-      description: "Add a file into the import job. The alias name should link up with the data baker process"
+      description: "Add a file into the import job"
       parameters:
       - $ref: '#/parameters/instanceId'
       - $ref: '#/parameters/s3File'
@@ -171,7 +171,7 @@ paths:
       tags:
       - "External Interface"
       summary: "Start importing the dataset"
-      description: "Once this is called the job is placed into a queue to be imported"
+      description: "Once this is called the import job is placed into a queue to be proccessed"
       parameters:
       - $ref: '#/parameters/instanceId'
       produces:
@@ -369,7 +369,10 @@ definitions:
     description: "A dimension object"
     properties:
       nodeName:
-        description: "The name of the node."
+        description: "The name of the node (instanceId-dimension.value)."
+        type: string
+      value:
+        description: "The value of the dimension"
         type: string
       nodeId:
         description: "Graph database node Id"
