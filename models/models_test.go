@@ -23,10 +23,11 @@ func TestCreateImportJobWithEmptyJson(t *testing.T) {
 
 func TestCreateImportJobWithDataset(t *testing.T) {
 	Convey("When a import message has a valid json body, a message is returned", t, func() {
-		reader := strings.NewReader("{ \"dataset\": \"test123\"}")
+		reader := strings.NewReader("{ \"recipe\": \"test123\", \"datasets\":[\"RPI\"]}")
 		message, errorMessage := CreateImportJob(reader)
 		So(errorMessage, ShouldBeNil)
-		So("test123", ShouldEqual, message.Dataset)
+		So(message.Recipe, ShouldEqual, "test123")
+		So(message.Datasets, ShouldContain, "RPI")
 	})
 }
 
@@ -61,10 +62,10 @@ func TestCreateS3FileWithInvalidJson(t *testing.T) {
 
 func TestCreateS3FileWithValidJson(t *testing.T) {
 	Convey("When a S3 file message has valid json, a s3 file struct is returned", t, func() {
-		message, errorMessage := CreateS3File(strings.NewReader("{ \"aliasName\":\"n1\",\"s3Url\":\"https://aws.s3/ons/myfile.exel\"}"))
+		message, errorMessage := CreateS3File(strings.NewReader("{ \"aliasName\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}"))
 		So(errorMessage, ShouldBeNil)
 		So(message.AliasName, ShouldEqual, "n1")
-		So(message.S3Url, ShouldEqual, "https://aws.s3/ons/myfile.exel")
+		So(message.Url, ShouldEqual, "https://aws.s3/ons/myfile.exel")
 	})
 }
 

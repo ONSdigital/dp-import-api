@@ -7,12 +7,20 @@ import (
 	"io/ioutil"
 )
 
-type Message interface {
-	Validate() error
+type Job struct {
+	Recipe   string   `json:"recipe"`
+	State    string   `json:"state"`
+	Datasets []string `json:"datasets"`
+	S3Files  []S3File `json:"s3Files"`
 }
 
 type ImportJob struct {
-	Dataset string
+	Recipe   string   `json:"recipe"`
+	Datasets []string `json:"datasets"`
+}
+
+type JobState struct {
+	State string `json:"recipe"`
 }
 
 type Event struct {
@@ -29,7 +37,8 @@ type Dimension struct {
 }
 
 type JobInstance struct {
-	InstanceId string `json:"instanceId"`
+	JobId       string   `json:"jobId"`
+	InstanceIds []string `json:"instanceIds"`
 }
 
 type ImportJobState struct {
@@ -42,19 +51,19 @@ type ImportJobState struct {
 }
 
 type S3File struct {
-	AliasName string
-	S3Url     string
+	AliasName string `json:"aliasName"`
+	Url       string `json:"url"`
 }
 
-func (m ImportJob) Validate() error {
-	if m.Dataset == "" {
-		return fmt.Errorf("No dataset was provided")
+func (i ImportJob) Validate() error {
+	if i.Recipe == "" || i.Datasets == nil {
+		return fmt.Errorf("Missing properties to create import job struct")
 	}
 	return nil
 }
 
 func (s S3File) Validate() error {
-	if s.S3Url == "" || s.AliasName == "" {
+	if s.Url == "" || s.AliasName == "" {
 		return fmt.Errorf("Invalid s3 file structure")
 	}
 	return nil

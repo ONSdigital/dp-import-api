@@ -6,8 +6,10 @@ import (
 )
 
 type DataStore interface {
-	AddImportJob(*models.ImportJob) (models.JobInstance, error)
-	GetImportJob(instanceId string) (models.ImportJobState, error)
+	AddJob(*models.ImportJob) (models.JobInstance, error)
+	AddInstance(string) (string, error)
+	UpdateJobState(string, *models.JobState) error
+	GetInstance(instanceId string) (models.ImportJobState, error)
 	AddS3File(instanceId string, message *models.S3File) error
 	AddEvent(instanceId string, event *models.Event) error
 	AddDimension(instanceId string, dimension *models.Dimension) error

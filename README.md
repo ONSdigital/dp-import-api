@@ -4,6 +4,7 @@ DP Import API
 
 ### Getting started
 * Run ```brew install postgres```
+* Run ```brew services start postgres```
 * Run ```createuser dp -d -w```
 * Run ```createdb --owner dp ImportJobs```
 * Run ```psql -U dp ImportJobs -f scripts/InitDatabase.sql```

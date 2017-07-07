@@ -21,6 +21,7 @@ func main() {
 		log.ErrorC("DB open error", err, nil)
 		panic("DB open error")
 	}
+	// LIMIT CONNECTIONS HERRE!!!!!!!!
 	postgresDataStore, error := datastore.NewPostgresDatastore(db)
 	if error != nil {
 		log.ErrorC("Create datastore error", err, nil)

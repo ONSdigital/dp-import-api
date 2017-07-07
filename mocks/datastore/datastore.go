@@ -14,14 +14,34 @@ type DataStore struct {
 	InternalError bool
 }
 
-func (ds *DataStore) AddImportJob(importJob *models.ImportJob) (models.JobInstance, error) {
+func (ds *DataStore) AddJob(importJob *models.ImportJob) (models.JobInstance, error) {
 	if ds.InternalError {
 		return models.JobInstance{}, internalError
 	}
-	return models.JobInstance{InstanceId: "34534543543"}, nil
+	return models.JobInstance{JobId: "34534543543"}, nil
 }
 
-func (ds *DataStore) GetImportJob(instanceId string) (models.ImportJobState, error) {
+func (ds *DataStore) AddInstance(dataset string) (string, error) {
+	if ds.NotFound {
+		return "", datastore.JobNotFoundError
+	}
+	if ds.InternalError {
+		return "", internalError
+	}
+	return "123", nil
+}
+
+func (ds *DataStore) UpdateJobState(string, *models.JobState) error {
+	if ds.NotFound {
+		return datastore.JobNotFoundError
+	}
+	if ds.InternalError {
+		return internalError
+	}
+	return  nil
+}
+
+func (ds *DataStore) GetInstance(instanceId string) (models.ImportJobState, error) {
 	if ds.NotFound {
 		return models.ImportJobState{}, datastore.JobNotFoundError
 	}

@@ -9,11 +9,11 @@ import (
 	"testing"
 )
 
-func TestCreateImportJobReturnsInternalError(t *testing.T) {
+func TestAddImportJobReturnsInternalError(t *testing.T) {
 	t.Parallel()
 	Convey("When a no data store is available, an internal error is returned", t, func() {
-		reader := strings.NewReader("{ \"dataset\": \"test123\"}")
-		r, err := http.NewRequest("POST", "http://localhost:21800/import", reader)
+		reader := strings.NewReader("{ \"datasets\": [\"test123\"], \"recipe\":\"test\"}")
+		r, err := http.NewRequest("POST", "http://localhost:21800/job", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
 		api := CreateImportAPI(&mocks.DataStore{InternalError: true})
@@ -22,11 +22,11 @@ func TestCreateImportJobReturnsInternalError(t *testing.T) {
 	})
 }
 
-func TestCreateImportJobReturnsBadClientRequest(t *testing.T) {
+func TestAddImportJobReturnsBadClientRequest(t *testing.T) {
 	t.Parallel()
 	Convey("When a empt json message is sent, a bad request is returned", t, func() {
 		reader := strings.NewReader("{ }")
-		r, err := http.NewRequest("POST", "http://localhost:21800/import", reader)
+		r, err := http.NewRequest("POST", "http://localhost:21800/job", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
 		api := CreateImportAPI(&mocks.DataStore{})
@@ -35,17 +35,17 @@ func TestCreateImportJobReturnsBadClientRequest(t *testing.T) {
 	})
 }
 
-func TestCreateImportJobReturnsJobInstance(t *testing.T) {
+func TestAddImportJobReturnsJobInstance(t *testing.T) {
 	t.Parallel()
 	Convey("When a valid import job message is sent, an instanceId is returned", t, func() {
-		reader := strings.NewReader("{ \"dataset\": \"test123\"}")
-		r, err := http.NewRequest("POST", "http://localhost:21800/import", reader)
+		reader := strings.NewReader("{ \"datasets\": [\"test123\"], \"recipe\":\"test\"}")
+		r, err := http.NewRequest("POST", "http://localhost:21800/job", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
 		api := CreateImportAPI(&mocks.DataStore{})
 		api.Router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusOK)
-		So(w.Body.String(), ShouldContainSubstring, "\"instanceId\":\"34534543543\"")
+		So(w.Body.String(), ShouldContainSubstring, "\"jobId\":\"34534543543\"")
 	})
 }
 
