@@ -1,4 +1,4 @@
-DIRECTORIES?=api datastore models utils
+DIRECTORIES?=api postgres models utils
 
 BUILD=build
 HASH?=$(shell make hash)
@@ -14,6 +14,6 @@ build:
 debug:
 	HUMAN_LOG=1 go run cmd/dp-import-api/main.go
 
-test: ; $(foreach dir,$(DIRECTORIES),(go test -cover $(dir)/*.go) &&) :
+test: ; $(foreach dir,$(DIRECTORIES),(echo testing - $(dir) &&  go test -cover $(dir)/*.go) &&) :
 
 .PHONEY: test

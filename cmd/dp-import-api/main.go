@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/ONSdigital/dp-import-api/api"
-	"github.com/ONSdigital/dp-import-api/datastore"
+	"github.com/ONSdigital/dp-import-api/postgres"
 	"github.com/ONSdigital/dp-import-api/utils"
 	"github.com/ONSdigital/go-ns/log"
 
@@ -22,9 +22,9 @@ func main() {
 		panic("DB open error")
 	}
 	// LIMIT CONNECTIONS HERRE!!!!!!!!
-	postgresDataStore, error := datastore.NewPostgresDatastore(db)
+	postgresDataStore, error := postgres.NewDatastore(db)
 	if error != nil {
-		log.ErrorC("Create datastore error", err, nil)
+		log.ErrorC("Create postgres error", err, nil)
 		panic("Create data Store error")
 	}
 	importAPI := api.CreateImportAPI(postgresDataStore)
