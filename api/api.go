@@ -8,30 +8,29 @@ import (
 	"github.com/ONSdigital/dp-import-api/utils"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/gorilla/mux"
-	//"github.com/ONSdigital/go-ns/avro"
 	"github.com/ONSdigital/dp-import-api/schema"
 )
-// ImportAPI - .....
+// ImportAPI - A restful API used to manage importing datasets to be published
 type ImportAPI struct {
 	dataStore DataStore
 	Router    *mux.Router
-	Output    chan []byte
+	producer    chan []byte
 }
 
 // CreateImportAPI - ....
-func CreateImportAPI(dataStore DataStore) *ImportAPI {
+func CreateImportAPI(dataStore DataStore, producer chan []byte) *ImportAPI {
 	router := mux.NewRouter()
-	api := ImportAPI{dataStore: dataStore, Router: router}
+	api := ImportAPI{dataStore: dataStore, Router: router, producer: producer}
 	// External API for florence
 	api.Router.HandleFunc("/job", api.addJob).Methods("POST")
 	api.Router.HandleFunc("/job/{jobId}/s3file", api.addUploadedFile).Methods("PUT")
 	api.Router.HandleFunc("/job/{jobId}/state", api.updateState).Methods("PUT")
-	api.Router.HandleFunc("/import/{instanceId}", api.getInstance).Methods("GET")
+	api.Router.HandleFunc("/instance/{instanceId}", api.getInstance).Methods("GET")
 	// Internal API
-	api.Router.HandleFunc("/import/{instanceId}/events", api.addEvent).Methods("PUT")
-	api.Router.HandleFunc("/import/{instanceId}/dimensions", api.addDimension).Methods("PUT")
-	api.Router.HandleFunc("/import/{instanceId}/dimensions/{nodeName}/nodeId", api.addNodeID).Methods("PUT")
-	api.Router.HandleFunc("/import/{instanceId}/dimensions", api.getDimension).Methods("GET")
+	api.Router.HandleFunc("/instance/{instanceId}/events", api.addEvent).Methods("PUT")
+	api.Router.HandleFunc("/instance/{instanceId}/dimensions", api.addDimension).Methods("PUT")
+	api.Router.HandleFunc("/instance/{instanceId}/dimensions/{nodeName}/nodeId", api.addNodeID).Methods("PUT")
+	api.Router.HandleFunc("/instance/{instanceId}/dimensions", api.getDimension).Methods("GET")
 
 	return &api
 }
@@ -99,12 +98,13 @@ func (api *ImportAPI) updateState(w http.ResponseWriter, r *http.Request) {
 			setErrorCode(w, error)
 			return
 		}
-		byte, avroError := schema.PublishDataset.Marshal(&message)
+		bytes, avroError := schema.PublishDataset.Marshal(message)
 		if avroError != nil {
-			log.Error(avroError, log.Data{"message": message, "byte": byte})
+			log.Error(avroError, log.Data{"recipe": message.Recipe, "byte": bytes})
 			setErrorCode(w, avroError)
 			return
 		}
+		api.producer <- bytes
 	}
 }
 

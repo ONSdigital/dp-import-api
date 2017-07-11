@@ -6,7 +6,7 @@ import (
 // DataStore - .......
 type DataStore interface {
 	AddJob(job *models.NewJob) (models.JobInstance, error)
-	AddInstance(jobID, instanceID string) (string, error)
+	AddInstance(jobID string) (string, error)
 	UpdateJobState(jobID string, state *models.JobState) error
 	GetInstance(instanceID string) (models.JobInstanceState, error)
 	AddUploadedFile(instanceID string, message *models.UploadedFile) error

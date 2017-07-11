@@ -52,7 +52,7 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 
 // AddJob - Add a job to be stored in postgres.
 func (ds Datastore) AddJob(newjob *models.NewJob) (models.JobInstance, error) {
-	job := models.Job{Datasets: newjob.Datasets, Recipe: newjob.Recipe,
+	job := models.Job{Recipe: newjob.Recipe,
 		UploadedFileS: []models.UploadedFile{}, State: "Created"}
 	bytes, error := json.Marshal(job)
 	if error != nil {
@@ -65,8 +65,8 @@ func (ds Datastore) AddJob(newjob *models.NewJob) (models.JobInstance, error) {
 		return models.JobInstance{}, rowError
 	}
 	instanceIDs := []string{}
-	for i := 0; i < len(newjob.Datasets); i++ {
-		id, instanceIDErr := ds.AddInstance(jobID.String, newjob.Datasets[i])
+	for i := 0; i < newjob.NumberOfInstances; i++ {
+		id, instanceIDErr := ds.AddInstance(jobID.String)
 		if instanceIDErr != nil {
 			return models.JobInstance{}, instanceIDErr
 		}
@@ -94,8 +94,8 @@ func (ds Datastore) UpdateJobState(jobID string, state *models.JobState) error {
 }
 
 // AddInstance - Add an instance and relate it to a job.
-func (ds Datastore) AddInstance(jobID, dataset string) (string, error) {
-	job := models.JobInstanceState{Dataset: dataset, State: "Created", LastUpdated: time.Now().UTC().String(), Events: []models.Event{}}
+func (ds Datastore) AddInstance(jobID string) (string, error) {
+	job := models.JobInstanceState{ State: "Created", LastUpdated: time.Now().UTC().String(), Events: []models.Event{}}
 	bytes, error := json.Marshal(job)
 	if error != nil {
 		return "", error

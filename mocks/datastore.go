@@ -20,7 +20,7 @@ func (ds *DataStore) AddJob(importJob *models.NewJob) (models.JobInstance, error
 	return models.JobInstance{JobID: "34534543543"}, nil
 }
 
-func (ds *DataStore) AddInstance(joId, dataset string) (string, error) {
+func (ds *DataStore) AddInstance(joId string) (string, error) {
 	if ds.NotFound {
 		return "", utils.JobNotFoundError
 	}
@@ -47,7 +47,7 @@ func (ds *DataStore) GetInstance(instanceId string) (models.JobInstanceState, er
 	if ds.InternalError {
 		return models.JobInstanceState{}, internalError
 	}
-	return models.JobInstanceState{InstanceID: "234234", Dataset: "123", State: "Created",
+	return models.JobInstanceState{InstanceID: "234234", State: "Created",
 		Events:                                []models.Event{models.Event{Type: "Info", Message: "Create at ...", Time: "00000", MessageOffset: "0"}}}, nil
 }
 
@@ -102,5 +102,12 @@ func (ds *DataStore) AddNodeID(instanceId, nodeId string, message *models.Dimens
 }
 
 func (ds *DataStore) BuildPublishDatasetMessage(jobId string) (*models.PublishDataset, error) {
-	return nil, nil
+	if ds.NotFound {
+		return nil,utils.JobNotFoundError
+	}
+	if ds.InternalError {
+		return nil,internalError
+	}
+	return &models.PublishDataset{Recipe:"test", InstanceIds: []string{"1","2","3"},
+		UploadedFiles: []models.UploadedFile{models.UploadedFile{URL:"s3//aws/bucket/file.xls", AliasName:"test"}}}, nil
 }

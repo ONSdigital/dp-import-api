@@ -12,19 +12,18 @@ import (
 type Job struct {
 	Recipe        string         `json:"recipe"`
 	State         string         `json:"state"`
-	Datasets      []string       `json:"datasets"`
 	UploadedFileS []UploadedFile `json:"s3Files"`
 }
 
 // NewJob - The requested structure to create a new job
 type NewJob struct {
 	Recipe   string   `json:"recipe"`
-	Datasets []string `json:"datasets"`
+	NumberOfInstances int `json:"NumberOfInstances"`
 }
 
 // Validate - Validate the content of the structure
 func (i NewJob) Validate() error {
-	if i.Recipe == "" || i.Datasets == nil {
+	if i.Recipe == "" || i.NumberOfInstances == 0 {
 		return fmt.Errorf("Missing properties to create import job struct")
 	}
 	return nil
@@ -80,7 +79,6 @@ type JobInstance struct {
 // JobInstanceState - A structure used for a instance job
 type JobInstanceState struct {
 	InstanceID  string  `json:"instanceId"`
-	Dataset     string  `json:"dataset"`
 	State       string  `json:"state"`
 	Events      []Event `json:"events"`
 	LastUpdated string  `json:"lastUpdated"`
@@ -88,8 +86,8 @@ type JobInstanceState struct {
 
 // UploadedFile - a structure used for a file which has been uploaded to a bucket
 type UploadedFile struct {
-	AliasName string `json:"aliasName"`
-	URL       string `json:"url"`
+	AliasName string `json:"aliasName" avro:"alias-name"`
+	URL       string `json:"url" avro:"url"`
 }
 
 // Validate - Validate the content of the structure
@@ -102,9 +100,9 @@ func (s UploadedFile) Validate() error {
 
 // PublishDataset - A structure used to create a message to data baker
 type PublishDataset struct {
-	Recipe        string         `json:"recipe"`
-	UploadedFiles []UploadedFile `json:"files"`
-	InstanceIds   []string       `json:"instanceIds"`
+	Recipe        string         `avro:"recipe"`
+	UploadedFiles []UploadedFile `avro:"files"`
+	InstanceIds   []string       `avro:"instance_ids"`
 }
 
 // CreateJobState - Create a job state from a reader

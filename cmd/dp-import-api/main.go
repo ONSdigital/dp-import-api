@@ -3,33 +3,40 @@ package main
 import (
 	"github.com/ONSdigital/dp-import-api/api"
 	"github.com/ONSdigital/dp-import-api/postgres"
-	"github.com/ONSdigital/dp-import-api/utils"
 	"github.com/ONSdigital/go-ns/log"
 
 	"database/sql"
 	_ "github.com/lib/pq"
 	"net/http"
+	"github.com/ONSdigital/dp-import-api/config"
+	"os"
+	"github.com/ONSdigital/go-ns/kafka"
 )
 
 func main() {
-	log.Namespace = "dp-dp-import-api"
-	address := utils.GetEnvVariable("BIND_ADDR", ":21800")
-	dbUrl := utils.GetEnvVariable("DB_URL", "user=dp dbname=ImportJobs sslmode=disable")
-	log.Debug("Starting import api", log.Data{"BIND_ADDR": address})
-	db, err := sql.Open("postgres", dbUrl)
-	if err != nil {
-		log.ErrorC("DB open error", err, nil)
-		panic("DB open error")
+	log.Namespace = "dp-import-api"
+	configuration, configErr := config.Get()
+	if configErr != nil {
+		log.Error(configErr, nil)
+		os.Exit(1)
 	}
-	// LIMIT CONNECTIONS HERRE!!!!!!!!
-	postgresDataStore, error := postgres.NewDatastore(db)
-	if error != nil {
-		log.ErrorC("Create postgres error", err, nil)
-		panic("Create data Store error")
+
+	log.Debug("Starting import api", log.Data{"BIND_ADDR": configuration.BindAddr})
+	db, postgresErr := sql.Open("postgres", configuration.PostgresURL)
+	if postgresErr != nil {
+		log.ErrorC("DB open error", postgresErr, nil)
+		os.Exit(1)
 	}
-	importAPI := api.CreateImportAPI(postgresDataStore)
-	httpCloseError := http.ListenAndServe(address, importAPI.Router)
+	postgresDataStore, dataStoreError := postgres.NewDatastore(db)
+	if dataStoreError != nil {
+		log.ErrorC("Create postgres error", dataStoreError, nil)
+		os.Exit(1)
+	}
+	producer := kafka.NewProducer(configuration.Brokers, configuration.PublishDatasetTopic, configuration.KafkaMaxBytes)
+	importAPI := api.CreateImportAPI(postgresDataStore, producer.Output)
+	httpCloseError := http.ListenAndServe(configuration.BindAddr, importAPI.Router)
 	if httpCloseError != nil {
-		log.Error(httpCloseError, log.Data{"BIND_ADDR": address})
+		log.Error(httpCloseError, log.Data{"BIND_ADDR": configuration.BindAddr, "TOPIC": configuration.PublishDatasetTopic})
 	}
+	producer.Closer <- true
 }

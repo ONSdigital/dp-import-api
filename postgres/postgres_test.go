@@ -41,7 +41,7 @@ func TestAddJobReturnsJobInstance(t *testing.T) {
 			AddRow("123"))
 		mock.ExpectQuery(createInstanceSQL).WillReturnRows(sqlmock.NewRows([]string{"InstanceID"}).
 			AddRow("321"))
-		jobInstance, err := ds.AddJob(&models.NewJob{Recipe: "test", Datasets: []string{"RPI"}})
+		jobInstance, err := ds.AddJob(&models.NewJob{Recipe: "test", NumberOfInstances: 1})
 		So(err, ShouldBeNil)
 		So(jobInstance.JobID, ShouldEqual, "123")
 		So(jobInstance.InstanceIds, ShouldContain, "321")
@@ -58,7 +58,7 @@ func TestAddInstanceReturnsInstanceId(t *testing.T) {
 		mock.ExpectPrepare(createInstanceSQL).ExpectQuery().
 			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).WillReturnRows(sqlmock.NewRows([]string{"InstanceID"}).
 			AddRow(expectID))
-		jobID, err := ds.AddInstance("123", "123")
+		jobID, err := ds.AddInstance("123")
 		So(err, ShouldBeNil)
 		So(jobID, ShouldEqual, expectID)
 	})
@@ -67,7 +67,7 @@ func TestAddInstanceReturnsInstanceId(t *testing.T) {
 func TestGetInstance(t *testing.T) {
 	t.Parallel()
 	Convey("When an instanceId is provided, the import job state is returned", t, func() {
-		jsonContent := "{ \"dataset\":\"123\"  }"
+		jsonContent := "{ \"state\":\"Created\"}"
 		mock, db := NewSQLMockWithSQLStatements()
 		ds, err := NewDatastore(db)
 		So(err, ShouldBeNil)
@@ -76,7 +76,7 @@ func TestGetInstance(t *testing.T) {
 			AddRow(jsonContent))
 		state, err := ds.GetInstance("any")
 		So(err, ShouldBeNil)
-		So(state.Dataset, ShouldEqual, "123")
+		So(state.State, ShouldEqual, "Created")
 	})
 }
 
