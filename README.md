@@ -22,7 +22,10 @@ DP Import API
 | Environment variable | Default                                   | Description
 | -------------------- | ----------------------------------------- | -----------
 | BIND_ADDR            | :21800                                    | The host and port to bind to
-| DB_URL               | user=dp dbname=ImportJobs sslmode=disable | URL to a Postgres services
+| POSTGRES_URL         | user=dp dbname=ImportJobs sslmode=disable | URL to a Postgres services
+| KAFKA_ADDR           | localhost:9092                            | A list of kafka brokers
+| KAFKA_MAX_BYTES      | 200000                                    | The max message size for kafka producer
+| PUBLISH_DATASET_TOPIC | publish-dataset                          | The topic to place messages on
 
 ### Contributing
 

@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/ONSdigital/dp-import-api/models"
 )
+
 // DataStore - .......
 type DataStore interface {
 	AddJob(job *models.NewJob) (models.JobInstance, error)

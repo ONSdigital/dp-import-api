@@ -1,3 +1,4 @@
+SHELL=bash
 DIRECTORIES?=api postgres models utils
 
 BUILD=build
@@ -14,6 +15,7 @@ build:
 debug:
 	HUMAN_LOG=1 go run cmd/dp-import-api/main.go
 
-test: ; $(foreach dir,$(DIRECTORIES),(echo testing - $(dir) &&  go test -cover $(dir)/*.go) &&) :
+test:
+	go test -cover $(shell go list ./... | grep -v /vendor/)
 
-.PHONEY: test
+.PHONEY: test build debug

@@ -7,18 +7,17 @@ import (
 	"io/ioutil"
 )
 
-
 // Job - A structure for an import job
 type Job struct {
 	Recipe        string         `json:"recipe"`
 	State         string         `json:"state"`
-	UploadedFileS []UploadedFile `json:"s3Files"`
+	UploadedFileS []UploadedFile `json:"files"`
 }
 
 // NewJob - The requested structure to create a new job
 type NewJob struct {
-	Recipe   string   `json:"recipe"`
-	NumberOfInstances int `json:"NumberOfInstances"`
+	Recipe            string `json:"recipe"`
+	NumberOfInstances int    `json:"NumberOfInstances"`
 }
 
 // Validate - Validate the content of the structure

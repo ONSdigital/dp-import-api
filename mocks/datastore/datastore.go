@@ -48,7 +48,7 @@ func (ds *DataStore) GetInstance(instanceId string) (models.JobInstanceState, er
 		return models.JobInstanceState{}, internalError
 	}
 	return models.JobInstanceState{InstanceID: "234234", State: "Created",
-		Events:                                []models.Event{models.Event{Type: "Info", Message: "Create at ...", Time: "00000", MessageOffset: "0"}}}, nil
+		Events: []models.Event{models.Event{Type: "Info", Message: "Create at ...", Time: "00000", MessageOffset: "0"}}}, nil
 }
 
 func (ds *DataStore) AddUploadedFile(instanceId string, s3file *models.UploadedFile) error {
@@ -103,11 +103,11 @@ func (ds *DataStore) AddNodeID(instanceId, nodeId string, message *models.Dimens
 
 func (ds *DataStore) BuildPublishDatasetMessage(jobId string) (*models.PublishDataset, error) {
 	if ds.NotFound {
-		return nil,utils.JobNotFoundError
+		return nil, utils.JobNotFoundError
 	}
 	if ds.InternalError {
-		return nil,internalError
+		return nil, internalError
 	}
-	return &models.PublishDataset{Recipe:"test", InstanceIds: []string{"1","2","3"},
-		UploadedFiles: []models.UploadedFile{models.UploadedFile{URL:"s3//aws/bucket/file.xls", AliasName:"test"}}}, nil
+	return &models.PublishDataset{Recipe: "test", InstanceIds: []string{"1", "2", "3"},
+		UploadedFiles: []models.UploadedFile{models.UploadedFile{URL: "s3//aws/bucket/file.xls", AliasName: "test"}}}, nil
 }

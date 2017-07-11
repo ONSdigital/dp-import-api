@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-
 // Datastore - A structure to hold SQL statements to be used to gather information or insert about Jobs and instances
 type Datastore struct {
 	db                   *sql.DB
@@ -39,15 +38,15 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 	updateState := prepare("UPDATE Jobs SET job = jsonb_set(job, '{state}', TO_JSONB($1::TEXT)) WHERE jobId = $2 RETURNING jobId", db)
 	addInstance := prepare("INSERT INTO Instances(jobId, instance) VALUES($1, $2) RETURNING instanceId", db)
 	findInstance := prepare("SELECT instance FROM Instances WHERE instanceId = $1", db)
-	addS3Url := prepare("UPDATE Jobs SET job = jsonb_set(job, '{s3Files}', (SELECT (job->'s3Files')  || TO_JSONB(json_build_object('alaisName',$1::TEXT,'url',$2::TEXT)) FROM Jobs WHERE jobId = $3), true) WHERE jobId = $3 RETURNING jobId", db)
-	addEvent := prepare("UPDATE Instances SET instance = jsonb_set(instance, '{events}', (SELECT (instance->'events')  || TO_JSONB(json_build_object('type', $1::TEXT, 'time', $2::TEXT, 'message', $3::TEXT, 'messageOffset', $4::TEXT)) FROM Jobs WHERE instanceid = $5), true) WHERE instanceid = $5 RETURNING instanceId", db)
+	addS3Url := prepare("UPDATE Jobs SET job = jsonb_set(job, '{files}', (SELECT (job->'files')  || TO_JSONB(json_build_object('alaisName',$1::TEXT,'url',$2::TEXT)) FROM Jobs WHERE jobId = $3), true) WHERE jobId = $3 RETURNING jobId", db)
+	addEvent := prepare("UPDATE Instances SET instance = jsonb_set(instance, '{events}', (SELECT (instance->'events')  || TO_JSONB(json_build_object('type', $1::TEXT, 'time', $2::TEXT, 'message', $3::TEXT, 'messageOffset', $4::TEXT)) FROM Instances WHERE instanceid = $5), true) WHERE instanceid = $5 RETURNING instanceId", db)
 	addDimension := prepare("INSERT INTO Dimensions(instanceId, nodeName, value) VALUES($1, $2, $3)", db)
 	getDimensions := prepare("SELECT nodeName, value, nodeId FROM Dimensions WHERE instanceId = $1", db)
 	addNodeID := prepare("UPDATE Dimensions SET nodeId = $1 WHERE instanceId = $2 AND nodeName = $3 RETURNING instanceId", db)
 	createPublishMessage := prepare("SELECT job->'recipe', job->'s3Files', STRING_AGG(instanceId::TEXT, ', ') FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE jobs.jobId = $1 GROUP BY jobs.job", db)
 	return Datastore{db: db, addJob: addJob, updateState: updateState, addInstance: addInstance,
-		findInstance:    findInstance, addS3Url: addS3Url, addEvent: addEvent, addDimension: addDimension,
-		getDimensions:   getDimensions, addNodeID: addNodeID, createPublishMessage: createPublishMessage}, nil
+		findInstance: findInstance, addS3Url: addS3Url, addEvent: addEvent, addDimension: addDimension,
+		getDimensions: getDimensions, addNodeID: addNodeID, createPublishMessage: createPublishMessage}, nil
 }
 
 // AddJob - Add a job to be stored in postgres.
@@ -95,7 +94,7 @@ func (ds Datastore) UpdateJobState(jobID string, state *models.JobState) error {
 
 // AddInstance - Add an instance and relate it to a job.
 func (ds Datastore) AddInstance(jobID string) (string, error) {
-	job := models.JobInstanceState{ State: "Created", LastUpdated: time.Now().UTC().String(), Events: []models.Event{}}
+	job := models.JobInstanceState{State: "Created", LastUpdated: time.Now().UTC().String(), Events: []models.Event{}}
 	bytes, error := json.Marshal(job)
 	if error != nil {
 		return "", error

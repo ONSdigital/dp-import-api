@@ -6,11 +6,11 @@ import (
 	"github.com/ONSdigital/go-ns/log"
 
 	"database/sql"
+	"github.com/ONSdigital/dp-import-api/config"
+	"github.com/ONSdigital/go-ns/kafka"
 	_ "github.com/lib/pq"
 	"net/http"
-	"github.com/ONSdigital/dp-import-api/config"
 	"os"
-	"github.com/ONSdigital/go-ns/kafka"
 )
 
 func main() {

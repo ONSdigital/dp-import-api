@@ -24,5 +24,3 @@ var PublishDatasetEvent = `{
 var PublishDataset *avro.Schema = &avro.Schema{
 	Definition: PublishDatasetEvent,
 }
-
-
