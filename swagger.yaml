@@ -18,7 +18,7 @@ schemes:
 parameters:
   instanceId:
     name: instanceId
-    description: ""
+    description: "A unique id that relates to a dataset being output"
     type: string
     in: path
     required: true
@@ -28,11 +28,11 @@ parameters:
     type: string
     in: path
     required: true
-  importJob:
-    name: importJob
+  newJob:
+    name: newJob
     in: body
     schema:
-      $ref: '#/definitions/ImportJob'
+      $ref: '#/definitions/NewJob'
     required: true
   dimension:
     name: Dimension
@@ -41,30 +41,19 @@ parameters:
     schema:
       $ref: '#/definitions/Dimension'
     required: true
-  s3File:
-    name: S3File
-    description: "A S3 file to include in the import job"
+  file:
+    name: File
+    description: "A file to include in the job"
     in: body
     schema:
-      $ref: '#/definitions/S3File'
-  pageSize:
-    name: pageSize
-    description: "Pagination size for the number of import jobs returned"
-    in: query
-    type: integer
-    required: true
-  pageNumber:
-    name: pageNumber
-    description: "Pagination page number"
-    in: query
-    type: integer
+      $ref: '#/definitions/File'
     required: true
   event:
     name: event
     description: "An import event when publishing a dataset"
     in: body
     schema:
-      $ref: '#/definitions/ImportEvent'
+      $ref: '#/definitions/InstanceEvent'
     required: true
   state:
     name: state
@@ -75,14 +64,14 @@ parameters:
     required: true
   nodeId:
     name: nodeId
-    description: ""
+    description: "A node id"
     in: body
     schema:
       $ref: '#/definitions/NodeId'
     required: true
   nodeName:
     name: nodeName
-    description: ""
+    description: "The name of a node (instanceId-Type.Value)"
     type: string
     in: path
     required: true
@@ -98,18 +87,21 @@ securityDefinitions:
     in: header
     name: internal-token
 paths:
-  /job:
+  /jobs:
     post:
       tags:
       - "External Interface"
       summary: "Create an import job"
       description: |
-        To generate a dataset a single or multiple files are required. Each file must be store in S3 and the full S3 path must be provided
-        in the body of the message. A name, edition and a version for the dataset must all be provided.
+        To import a dataset a job must be created first. To do this a data baker recipe
+        is needed and the number of instances which the recipe creates. As a data baker
+        recipe can create a number of datasets from a single file or multiple files.
+        Once a job is created files can be added to the job and the state of the job can be
+        changed.
       produces:
       - "application/json"
       parameters:
-      - $ref: '#/parameters/importJob'
+      - $ref: '#/parameters/newJob'
       security:
       - FlorenceAPIKey: []
       responses:
@@ -121,15 +113,15 @@ paths:
           description: "Invalid json message was sent to the API"
         500:
           description: "Failed to process the request due to an internal error"
-  /job/{jobId}/s3file:
+  /jobs/{jobId}/file:
     put:
       tags:
       - "External Interface"
-      summary: "Add a file to the import job"
-      description: "Add a file into the import job"
+      summary: "Add a file into a job"
+      description: "Add a file into a job, for each file added an alais name needs to be given. This name needs to link to the recipe"
       parameters:
       - $ref: '#/parameters/jobId'
-      - $ref: '#/parameters/s3File'
+      - $ref: '#/parameters/file'
       produces:
       - "application/json"
       security:
@@ -143,33 +135,36 @@ paths:
           description: "InstanceId does not match any import jobs"
         500:
           description: "Failed to process the request due to an internal error"
-  /job/{jobId}/state:
+  /jobs/{jobId}/state:
     put:
       tags:
       - "External Interface"
-      summary: "Start importing the dataset"
-      description: "Once this is called the import job is placed into a queue to be proccessed"
+      summary: "Update the jobs state"
+      description: |
+        Update the state of the job. If this is set to submitted, this shall trigger the
+        import process.
       parameters:
       - $ref: '#/parameters/jobId'
+      - $ref: '#/parameters/state'
       produces:
       - "application/json"
       security:
       - FlorenceAPIKey: []
       responses:
         200:
-          description: "The import job is in a queue"
+          description: "The job is in a queue"
         400:
           description: "Invalid json message was sent to the API"
         404:
           description: "InstanceId does not match any import jobs"
         500:
           description: "Failed to process the request due to an internal error"
-  /instance/{instanceId}:
+  /instances/{instanceId}:
     get:
       tags:
       - "External Interface"
-      summary: "Get Information about an import job"
-      description: "Get the current state of an import job, this includes all events which have happened and a overall state of the job."
+      summary: "Get Information about an instance"
+      description: "Get the current state of an instance, this includes all events which have happened."
       parameters:
       - $ref: '#/parameters/instanceId'
       produces:
@@ -178,22 +173,22 @@ paths:
       - FlorenceAPIKey: []
       responses:
         200:
-          description: "Return a single import job"
+          description: "Return a single instance state"
           schema:
-            $ref: '#/definitions/ImportJobState'
+            $ref: '#/definitions/InstanceState'
         404:
           description: "InstanceId does not match any import jobs"
         500:
           description: "Failed to process the request due to an internal error"
-  /instance/{instanceId}/events:
+  /instances/{instanceId}/events:
     put:
       tags:
        - "Internal Interface"
-      summary: "Add an event to a import job"
+      summary: "Add an event to an instance"
       description: |
-        Add a new event onto the import job. Events can be for information or error messages. Each event must contain a
-        type of event(Info or Error), a message to explaining the event, time of the event and finally the
-        message offset in kafka
+        Add a new event into an instance. Events can be for information or error messages
+        Each event must contain a type of event(Info or Error), a message to explaining
+        the event, time of the event and finally the message offset in kafka
       parameters:
       - $ref: '#/parameters/instanceId'
       - $ref: '#/parameters/event'
@@ -201,22 +196,22 @@ paths:
       - InternalAPIKey: []
       responses:
         200:
-          description: "The event was added to the import job"
+          description: "The event was added to the instance"
         400:
           description: "Invalid json message sent"
         404:
           description: "InstanceId does not match any import jobs"
         500:
           description: "Failed to process the request due to an internal error"
-  /instance/{instanceId}/dimensions:
+  /instances/{instanceId}/dimensions:
     put:
       tags:
       - "Internal Interface"
-      summary: "Add a dimension for the import job"
+      summary: "Add a dimension for the instance"
       description: |
         Add a dimension from the obervations found in the V3 data. To create a dimension the following items are needed;
         * nodeName - The name of the node eg (instanceId)-(dimension).(value)
-        * nodeId - The unique id for this node
+        * value - The value of the obervation
       parameters:
       - $ref: '#/parameters/instanceId'
       - $ref: '#/parameters/dimension'
@@ -251,15 +246,13 @@ paths:
           description: "InstanceId does not match any import jobs"
         500:
           description: "Failed to process the request due to an internal error"
-  /instance/{instanceId}/dimensions/{nodeName}/nodeid:
+  /instances/{instanceId}/dimensions/{nodeName}/nodeId:
     put:
       tags:
       - "Internal Interface"
-      summary: "Add a dimension for the import job"
+      summary: "Update a dimension with the nodeId"
       description: |
-        Add a dimension from the obervations found in the V3 data. To create a dimension the following items are needed;
-        * nodeName - The name of the node eg (instanceId)-(dimension).(value)
-        * nodeId - The unique id for this node
+        Update the dimension with a nodeId
       parameters:
       - $ref: '#/parameters/instanceId'
       - $ref: '#/parameters/nodeName'
@@ -270,7 +263,7 @@ paths:
       - InternalAPIKey: []
       responses:
         200:
-          description: "The dimension was added"
+          description: "Update the dimension with the nodeId"
         404:
           description: "InstanceId does not match any import jobs"
         500:
@@ -287,31 +280,21 @@ definitions:
         type: array
         items:
           type: string
-  ImportJob:
+  NewJob:
     type: object
-    description: "A object used to create a import job"
+    description: "A object used to create a job"
     properties:
       recipe:
         type: string
         description: "The type of recipe to use when baking the data"
-      datasetsToGenerate:
-        type: array
-        items:
-          type: string
-  ImportJobState:
+      numberOfInstances:
+        type: integer
+  InstanceState:
     type: object
     properties:
       instanceId:
         type: string
-        description: "A unique id for an import job"
-      dataset:
-        type: string
-        description: "The name of the dataset"
-      Files:
-        type: array
-        description: "A list of all S3 files to be used for the import job"
-        items:
-          $ref: '#/definitions/S3File'
+        description: "A unique id for a job"
       state:
         type: string
         description: |
@@ -320,11 +303,11 @@ definitions:
         type: array
         description: "A list of events took place for this job"
         items:
-          $ref: '#/definitions/ImportEvent'
+          $ref: '#/definitions/InstanceEvent'
       lastUpdated:
         type: string
         description: "The last time an event happened"
-  ImportEvent:
+  InstanceEvent:
     type: object
     properties:
       type:
@@ -373,17 +356,16 @@ definitions:
           $ref: '#/definitions/Dimension'
   NodeId:
     type: object
-    description: ""
     properties:
       nodeId:
         description: "Graph database node Id"
         type: string
-  S3File:
+  File:
     type: object
     properties:
       aliasName:
         description: "An alias name for the file"
         type: string
-      URL:
+      url:
         description: "The full S3 path including zone, and bucket"
         type: string
