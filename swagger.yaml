@@ -1,9 +1,9 @@
 swagger: "2.0"
 info:
   description: |
-    An API used to create and query information about imports. This API is seperated into two parts;
+    An API used to create and query information about import jobs. This API is seperated into two parts;
     * The external interface is used by florence to create and query for information about an import job
-    * The internal interface is used by services which are processing the import job. The services will uses this API to update the state and add events to the job.
+    * The internal interface is used by services which are processing the import job. The services will use this API to update the state and add events to the job.
   version: "1.0.0"
   title: "ONS Import API"
   license:
@@ -18,13 +18,13 @@ schemes:
 parameters:
   instanceId:
     name: instanceId
-    description: "A unique id that relates to a dataset being output"
+    description: "A unique id for an instance"
     type: string
     in: path
     required: true
   jobId:
     name: jobId
-    description: "A unique jobId that relates to an import job"
+    description: "A unique jobId"
     type: string
     in: path
     required: true
@@ -75,6 +75,13 @@ parameters:
     type: string
     in: path
     required: true
+  observation:
+    name: observation
+    description: "The number of observations within an instance"
+    in: body
+    schema:
+      $ref: '#/definitions/Observation'
+    required: true
 securityDefinitions:
   FlorenceAPIKey:
     description: "API key used to allow florence users to create and query the progress of importing a dataset"
@@ -93,11 +100,7 @@ paths:
       - "External Interface"
       summary: "Create an import job"
       description: |
-        To import a dataset a job must be created first. To do this a data baker recipe
-        is needed and the number of instances which the recipe creates. As a data baker
-        recipe can create a number of datasets from a single file or multiple files.
-        Once a job is created files can be added to the job and the state of the job can be
-        changed.
+        To import a dataset a job must be created first. To do this a data baker recipe is needed and the number of instances which the recipe creates. Once a job is created files can be added to the job and the state of the job can be changed.
       produces:
       - "application/json"
       parameters:
@@ -106,7 +109,7 @@ paths:
       - FlorenceAPIKey: []
       responses:
         200:
-          description: "A import job was successfully created"
+          description: "An import job was successfully created"
           schema:
             $ref: '#/definitions/Job'
         400:
@@ -118,7 +121,7 @@ paths:
       tags:
       - "External Interface"
       summary: "Add a file into a job"
-      description: "Add a file into a job, for each file added an alais name needs to be given. This name needs to link to the recipe"
+      description: "Add a file into a job, for each file added an alias name needs to be given. This name needs to link to the recipe"
       parameters:
       - $ref: '#/parameters/jobId'
       - $ref: '#/parameters/file'
@@ -132,7 +135,7 @@ paths:
         400:
           description: "Invalid json message was sent to the API"
         404:
-          description: "InstanceId does not match any import jobs"
+          description: "JobId does not match any import jobs"
         500:
           description: "Failed to process the request due to an internal error"
   /jobs/{jobId}/state:
@@ -156,7 +159,7 @@ paths:
         400:
           description: "Invalid json message was sent to the API"
         404:
-          description: "InstanceId does not match any import jobs"
+          description: "JobId does not match any import jobs"
         500:
           description: "Failed to process the request due to an internal error"
   /instances/{instanceId}:
@@ -186,8 +189,8 @@ paths:
        - "Internal Interface"
       summary: "Add an event to an instance"
       description: |
-        Add a new event into an instance. Events can be for information or error messages
-        Each event must contain a type of event(Info or Error), a message to explaining
+        Add a new event into an instance. Events can be for information or error messages.
+        Each event must contain a type of event (Info or Error), a message to explain
         the event, time of the event and finally the message offset in kafka
       parameters:
       - $ref: '#/parameters/instanceId'
@@ -200,7 +203,27 @@ paths:
         400:
           description: "Invalid json message sent"
         404:
-          description: "InstanceId does not match any import jobs"
+          description: "InstanceId does not match any instances"
+        500:
+          description: "Failed to process the request due to an internal error"
+  /instances/{instanceId}/observation:
+    put:
+      tags:
+      - "Internal Interface"
+      summary: "Update the number of observations within this instance"
+      description: "Update the number of observations within this instance"
+      parameters:
+      - $ref: '#/parameters/instanceId'
+      - $ref: '#/parameters/observation'
+      security:
+      - InternalAPIKey: []
+      responses:
+        200:
+          description: "The event was added to the instance"
+        400:
+          description: "Invalid json message sent"
+        404:
+          description: "InstanceId does not match any instances"
         500:
           description: "Failed to process the request due to an internal error"
   /instances/{instanceId}/dimensions:
@@ -209,9 +232,9 @@ paths:
       - "Internal Interface"
       summary: "Add a dimension for the instance"
       description: |
-        Add a dimension from the obervations found in the V3 data. To create a dimension the following items are needed;
+        Add a dimension from the observations found in the V3 data. To create a dimension the following items are needed;
         * nodeName - The name of the node eg (instanceId)-(dimension).(value)
-        * value - The value of the obervation
+        * value - The value of the observation
       parameters:
       - $ref: '#/parameters/instanceId'
       - $ref: '#/parameters/dimension'
@@ -223,14 +246,14 @@ paths:
         200:
           description: "The dimension was added"
         404:
-          description: "InstanceId does not match any import jobs"
+          description: "InstanceId does not match any instances"
         500:
           description: "Failed to process the request due to an internal error"
     get:
       tags:
       - "Internal Interface"
-      summary: "Get all dimensions from an imported job"
-      description: "Get all the dimensions within an import job"
+      summary: "Get all dimensions from an instance"
+      description: "Get all dimensions from an instance"
       parameters:
       - $ref: '#/parameters/instanceId'
       produces:
@@ -243,7 +266,7 @@ paths:
           schema:
             $ref: '#/definitions/Dimensions'
         404:
-          description: "InstanceId does not match any import jobs"
+          description: "InstanceId does not match any instances"
         500:
           description: "Failed to process the request due to an internal error"
   /instances/{instanceId}/dimensions/{nodeName}/nodeId:
@@ -263,15 +286,15 @@ paths:
       - InternalAPIKey: []
       responses:
         200:
-          description: "Update the dimension with the nodeId"
+          description: "Updated the dimension with the nodeId"
         404:
-          description: "InstanceId does not match any import jobs"
+          description: "InstanceId does not match any instances"
         500:
           description: "Failed to process the request due to an internal error"
 definitions:
   Job:
     type: object
-    description: "A object returned when an import job is created"
+    description: "An object returned when an import job is created"
     properties:
       jobId:
         type: string
@@ -282,7 +305,7 @@ definitions:
           type: string
   NewJob:
     type: object
-    description: "A object used to create a job"
+    description: "An object used to create a job"
     properties:
       recipe:
         type: string
@@ -298,12 +321,15 @@ definitions:
       state:
         type: string
         description: |
-          The state of the import job, this can be;
+          The state of the import job
       events:
         type: array
         description: "A list of events took place for this job"
         items:
           $ref: '#/definitions/InstanceEvent'
+      numberOfObservations:
+        type: integer
+        description: "The number of observations in this instance"
       lastUpdated:
         type: string
         description: "The last time an event happened"
@@ -327,12 +353,12 @@ definitions:
         description: "The kafka message offset (Used to locate the kafka message)"
   State:
     type: object
-    description: "A object used to update the state an import job"
+    description: "A object used to update the state of an import job"
     properties:
       state:
         type: string
         description: |
-          The state to set the job, this can be;
+          The state to set the job
   Dimension:
     type: object
     description: "A dimension object"
@@ -369,3 +395,10 @@ definitions:
       url:
         description: "The full S3 path including zone, and bucket"
         type: string
+  Observation:
+    type: object
+    description: "A model used to update the number of observations within an instance"
+    properties:
+      numberOfObservations:
+        type: integer
+        description: "The number of observations within an instance"
