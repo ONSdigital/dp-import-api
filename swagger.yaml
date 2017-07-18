@@ -16,30 +16,30 @@ tags:
 schemes:
 - "http"
 parameters:
-  instanceId:
-    name: instanceId
+  instance_id:
+    name: instance_id
     description: "A unique id for an instance"
     type: string
     in: path
     required: true
-  jobId:
-    name: jobId
-    description: "A unique jobId"
+  job_id:
+    name: job_id
+    description: "A unique job id"
     type: string
     in: path
     required: true
-  newJob:
-    name: newJob
+  job:
+    name: job
     in: body
     schema:
-      $ref: '#/definitions/NewJob'
+      $ref: '#/definitions/Job'
     required: true
-  dimension:
-    name: Dimension
-    description: "A dimension of an observation to store"
-    in: body
+  instance:
+    name: instance
+    description: "A state of an instance"
     schema:
-      $ref: '#/definitions/Dimension'
+      $ref: '#/definitions/Instance'
+    in: body
     required: true
   file:
     name: File
@@ -53,35 +53,20 @@ parameters:
     description: "An import event when publishing a dataset"
     in: body
     schema:
-      $ref: '#/definitions/InstanceEvent'
+      $ref: '#/definitions/Event'
     required: true
-  state:
-    name: state
-    description: "The state of an import job"
-    in: body
-    schema:
-      $ref: '#/definitions/State'
-    required: true
-  nodeId:
-    name: nodeId
-    description: "A node id"
-    in: body
-    schema:
-      $ref: '#/definitions/NodeId'
-    required: true
-  nodeName:
-    name: nodeName
+  dimension_id:
+    name: dimension_id
     description: "The name of a node (instanceId-Type.Value)"
     type: string
     in: path
     required: true
-  observation:
-    name: observation
-    description: "The number of observations within an instance"
-    in: body
-    schema:
-      $ref: '#/definitions/Observation'
-    required: true
+  value:
+   name: value
+   description: "A value to set within a type"
+   type: string
+   in: path
+   required: true
 securityDefinitions:
   FlorenceAPIKey:
     description: "API key used to allow florence users to create and query the progress of importing a dataset"
@@ -104,7 +89,7 @@ paths:
       produces:
       - "application/json"
       parameters:
-      - $ref: '#/parameters/newJob'
+      - $ref: '#/parameters/job'
       security:
       - FlorenceAPIKey: []
       responses:
@@ -115,15 +100,39 @@ paths:
         400:
           description: "Invalid json message was sent to the API"
         500:
-          description: "Failed to process the request due to an internal error"
-  /jobs/{jobId}/file:
+          $ref: '#/responses/InternalError'
+  /jobs/{job_id}:
+    put:
+      tags:
+      - "External Interface"
+      summary: "Update the jobs state"
+      description: |
+        Update the state of the job. If this is set to submitted, this shall trigger the
+        import process.
+      parameters:
+      - $ref: '#/parameters/job_id'
+      - $ref: '#/parameters/job'
+      produces:
+      - "application/json"
+      security:
+      - FlorenceAPIKey: []
+      responses:
+        200:
+          description: "The job is in a queue"
+        400:
+          description: "Invalid json message was sent to the API"
+        404:
+          description: "JobId does not match any import jobs"
+        500:
+          $ref: '#/responses/InternalError'
+  /jobs/{job_id}/files:
     put:
       tags:
       - "External Interface"
       summary: "Add a file into a job"
       description: "Add a file into a job, for each file added an alias name needs to be given. This name needs to link to the recipe"
       parameters:
-      - $ref: '#/parameters/jobId'
+      - $ref: '#/parameters/job_id'
       - $ref: '#/parameters/file'
       produces:
       - "application/json"
@@ -137,39 +146,15 @@ paths:
         404:
           description: "JobId does not match any import jobs"
         500:
-          description: "Failed to process the request due to an internal error"
-  /jobs/{jobId}/state:
-    put:
-      tags:
-      - "External Interface"
-      summary: "Update the jobs state"
-      description: |
-        Update the state of the job. If this is set to submitted, this shall trigger the
-        import process.
-      parameters:
-      - $ref: '#/parameters/jobId'
-      - $ref: '#/parameters/state'
-      produces:
-      - "application/json"
-      security:
-      - FlorenceAPIKey: []
-      responses:
-        200:
-          description: "The job is in a queue"
-        400:
-          description: "Invalid json message was sent to the API"
-        404:
-          description: "JobId does not match any import jobs"
-        500:
-          description: "Failed to process the request due to an internal error"
-  /instances/{instanceId}:
+          $ref: '#/responses/InternalError'
+  /instances/{instance_id}:
     get:
       tags:
       - "External Interface"
       summary: "Get Information about an instance"
       description: "Get the current state of an instance, this includes all events which have happened."
       parameters:
-      - $ref: '#/parameters/instanceId'
+      - $ref: '#/parameters/instance_id'
       produces:
       - "application/json"
       security:
@@ -178,13 +163,32 @@ paths:
         200:
           description: "Return a single instance state"
           schema:
-            $ref: '#/definitions/InstanceState'
+            $ref: '#/definitions/Instance'
         404:
           description: "InstanceId does not match any import jobs"
         500:
-          description: "Failed to process the request due to an internal error"
-  /instances/{instanceId}/events:
+          $ref: '#/responses/InternalError'
     put:
+      tags:
+      - "Internal Interface"
+      summary: "Update the number of observations within this instance"
+      description: "Update the number of observations within this instance"
+      parameters:
+      - $ref: '#/parameters/instance_id'
+      - $ref: '#/parameters/instance'
+      security:
+      - InternalAPIKey: []
+      responses:
+        200:
+          description: "The event was added to the instance"
+        400:
+          description: "Invalid json message sent"
+        404:
+          description: "InstanceId does not match any instances"
+        500:
+          $ref: '#/responses/InternalError'
+  /instances/{instance_id}/events:
+    post:
       tags:
        - "Internal Interface"
       summary: "Add an event to an instance"
@@ -193,7 +197,7 @@ paths:
         Each event must contain a type of event (Info or Error), a message to explain
         the event, time of the event and finally the message offset in kafka
       parameters:
-      - $ref: '#/parameters/instanceId'
+      - $ref: '#/parameters/instance_id'
       - $ref: '#/parameters/event'
       security:
       - InternalAPIKey: []
@@ -205,39 +209,41 @@ paths:
         404:
           description: "InstanceId does not match any instances"
         500:
-          description: "Failed to process the request due to an internal error"
-  /instances/{instanceId}/observation:
-    put:
+          $ref: '#/responses/InternalError'
+  /instances/{instance_id}/dimensions:
+    get:
       tags:
       - "Internal Interface"
-      summary: "Update the number of observations within this instance"
-      description: "Update the number of observations within this instance"
+      summary: "Get all dimensions from an instance"
+      description: "Get all dimensions from an instance"
       parameters:
-      - $ref: '#/parameters/instanceId'
-      - $ref: '#/parameters/observation'
+      - $ref: '#/parameters/instance_id'
+      produces:
+      - "application/json"
       security:
       - InternalAPIKey: []
       responses:
         200:
-          description: "The event was added to the instance"
-        400:
-          description: "Invalid json message sent"
+          description: "Return a list of dimensions"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Dimension'
         404:
           description: "InstanceId does not match any instances"
         500:
-          description: "Failed to process the request due to an internal error"
-  /instances/{instanceId}/dimensions:
+          $ref: '#/responses/InternalError'
+  /instances/{instance_id}/dimensions/{dimension_id}/options/{value}:
     put:
       tags:
       - "Internal Interface"
       summary: "Add a dimension for the instance"
       description: |
-        Add a dimension from the observations found in the V3 data. To create a dimension the following items are needed;
-        * nodeName - The name of the node eg (instanceId)-(dimension).(value)
-        * value - The value of the observation
+        Add a dimension found in the V4 data.
       parameters:
-      - $ref: '#/parameters/instanceId'
-      - $ref: '#/parameters/dimension'
+      - $ref: '#/parameters/instance_id'
+      - $ref: '#/parameters/dimension_id'
+      - $ref: '#/parameters/value'
       produces:
       - "application/json"
       security:
@@ -248,38 +254,18 @@ paths:
         404:
           description: "InstanceId does not match any instances"
         500:
-          description: "Failed to process the request due to an internal error"
-    get:
-      tags:
-      - "Internal Interface"
-      summary: "Get all dimensions from an instance"
-      description: "Get all dimensions from an instance"
-      parameters:
-      - $ref: '#/parameters/instanceId'
-      produces:
-      - "application/json"
-      security:
-      - InternalAPIKey: []
-      responses:
-        200:
-          description: "Return a list of dimensions"
-          schema:
-            $ref: '#/definitions/Dimensions'
-        404:
-          description: "InstanceId does not match any instances"
-        500:
-          description: "Failed to process the request due to an internal error"
-  /instances/{instanceId}/dimensions/{nodeName}/nodeId:
+          $ref: '#/responses/InternalError'
+  /instances/{instance_id}/dimensions/{dimension_id}/node_id/{value}:
     put:
       tags:
       - "Internal Interface"
-      summary: "Update a dimension with the nodeId"
+      summary: "Update a dimension with the node_id"
       description: |
         Update the dimension with a nodeId
       parameters:
-      - $ref: '#/parameters/instanceId'
-      - $ref: '#/parameters/nodeName'
-      - $ref: '#/parameters/nodeId'
+      - $ref: '#/parameters/instance_id'
+      - $ref: '#/parameters/dimension_id'
+      - $ref: '#/parameters/value'
       produces:
       - "application/json"
       security:
@@ -290,33 +276,55 @@ paths:
         404:
           description: "InstanceId does not match any instances"
         500:
-          description: "Failed to process the request due to an internal error"
+          $ref: '#/responses/InternalError'
+responses:
+  InternalError:
+    description: "Failed to process the request due to an internal error"
 definitions:
   Job:
     type: object
     description: "An object returned when an import job is created"
     properties:
-      jobId:
+      job_id:
         type: string
+        readOnly: true
         description: "A unique id for an import job"
-      instanceIds:
-        type: array
-        items:
-          type: string
-  NewJob:
-    type: object
-    description: "An object used to create a job"
-    properties:
       recipe:
         type: string
-        description: "The type of recipe to use when baking the data"
-      numberOfInstances:
+        description: |
+          The recipe to use when baking data. Below is a list of predefined recipes;
+          * v4 - This will skip the data baking process.
+      state:
+        type: string
+        description: |
+          The state of the job, this can be;
+           * created - The job has been created;
+           * submitted - The job has been queue to be imported
+           * completed - The job has been imported
+           * error - The job was not imported (See the events in the instances)
+      links:
+        type: object
+        readOnly: true
+        properties:
+          instance_ids:
+            type: array
+            description: "A list of URL to instances"
+            items:
+              type: string
+      number_of_instances:
+        description: "The number of instances within a job"
         type: integer
-  InstanceState:
+      files:
+        description: "A list of all files to be used in the job"
+        type: array
+        items:
+          $ref: '#/definitions/File'
+  Instance:
     type: object
     properties:
-      instanceId:
+      instance_id:
         type: string
+        readOnly: true
         description: "A unique id for a job"
       state:
         type: string
@@ -324,16 +332,23 @@ definitions:
           The state of the import job
       events:
         type: array
+        readOnly: true
         description: "A list of events took place for this job"
         items:
-          $ref: '#/definitions/InstanceEvent'
-      numberOfObservations:
+          $ref: '#/definitions/Event'
+      number_of_observations:
         type: integer
         description: "The number of observations in this instance"
-      lastUpdated:
+      headers:
+        type: array
+        description: "The header information from a V4 file"
+        items:
+          type: string
+      last_updated:
         type: string
+        readOnly: true
         description: "The last time an event happened"
-  InstanceEvent:
+  Event:
     type: object
     properties:
       type:
@@ -342,63 +357,37 @@ definitions:
           The type of event, this can be;
           * Info - for an information event
           * Error - for an error event
+      service:
+        type: string
+        description: "The name of the service which triggered the event"
       time:
         type: string
         description: "The time of the event in ISO 8601 format"
       message:
         type: string
         description: "A description of the event"
-      messageOffset:
+      message_offset:
         type: string
         description: "The kafka message offset (Used to locate the kafka message)"
-  State:
-    type: object
-    description: "A object used to update the state of an import job"
-    properties:
-      state:
-        type: string
-        description: |
-          The state to set the job
   Dimension:
     type: object
     description: "A dimension object"
     properties:
-      nodeName:
-        description: "The name of the node (instanceId-dimension.value)."
+      dimension_id:
+        description: "The name of the dimension (instanceId-dimension.value)."
         type: string
       value:
         description: "The value of the dimension"
         type: string
-  Dimensions:
-    type: object
-    properties:
-      instanceId:
-        type: string
-        description: "The instanceId of the import job"
-      items:
-        type: array
-        description: "A list of all dimensions within an import job"
-        items:
-          $ref: '#/definitions/Dimension'
-  NodeId:
-    type: object
-    properties:
-      nodeId:
-        description: "Graph database node Id"
+      node_id:
+        description: "The id of the node"
         type: string
   File:
     type: object
     properties:
-      aliasName:
+      alias_name:
         description: "An alias name for the file"
         type: string
       url:
         description: "The full S3 path including zone, and bucket"
         type: string
-  Observation:
-    type: object
-    description: "A model used to update the number of observations within an instance"
-    properties:
-      numberOfObservations:
-        type: integer
-        description: "The number of observations within an instance"
