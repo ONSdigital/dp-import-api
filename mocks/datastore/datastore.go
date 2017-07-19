@@ -13,11 +13,11 @@ type DataStore struct {
 	InternalError bool
 }
 
-func (ds *DataStore) AddJob(importJob *models.NewJob) (models.JobInstance, error) {
+func (ds *DataStore) AddJob(importJob *models.Job) (models.Job, error) {
 	if ds.InternalError {
-		return models.JobInstance{}, internalError
+		return models.Job{}, internalError
 	}
-	return models.JobInstance{JobID: "34534543543"}, nil
+	return models.Job{JobID: "34534543543"}, nil
 }
 
 func (ds *DataStore) AddInstance(joId string) (string, error) {
@@ -30,7 +30,7 @@ func (ds *DataStore) AddInstance(joId string) (string, error) {
 	return "123", nil
 }
 
-func (ds *DataStore) UpdateJobState(string, *models.JobState) error {
+func (ds *DataStore) UpdateJobState(string, *models.Job) error {
 	if ds.NotFound {
 		return utils.JobNotFoundError
 	}
@@ -40,14 +40,14 @@ func (ds *DataStore) UpdateJobState(string, *models.JobState) error {
 	return nil
 }
 
-func (ds *DataStore) GetInstance(instanceId string) (models.JobInstanceState, error) {
+func (ds *DataStore) GetInstance(instanceId string) (models.Instance, error) {
 	if ds.NotFound {
-		return models.JobInstanceState{}, utils.JobNotFoundError
+		return models.Instance{}, utils.JobNotFoundError
 	}
 	if ds.InternalError {
-		return models.JobInstanceState{}, internalError
+		return models.Instance{}, internalError
 	}
-	return models.JobInstanceState{InstanceID: "234234", State: "Created",
+	return models.Instance{InstanceID: "234234", State: "Created",
 		Events: []models.Event{models.Event{Type: "Info", Message: "Create at ...", Time: "00000", MessageOffset: "0"}}}, nil
 }
 
@@ -88,7 +88,7 @@ func (ds *DataStore) GetDimension(instanceId string) ([]models.Dimension, error)
 	if ds.InternalError {
 		return []models.Dimension{}, internalError
 	}
-	return []models.Dimension{models.Dimension{NodeName: "1234-geography.newport", Value: "newport", NodeID: "234234234"}}, nil
+	return []models.Dimension{models.Dimension{Name: "1234-geography.newport", Value: "newport", NodeID: "234234234"}}, nil
 }
 
 func (ds *DataStore) AddNodeID(instanceId, nodeId string, message *models.Dimension) error {

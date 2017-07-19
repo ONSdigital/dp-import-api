@@ -10,10 +10,10 @@ import (
 
 var (
 	createJobSQL           = "INSERT INTO Jobs"
-	updateJobStateSQL      = "UPDATE Jobs SET job = jsonb_set"
+	updateJobStateSQL      = "UPDATE Jobs set job = job"
+	addFileToJobSQL        = "UPDATE Jobs SET job = jsonb_set"
 	createInstanceSQL      = "INSERT INTO Instances"
 	findInstanceSQL        = "SELECT instance FROM Instances WHERE"
-	addFileToJobSQL        = "UPDATE Jobs SET job = jsonb_set"
 	addEventSQL            = "UPDATE Instances SET instance = jsonb_set"
 	addDimensionSQL        = "INSERT INTO Dimensions"
 	findDimensionsSQL      = "SELECT nodeName, value, nodeId"
@@ -41,16 +41,16 @@ func TestAddJobReturnsJobInstance(t *testing.T) {
 			AddRow("123"))
 		mock.ExpectQuery(createInstanceSQL).WillReturnRows(sqlmock.NewRows([]string{"InstanceID"}).
 			AddRow("321"))
-		jobInstance, err := ds.AddJob(&models.NewJob{Recipe: "test", NumberOfInstances: 1})
+		jobInstance, err := ds.AddJob(&models.Job{Recipe: "test", NumberOfInstances: 1})
 		So(err, ShouldBeNil)
 		So(jobInstance.JobID, ShouldEqual, "123")
-		So(jobInstance.InstanceIds, ShouldContain, "321")
+		So(jobInstance.Links.InstanceIDs, ShouldContain, "http://localhost:21800/instances/321")
 	})
 }
 
 func TestAddInstanceReturnsInstanceId(t *testing.T) {
 	t.Parallel()
-	Convey("When creating a new import job, an instanceId is returned", t, func() {
+	Convey("When creating a new jobimport job, an instanceId is returned", t, func() {
 		expectID := "000001"
 		mock, db := NewSQLMockWithSQLStatements()
 		ds, err := NewDatastore(db)
@@ -66,7 +66,7 @@ func TestAddInstanceReturnsInstanceId(t *testing.T) {
 
 func TestGetInstance(t *testing.T) {
 	t.Parallel()
-	Convey("When an instanceId is provided, the import job state is returned", t, func() {
+	Convey("When an instanceId is provided, the jobimport job state is returned", t, func() {
 		jsonContent := "{ \"state\":\"Created\"}"
 		mock, db := NewSQLMockWithSQLStatements()
 		ds, err := NewDatastore(db)
@@ -138,7 +138,7 @@ func TestAddDimension(t *testing.T) {
 		mock.ExpectPrepare(addDimensionSQL).ExpectQuery().
 			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 			WillReturnRows(sqlmock.NewRows([]string{}))
-		dataStoreErr := ds.AddDimension("123", &models.Dimension{NodeName: "name", Value: "123"})
+		dataStoreErr := ds.AddDimension("123", &models.Dimension{Name: "name", Value: "123"})
 		So(dataStoreErr, ShouldBeNil)
 	})
 }
@@ -166,7 +166,7 @@ func TestAddUpdateState(t *testing.T) {
 		mock.ExpectPrepare(updateJobStateSQL).ExpectQuery().
 			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).
 			WillReturnRows(sqlmock.NewRows([]string{"instanceId"}).AddRow("123"))
-		dataStoreErr := ds.UpdateJobState("123", &models.JobState{State: "Start"})
+		dataStoreErr := ds.UpdateJobState("123", &models.Job{State: "Start"})
 		So(dataStoreErr, ShouldBeNil)
 	})
 }
@@ -195,9 +195,9 @@ func NewSQLMockWithSQLStatements() (sqlmock.Sqlmock, *sql.DB) {
 	mock.MatchExpectationsInOrder(false)
 	mock.ExpectPrepare(createJobSQL)
 	mock.ExpectPrepare(updateJobStateSQL)
+	mock.ExpectPrepare(addFileToJobSQL)
 	mock.ExpectPrepare(createInstanceSQL)
 	mock.ExpectPrepare(findInstanceSQL)
-	mock.ExpectPrepare(addFileToJobSQL)
 	mock.ExpectPrepare(addEventSQL)
 	mock.ExpectPrepare(addDimensionSQL)
 	mock.ExpectPrepare(findDimensionsSQL)

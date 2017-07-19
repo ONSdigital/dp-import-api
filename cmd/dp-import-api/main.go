@@ -7,6 +7,7 @@ import (
 
 	"database/sql"
 	"github.com/ONSdigital/dp-import-api/config"
+	"github.com/ONSdigital/dp-import-api/jobimport"
 	"github.com/ONSdigital/go-ns/kafka"
 	_ "github.com/lib/pq"
 	"net/http"
@@ -21,7 +22,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Debug("Starting import api", log.Data{"BIND_ADDR": configuration.BindAddr})
+	log.Debug("Starting jobimport api", log.Data{"BIND_ADDR": configuration.BindAddr})
 	db, postgresErr := sql.Open("postgres", configuration.PostgresURL)
 	if postgresErr != nil {
 		log.ErrorC("DB open error", postgresErr, nil)
@@ -32,11 +33,15 @@ func main() {
 		log.ErrorC("Create postgres error", dataStoreError, nil)
 		os.Exit(1)
 	}
-	producer := kafka.NewProducer(configuration.Brokers, configuration.PublishDatasetTopic, configuration.KafkaMaxBytes)
-	importAPI := api.CreateImportAPI(postgresDataStore, producer.Output)
+	dataBakerProducer := kafka.NewProducer(configuration.Brokers, configuration.DatabakerImportTopic, configuration.KafkaMaxBytes)
+	directProducer := kafka.NewProducer(configuration.Brokers, configuration.DirectImportTopic, configuration.KafkaMaxBytes)
+	jobQueue := jobimport.CreateJobImporter(dataBakerProducer.Output, directProducer.Output)
+	importAPI := api.CreateImportAPI(postgresDataStore, &jobQueue)
 	httpCloseError := http.ListenAndServe(configuration.BindAddr, importAPI.Router)
 	if httpCloseError != nil {
-		log.Error(httpCloseError, log.Data{"BIND_ADDR": configuration.BindAddr, "TOPIC": configuration.PublishDatasetTopic})
+		log.Error(httpCloseError, log.Data{"BIND_ADDR": configuration.BindAddr,
+			"TOPICS": []string{configuration.DatabakerImportTopic, configuration.DirectImportTopic}})
 	}
-	producer.Closer <- true
+	dataBakerProducer.Closer <- true
+	directProducer.Closer <- true
 }

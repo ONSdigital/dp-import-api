@@ -21,6 +21,19 @@ var PublishDatasetEvent = `{
 ]
 }`
 
+var ImoprtV4FileEvent = `{
+  "type": "record",
+  "name": "input-file-available",
+  "fields": [
+    {"name": "file_url", "type": "string"},
+    {"name": "instance_id", "type": "string"}
+  ]
+}`
+
 var PublishDataset *avro.Schema = &avro.Schema{
 	Definition: PublishDatasetEvent,
+}
+
+var ImoprtV4File *avro.Schema = &avro.Schema{
+	Definition: ImoprtV4FileEvent,
 }

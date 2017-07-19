@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"encoding/json"
+	"fmt"
 	"github.com/ONSdigital/dp-import-api/models"
-	"github.com/ONSdigital/dp-import-api/schema"
 	"github.com/ONSdigital/dp-import-api/utils"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/gorilla/mux"
@@ -15,22 +15,22 @@ import (
 type ImportAPI struct {
 	dataStore DataStore
 	Router    *mux.Router
-	producer  chan []byte
+	jobQueue  JobQueue
 }
 
 // CreateImportAPI - Create the api with all the routes configured
-func CreateImportAPI(dataStore DataStore, producer chan []byte) *ImportAPI {
+func CreateImportAPI(dataStore DataStore, jobQueue JobQueue) *ImportAPI {
 	router := mux.NewRouter()
-	api := ImportAPI{dataStore: dataStore, Router: router, producer: producer}
+	api := ImportAPI{dataStore: dataStore, Router: router, jobQueue: jobQueue}
 	// External API for florence
 	api.Router.HandleFunc("/jobs", api.addJob).Methods("POST")
-	api.Router.HandleFunc("/jobs/{jobId}/file", api.addUploadedFile).Methods("PUT")
-	api.Router.HandleFunc("/jobs/{jobId}/state", api.updateState).Methods("PUT")
+	api.Router.HandleFunc("/jobs/{jobId}", api.updateJob).Methods("PUT")
+	api.Router.HandleFunc("/jobs/{jobId}/files", api.addUploadedFile).Methods("PUT")
 	api.Router.HandleFunc("/instances/{instanceId}", api.getInstance).Methods("GET")
 	// Internal API
 	api.Router.HandleFunc("/instances/{instanceId}/events", api.addEvent).Methods("PUT")
-	api.Router.HandleFunc("/instances/{instanceId}/dimensions", api.addDimension).Methods("PUT")
-	api.Router.HandleFunc("/instances/{instanceId}/dimensions/{nodeName}/nodeId", api.addNodeID).Methods("PUT")
+	api.Router.HandleFunc("/instances/{instanceId}/dimensions/{dimension_name}/options/{value}", api.addDimension).Methods("PUT")
+	api.Router.HandleFunc("/instances/{instanceId}/dimensions/{dimension_name}/nodeid/{value}", api.addNodeID).Methods("PUT")
 	api.Router.HandleFunc("/instances/{instanceId}/dimensions", api.getDimension).Methods("GET")
 
 	return &api
@@ -38,7 +38,7 @@ func CreateImportAPI(dataStore DataStore, producer chan []byte) *ImportAPI {
 
 func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 	newJob, error := models.CreateJob(r.Body)
-	if error != nil {
+	if error != nil || newJob.Validate() != nil {
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}
@@ -78,34 +78,32 @@ func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *ImportAPI) updateState(w http.ResponseWriter, r *http.Request) {
+func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	jobID := vars["jobId"]
-	jobState, err := models.CreateJobState(r.Body)
+	job, err := models.CreateJob(r.Body)
 	if err != nil {
-		log.Error(err, log.Data{"jobState": jobState, "jobID": jobID})
+		log.Error(err, log.Data{"jobState": job, "jobID": jobID})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 	}
-	dataStoreError := api.dataStore.UpdateJobState(jobID, jobState)
+	dataStoreError := api.dataStore.UpdateJobState(jobID, job)
 	if dataStoreError != nil {
-		log.Error(dataStoreError, log.Data{"jobState": jobState, "jobID": jobID})
+		log.Error(dataStoreError, log.Data{"jobState": job, "jobID": jobID})
 		setErrorCode(w, dataStoreError)
 		return
 	}
-	if jobState.State == "submitted" {
-		message, error := api.dataStore.BuildPublishDatasetMessage(jobID)
+	if job.State == "submitted" {
+		task, error := api.dataStore.BuildPublishDatasetMessage(jobID)
 		if error != nil {
-			log.Error(error, log.Data{"jobState": jobState, "jobID": jobID})
+			log.Error(error, log.Data{"jobState": job, "jobID": jobID})
 			setErrorCode(w, error)
 			return
 		}
-		bytes, avroError := schema.PublishDataset.Marshal(message)
-		if avroError != nil {
-			log.Error(avroError, log.Data{"recipe": message.Recipe, "byte": bytes})
-			setErrorCode(w, avroError)
-			return
+		queueError := api.jobQueue.Queue(task)
+		if queueError != nil {
+			log.Error(queueError, log.Data{"task": task})
+			setErrorCode(w, queueError)
 		}
-		api.producer <- bytes
 	}
 }
 
@@ -148,21 +146,6 @@ func (api *ImportAPI) addEvent(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *ImportAPI) addDimension(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	instanceID := vars["instanceId"]
-	dimension, error := models.CreateDimension(r.Body)
-	if error != nil {
-		http.Error(w, "Bad client request received", http.StatusBadRequest)
-		return
-	}
-	dataStoreError := api.dataStore.AddDimension(instanceID, dimension)
-	if dataStoreError != nil {
-		setErrorCode(w, dataStoreError)
-		return
-	}
-}
-
 func (api *ImportAPI) getDimension(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	instanceID := vars["instanceId"]
@@ -183,18 +166,35 @@ func (api *ImportAPI) getDimension(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (api *ImportAPI) addNodeID(w http.ResponseWriter, r *http.Request) {
+func (api *ImportAPI) addDimension(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	log.Debug("", log.Data{"mux": vars})
 	instanceID := vars["instanceId"]
-	nodeName := vars["nodeName"]
-
-	dimension, error := models.CreateDimension(r.Body)
-	if error != nil {
+	dimensionName := vars["dimension_name"]
+	dimensionValue := vars["value"]
+	if dimensionName == "" || dimensionValue == "" {
+		log.Error(fmt.Errorf("Missing parameters"), log.Data{"name": dimensionName, "value": dimensionValue})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}
-	dataStoreError := api.dataStore.AddNodeID(instanceID, nodeName, dimension)
+	dimension := models.Dimension{Name: dimensionName, Value: dimensionValue}
+	dataStoreError := api.dataStore.AddDimension(instanceID, &dimension)
+	if dataStoreError != nil {
+		setErrorCode(w, dataStoreError)
+		return
+	}
+}
+
+func (api *ImportAPI) addNodeID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	instanceID := vars["instanceId"]
+	dimensionName := vars["dimension_name"]
+	nodeValue := vars["value"]
+	if dimensionName == "" || nodeValue == "" {
+		http.Error(w, "Bad client request received", http.StatusBadRequest)
+		return
+	}
+	dimension := models.Dimension{NodeID: nodeValue}
+	dataStoreError := api.dataStore.AddNodeID(instanceID, dimensionName, &dimension)
 	setErrorCode(w, dataStoreError)
 
 }

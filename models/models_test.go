@@ -16,82 +16,67 @@ func TestCreateJobWithNoBody(t *testing.T) {
 
 func TestCreateJobWithEmptyJson(t *testing.T) {
 	Convey("When a job message has an empty json body, an error is returned", t, func() {
-		_, errorMessage := CreateJob(strings.NewReader("{ }"))
-		So(errorMessage, ShouldNotBeNil)
+		job, jobError := CreateJob(strings.NewReader("{ }"))
+		So(jobError, ShouldBeNil)
+		So(job.Validate(), ShouldNotBeNil)
 	})
 }
 
 func TestCreateJobWithDataset(t *testing.T) {
 	Convey("When a job has a valid json body, a message is returned", t, func() {
-		reader := strings.NewReader("{ \"recipe\": \"test123\", \"NumberOfInstances\":1}")
-		message, errorMessage := CreateJob(reader)
-		So(errorMessage, ShouldBeNil)
-		So(message.Recipe, ShouldEqual, "test123")
-		So(message.NumberOfInstances, ShouldEqual, 1)
+		reader := strings.NewReader("{ \"recipe\": \"test123\", \"number_of_instances\":1}")
+		job, jobError := CreateJob(reader)
+		So(jobError, ShouldBeNil)
+		So(job.Validate(), ShouldBeNil)
+		So(job.Recipe, ShouldEqual, "test123")
+		So(job.NumberOfInstances, ShouldEqual, 1)
 	})
 }
 
 func TestCreateJobWithInvalidJson(t *testing.T) {
 	Convey("When a job message has an invalid json, an error is returned", t, func() {
 		reader := strings.NewReader("{ ")
-		_, errorMessage := CreateJob(reader)
-		So(errorMessage, ShouldNotBeNil)
+		_, jobError := CreateJob(reader)
+		So(jobError, ShouldNotBeNil)
 	})
 }
 
 func TestCreateS3FilehNoBody(t *testing.T) {
 	Convey("When a uploaded file message has no body, an error is returned", t, func() {
-		_, errorMessage := CreateUploadedFile(mocks.Reader{})
-		So(errorMessage, ShouldNotBeNil)
+		_, uploadedFileError := CreateUploadedFile(mocks.Reader{})
+		So(uploadedFileError, ShouldNotBeNil)
 	})
 }
 
 func TestCreateS3FileWithEmptyJson(t *testing.T) {
 	Convey("When a uploaded file message has an empty json, an error is returned", t, func() {
-		_, errorMessage := CreateUploadedFile(strings.NewReader("{ }"))
-		So(errorMessage, ShouldNotBeNil)
+		_, uploadedFileError := CreateUploadedFile(strings.NewReader("{ }"))
+		So(uploadedFileError, ShouldNotBeNil)
 	})
 }
 
 func TestCreateS3FileWithInvalidJson(t *testing.T) {
 	Convey("When an uploaded file message has an empty json, an error is returned", t, func() {
-		_, errorMessage := CreateUploadedFile(strings.NewReader("{}}}"))
-		So(errorMessage, ShouldNotBeNil)
+		_, uploadedFileError := CreateUploadedFile(strings.NewReader("{}}}"))
+		So(uploadedFileError, ShouldNotBeNil)
 	})
 }
 
 func TestCreateUploadedFileWithValidJson(t *testing.T) {
 	Convey("When an uploaded file message has valid json, an uploaded file struct is returned", t, func() {
-		message, errorMessage := CreateUploadedFile(strings.NewReader("{ \"aliasName\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}"))
-		So(errorMessage, ShouldBeNil)
-		So(message.AliasName, ShouldEqual, "n1")
-		So(message.URL, ShouldEqual, "https://aws.s3/ons/myfile.exel")
+		file, uploadedFileError := CreateUploadedFile(strings.NewReader("{ \"alias_name\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}"))
+		So(uploadedFileError, ShouldBeNil)
+		So(file.AliasName, ShouldEqual, "n1")
+		So(file.URL, ShouldEqual, "https://aws.s3/ons/myfile.exel")
 	})
 }
 
 func TestCreateEventWithValidJson(t *testing.T) {
 	Convey("When an event message has valid json, an event struct is returned", t, func() {
 		reader := strings.NewReader("{ \"type\":\"info\",\"message\":\"123 123\",\"time\":\"7789789\",\"messageOffset\":\"321\"}")
-		message, errorMessage := CreateEvent(reader)
-		So(errorMessage, ShouldBeNil)
-		So("info", ShouldEqual, message.Type)
-	})
-}
-
-func TestCreateDimensionWithValidJson(t *testing.T) {
-	Convey("When a dimension message has valid json, a dimension struct is returned", t, func() {
-		reader := strings.NewReader("{ \"nodeName\":\"321\",\"value\":\"123 123\"}")
-		message, errorMessage := CreateDimension(reader)
-		So(errorMessage, ShouldBeNil)
-		So("321", ShouldEqual, message.NodeName)
-	})
-}
-
-func TestCreateJobState(t *testing.T) {
-	Convey("When a JobState has valid json, a jobstate struct is returned", t, func() {
-		reader := strings.NewReader("{ \"state\":\"start\"}")
-		jobState, errorMessage := CreateJobState(reader)
-		So(errorMessage, ShouldBeNil)
-		So("start", ShouldEqual, jobState.State)
+		event, eventError := CreateEvent(reader)
+		So(eventError, ShouldBeNil)
+		So(event.Validate(), ShouldBeNil)
+		So("info", ShouldEqual, event.Type)
 	})
 }
