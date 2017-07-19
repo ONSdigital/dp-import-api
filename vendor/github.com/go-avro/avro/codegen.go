@@ -102,7 +102,7 @@ func (codegen *CodeGenerator) Generate() (string, error) {
 		buffer := &bytes.Buffer{}
 		codegen.codeSnippets = append(codegen.codeSnippets, buffer)
 
-		// write package and import only once
+		// write package and jobimport only once
 		if index == 0 {
 			err = codegen.writePackageName(schemaInfo)
 			if err != nil {
@@ -245,7 +245,7 @@ func (codegen *CodeGenerator) writeEnumConstants(info *enumSchemaInfo, buffer *b
 
 func (codegen *CodeGenerator) writeImportStatement() error {
 	buffer := codegen.codeSnippets[0]
-	_, err := buffer.WriteString(`import "github.com/elodina/go-avro"`)
+	_, err := buffer.WriteString(`jobimport "github.com/elodina/go-avro"`)
 	if err != nil {
 		return err
 	}
