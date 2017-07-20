@@ -93,7 +93,7 @@ paths:
       security:
       - FlorenceAPIKey: []
       responses:
-        200:
+        201:
           description: "An import job was successfully created"
           schema:
             $ref: '#/definitions/Job'
@@ -202,7 +202,7 @@ paths:
       security:
       - InternalAPIKey: []
       responses:
-        200:
+        201:
           description: "The event was added to the instance"
         400:
           description: "Invalid json message sent"
