@@ -133,7 +133,7 @@ func TestAddEventReturnsOK(t *testing.T) {
 		w := httptest.NewRecorder()
 		api := CreateImportAPI(&mocks.DataStore{}, &mock_jobqueue.JobImporter{})
 		api.Router.ServeHTTP(w, r)
-		So(w.Code, ShouldEqual, http.StatusOK)
+		So(w.Code, ShouldEqual, http.StatusCreated)
 	})
 }
 

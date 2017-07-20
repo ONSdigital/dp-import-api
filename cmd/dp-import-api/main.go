@@ -22,7 +22,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Debug("Starting jobimport api", log.Data{"BIND_ADDR": configuration.BindAddr})
+	log.Info("Starting jobimport api", log.Data{"BIND_ADDR": configuration.BindAddr,
+		"TOPICS": []string{configuration.DatabakerImportTopic, configuration.DirectImportTopic},
+		"BROKERS":configuration.Brokers})
 	db, postgresErr := sql.Open("postgres", configuration.PostgresURL)
 	if postgresErr != nil {
 		log.ErrorC("DB open error", postgresErr, nil)

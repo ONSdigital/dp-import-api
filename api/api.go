@@ -11,6 +11,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var internalError = "Internal server error"
+
 // ImportAPI - A restful API used to manage importing datasets to be published
 type ImportAPI struct {
 	dataStore DataStore
@@ -31,34 +33,44 @@ func CreateImportAPI(dataStore DataStore, jobQueue JobQueue) *ImportAPI {
 	api.Router.HandleFunc("/instances/{instanceId}/events", api.addEvent).Methods("PUT")
 	api.Router.HandleFunc("/instances/{instanceId}/dimensions/{dimension_name}/options/{value}", api.addDimension).Methods("PUT")
 	api.Router.HandleFunc("/instances/{instanceId}/dimensions/{dimension_name}/nodeid/{value}", api.addNodeID).Methods("PUT")
-	api.Router.HandleFunc("/instances/{instanceId}/dimensions", api.getDimension).Methods("GET")
+	api.Router.HandleFunc("/instances/{instanceId}/dimensions", api.getDimensions).Methods("GET")
 
 	return &api
 }
 
 func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 	newJob, error := models.CreateJob(r.Body)
-	if error != nil || newJob.Validate() != nil {
+	if error != nil  {
+		log.Error(error,log.Data{})
+		http.Error(w, "Bad client request received", http.StatusBadRequest)
+		return
+	}
+	if validationError := newJob.Validate();  validationError != nil  {
+		log.Error(validationError,log.Data{})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}
 	jobInstance, dataStoreError := api.dataStore.AddJob(newJob)
 	if dataStoreError != nil {
 		log.Error(dataStoreError, log.Data{"newJob": newJob})
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
 	bytes, error := json.Marshal(jobInstance)
 	if error != nil {
 		log.Error(error, log.Data{"Job": newJob})
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
 	setJSONContentType(w)
 	_, writeError := w.Write(bytes)
 	if writeError != nil {
 		log.Error(writeError, log.Data{"jobInstance": jobInstance})
+		http.Error(w, internalError, http.StatusInternalServerError)
+		return
 	}
+	log.Info("created new import job", log.Data{"job": jobInstance})
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
@@ -66,16 +78,17 @@ func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
 	jobID := vars["jobId"]
 	uploadedFile, error := models.CreateUploadedFile(r.Body)
 	if error != nil {
-		log.Error(error, log.Data{"uploadedFile": uploadedFile, "jobID": jobID})
-		http.Error(w, "Bad client request received", http.StatusBadRequest)
+		log.Error(error, log.Data{"file": uploadedFile, "job_id": jobID})
+		http.Error(w, "bad client request received", http.StatusBadRequest)
 		return
 	}
 	dataStoreError := api.dataStore.AddUploadedFile(jobID, uploadedFile)
 	if dataStoreError != nil {
-		log.Error(dataStoreError, log.Data{"uploadedFile": uploadedFile, "instanceId": jobID})
+		log.Error(dataStoreError, log.Data{"file": uploadedFile, "job_id": jobID})
 		setErrorCode(w, dataStoreError)
 		return
 	}
+	log.Info("added uploaded file to job", log.Data{"job_id":jobID, "file":uploadedFile})
 }
 
 func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
@@ -83,19 +96,20 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 	jobID := vars["jobId"]
 	job, err := models.CreateJob(r.Body)
 	if err != nil {
-		log.Error(err, log.Data{"jobState": job, "jobID": jobID})
-		http.Error(w, "Bad client request received", http.StatusBadRequest)
+		log.Error(err, log.Data{"jobState": job, "job_id": jobID})
+		http.Error(w, "bad client request received", http.StatusBadRequest)
 	}
 	dataStoreError := api.dataStore.UpdateJobState(jobID, job)
 	if dataStoreError != nil {
-		log.Error(dataStoreError, log.Data{"jobState": job, "jobID": jobID})
+		log.Error(dataStoreError, log.Data{"job": job, "job_id": jobID})
 		setErrorCode(w, dataStoreError)
 		return
 	}
+	log.Info("job updated", log.Data{"job_id":jobID, "updates": job})
 	if job.State == "submitted" {
 		task, error := api.dataStore.BuildPublishDatasetMessage(jobID)
 		if error != nil {
-			log.Error(error, log.Data{"jobState": job, "jobID": jobID})
+			log.Error(error, log.Data{"job": job, "job_id": jobID})
 			setErrorCode(w, error)
 			return
 		}
@@ -103,7 +117,9 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 		if queueError != nil {
 			log.Error(queueError, log.Data{"task": task})
 			setErrorCode(w, queueError)
+			return
 		}
+		log.Info("import job was queued", log.Data{"job_id":jobID})
 	}
 }
 
@@ -116,17 +132,20 @@ func (api *ImportAPI) getInstance(w http.ResponseWriter, r *http.Request) {
 		setErrorCode(w, dataStoreError)
 		return
 	}
-
 	bytes, error := json.Marshal(instanceState)
 	if error != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Error(error, log.Data{"instance_id":instanceID})
+		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
 	setJSONContentType(w)
 	_, writeError := w.Write(bytes)
 	if writeError != nil {
+		log.Error(error, log.Data{"instance_id":instanceID})
 		log.Error(writeError, log.Data{"instanceState": instanceState})
+		return
 	}
+	log.Info("returning instance information", log.Data{"instance_id":instanceID})
 }
 
 func (api *ImportAPI) addEvent(w http.ResponseWriter, r *http.Request) {
@@ -134,19 +153,21 @@ func (api *ImportAPI) addEvent(w http.ResponseWriter, r *http.Request) {
 	instanceID := vars["instanceId"]
 	event, error := models.CreateEvent(r.Body)
 	if error != nil {
-		log.Error(error, log.Data{"event": event})
+		log.Error(error, log.Data{"instance_id":instanceID, "event":event})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}
 	dataStoreError := api.dataStore.AddEvent(instanceID, event)
 	if dataStoreError != nil {
-		log.Error(dataStoreError, log.Data{"event": event})
+		log.Error(dataStoreError, log.Data{"instance_id":instanceID, "event":event})
 		setErrorCode(w, dataStoreError)
 		return
 	}
+	log.Info("event added to instance", log.Data{"instance_id":instanceID, "event":event})
+	w.WriteHeader(http.StatusCreated)
 }
 
-func (api *ImportAPI) getDimension(w http.ResponseWriter, r *http.Request) {
+func (api *ImportAPI) getDimensions(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	instanceID := vars["instanceId"]
 	dimensions, dataStoreError := api.dataStore.GetDimension(instanceID)
@@ -156,14 +177,18 @@ func (api *ImportAPI) getDimension(w http.ResponseWriter, r *http.Request) {
 	}
 	bytes, error := json.Marshal(dimensions)
 	if error != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Error(error, log.Data{"instance_id":instanceID, "dimensions": dimensions})
+		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
 	setJSONContentType(w)
 	_, writeError := w.Write(bytes)
 	if writeError != nil {
-		log.Error(writeError, log.Data{"dimensions": dimensions})
+		log.Error(error, log.Data{"instance_id":instanceID, "dimensions": dimensions})
+		http.Error(w, internalError, http.StatusInternalServerError)
+		return
 	}
+	log.Info("returned dimensions", log.Data{"instance_id":instanceID})
 }
 
 func (api *ImportAPI) addDimension(w http.ResponseWriter, r *http.Request) {
@@ -172,7 +197,7 @@ func (api *ImportAPI) addDimension(w http.ResponseWriter, r *http.Request) {
 	dimensionName := vars["dimension_name"]
 	dimensionValue := vars["value"]
 	if dimensionName == "" || dimensionValue == "" {
-		log.Error(fmt.Errorf("Missing parameters"), log.Data{"name": dimensionName, "value": dimensionValue})
+		log.Error(fmt.Errorf("Missing parameters"), log.Data{"instance_id":instanceID, "name": dimensionName, "value": dimensionValue})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}
@@ -182,6 +207,7 @@ func (api *ImportAPI) addDimension(w http.ResponseWriter, r *http.Request) {
 		setErrorCode(w, dataStoreError)
 		return
 	}
+	log.Info("dimension added", log.Data{"instance_id":instanceID, "name": dimensionName, "value": dimensionValue})
 }
 
 func (api *ImportAPI) addNodeID(w http.ResponseWriter, r *http.Request) {
@@ -190,13 +216,18 @@ func (api *ImportAPI) addNodeID(w http.ResponseWriter, r *http.Request) {
 	dimensionName := vars["dimension_name"]
 	nodeValue := vars["value"]
 	if dimensionName == "" || nodeValue == "" {
+		log.Error(fmt.Errorf("Missing parameters"), log.Data{"instance_id":instanceID, "name": dimensionName, "nodeValue": nodeValue})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}
 	dimension := models.Dimension{NodeID: nodeValue}
 	dataStoreError := api.dataStore.AddNodeID(instanceID, dimensionName, &dimension)
-	setErrorCode(w, dataStoreError)
-
+	if dataStoreError != nil {
+		log.Error(dataStoreError, log.Data{"instance_id":instanceID, "name": dimensionName, "nodeValue": nodeValue})
+		setErrorCode(w, dataStoreError)
+		return
+	}
+    log.Info("added node id", log.Data{"instance_id":instanceID, "name": dimensionName, "nodeValue": nodeValue})
 }
 
 func setErrorCode(w http.ResponseWriter, err error) {
@@ -205,7 +236,7 @@ func setErrorCode(w http.ResponseWriter, err error) {
 		http.Error(w, "Import job not found", http.StatusNotFound)
 		return
 	case err != nil:
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
 }

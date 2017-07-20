@@ -1,8 +1,6 @@
 SHELL=bash
-DIRECTORIES?=api postgres models utils
 
 BUILD=build
-HASH?=$(shell make hash)
 BUILD_ARCH=$(BUILD)/$(GOOS)-$(GOARCH)
 BIN_DIR?=.
 

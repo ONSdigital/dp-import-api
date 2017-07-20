@@ -100,7 +100,7 @@ func CreateJob(reader io.Reader) (*Job, error) {
 	if badJSONError != nil {
 		return nil, fmt.Errorf("Failed to parse json body")
 	}
-	return &job, nil //job.Validate()
+	return &job, nil
 }
 
 // CreateUploadedFile - Create a uploaded file from a reader
