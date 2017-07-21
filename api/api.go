@@ -31,6 +31,7 @@ func CreateImportAPI(host string, dataStore DataStore, jobQueue JobQueue) *Impor
 	api.Router.HandleFunc("/jobs/{jobId}/files", api.addUploadedFile).Methods("PUT")
 	api.Router.HandleFunc("/instances/{instanceId}", api.getInstance).Methods("GET")
 	// Internal API
+	api.Router.HandleFunc("/instances/{instanceId}", api.updateInstance).Methods("PUT")
 	api.Router.HandleFunc("/instances/{instanceId}/events", api.addEvent).Methods("PUT")
 	api.Router.HandleFunc("/instances/{instanceId}/dimensions/{dimension_name}/options/{value}", api.addDimension).Methods("PUT")
 	api.Router.HandleFunc("/instances/{instanceId}/dimensions/{dimension_name}/nodeid/{value}", api.addNodeID).Methods("PUT")
@@ -147,6 +148,25 @@ func (api *ImportAPI) getInstance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Info("returning instance information", log.Data{"instance_id": instanceID})
+}
+
+func (api *ImportAPI) updateInstance(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	instanceID := vars["instanceId"]
+
+	instance, error := models.CreateInstance(r.Body)
+	if error != nil {
+		log.Error(error, log.Data{"instance_id": instanceID, "instance": instance})
+		http.Error(w, "Bad client request received", http.StatusBadRequest)
+		return
+	}
+	dataStoreError := api.dataStore.UpdateInstance(instanceID, instance)
+	if dataStoreError != nil {
+		log.Error(dataStoreError, log.Data{"instance_id": instanceID, "instance": instance})
+		setErrorCode(w, dataStoreError)
+		return
+	}
+	log.Info("instance was updated", log.Data{"instance_id": instanceID, "instance": instance})
 }
 
 func (api *ImportAPI) addEvent(w http.ResponseWriter, r *http.Request) {

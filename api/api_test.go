@@ -64,6 +64,19 @@ func TestGetInstanceReturnsNotFound(t *testing.T) {
 	})
 }
 
+func TestUpdateInstanceReturnsOk(t *testing.T) {
+	t.Parallel()
+	Convey("When a put request for updating an instance has a valid instanceId and json, return a ok code", t, func() {
+		reader := strings.NewReader("{ \"number_of_observations\": 1}")
+		r, err := http.NewRequest("PUT", "http://localhost:21800/instances/12345", reader)
+		So(err, ShouldBeNil)
+		w := httptest.NewRecorder()
+		api := CreateImportAPI(host, &mocks.DataStore{}, &mock_jobqueue.JobImporter{})
+		api.Router.ServeHTTP(w, r)
+		So(w.Code, ShouldEqual, http.StatusOK)
+	})
+}
+
 func TestGetImportJobReturnsImportJob(t *testing.T) {
 	t.Parallel()
 	Convey("When a get request for an importqueue job has a valid instance id, it state is returned", t, func() {

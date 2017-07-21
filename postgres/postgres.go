@@ -16,6 +16,7 @@ type Datastore struct {
 	updateJob            *sql.Stmt
 	addInstance          *sql.Stmt
 	findInstance         *sql.Stmt
+	updateInstance       *sql.Stmt
 	addFileToJob         *sql.Stmt
 	addEvent             *sql.Stmt
 	addDimension         *sql.Stmt
@@ -39,12 +40,13 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 	addFileToJob := prepare("UPDATE Jobs SET job = jsonb_set(job, '{files}', (SELECT (job->'files')  || TO_JSONB(json_build_object('alaisName',$1::TEXT,'url',$2::TEXT)) FROM Jobs WHERE jobId = $3), true) WHERE jobId = $3 RETURNING jobId", db)
 	addInstance := prepare("INSERT INTO Instances(jobId, instance) VALUES($1, $2) RETURNING instanceId", db)
 	findInstance := prepare("SELECT instance FROM Instances WHERE instanceId = $1", db)
+	updateInstance := prepare("UPDATE Instances set instance = instance || jsonb($1::TEXT) WHERE instanceId = $2 RETURNING instanceId", db)
 	addEvent := prepare("UPDATE Instances SET instance = jsonb_set(instance, '{events}', (SELECT (instance->'events')  || TO_JSONB(json_build_object('type', $1::TEXT, 'time', $2::TEXT, 'message', $3::TEXT, 'messageOffset', $4::TEXT)) FROM Instances WHERE instanceid = $5), true) WHERE instanceid = $5 RETURNING instanceId", db)
 	addDimension := prepare("INSERT INTO Dimensions(instanceId, nodeName, value) VALUES($1, $2, $3)", db)
 	getDimensions := prepare("SELECT nodeName, value, nodeId FROM Dimensions WHERE instanceId = $1", db)
 	addNodeID := prepare("UPDATE Dimensions SET nodeId = $1 WHERE instanceId = $2 AND nodeName = $3 RETURNING instanceId", db)
 	createPublishMessage := prepare("SELECT job->>'recipe', job->'files', STRING_AGG(instanceId::TEXT, ', ') FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE jobs.jobId = $1 GROUP BY jobs.job", db)
-	return Datastore{db: db, addJob: addJob, updateJob: updateJob, addInstance: addInstance,
+	return Datastore{db: db, addJob: addJob, updateJob: updateJob, addInstance: addInstance, updateInstance: updateInstance,
 		findInstance: findInstance, addFileToJob: addFileToJob, addEvent: addEvent, addDimension: addDimension,
 		getDimensions: getDimensions, addNodeID: addNodeID, createPublishMessage: createPublishMessage}, nil
 }
@@ -103,7 +105,7 @@ func (ds Datastore) UpdateJobState(jobID string, job *models.Job) error {
 
 // AddInstance - Add an instance and relate it to a job.
 func (ds Datastore) AddInstance(tx *sql.Tx, jobID string) (string, error) {
-	job := models.Instance{State: "Created", LastUpdated: time.Now().UTC().String(), Events: []models.Event{}}
+	job := models.Instance{State: "Created", LastUpdated: time.Now().UTC().String(), Events: &[]models.Event{}}
 	bytes, error := json.Marshal(job)
 	if error != nil {
 		return "", error
@@ -132,6 +134,18 @@ func (ds Datastore) GetInstance(instanceID string) (models.Instance, error) {
 	}
 	importJob.InstanceID = instanceID
 	return importJob, nil
+}
+
+func (ds Datastore) UpdateInstance(instanceID string, instance *models.Instance) error {
+	json, jsonErr := json.Marshal(instance)
+	if jsonErr != nil {
+		return jsonErr
+	}
+	row := ds.updateInstance.QueryRow(string(json), instanceID)
+	var instanceIDReturned sql.NullString
+	// Check that a instanceId is returned if not, no rows where update so return a job not found error
+	dataStoreError := row.Scan(&instanceIDReturned)
+	return dataStoreError
 }
 
 // AddEvent - Add an event into an instance.

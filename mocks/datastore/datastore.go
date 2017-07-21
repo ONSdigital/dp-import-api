@@ -47,8 +47,17 @@ func (ds *DataStore) GetInstance(instanceId string) (models.Instance, error) {
 	if ds.InternalError {
 		return models.Instance{}, internalError
 	}
-	return models.Instance{InstanceID: "234234", State: "Created",
-		Events: []models.Event{models.Event{Type: "Info", Message: "Create at ...", Time: "00000", MessageOffset: "0"}}}, nil
+	return models.Instance{InstanceID: "234234", State: "Created"}, nil
+}
+
+func (ds *DataStore) UpdateInstance(instanceId string, instance *models.Instance) error {
+	if ds.NotFound {
+		return errors.JobNotFoundError
+	}
+	if ds.InternalError {
+		return internalError
+	}
+	return nil
 }
 
 func (ds *DataStore) AddUploadedFile(instanceId string, s3file *models.UploadedFile) error {

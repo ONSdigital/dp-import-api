@@ -14,6 +14,7 @@ var (
 	addFileToJobSQL        = "UPDATE Jobs SET job = jsonb_set"
 	createInstanceSQL      = "INSERT INTO Instances"
 	findInstanceSQL        = "SELECT instance FROM Instances WHERE"
+	updateInstanceSQL         = "UPDATE Instances set instance = instance"
 	addEventSQL            = "UPDATE Instances SET instance = jsonb_set"
 	addDimensionSQL        = "INSERT INTO Dimensions"
 	findDimensionsSQL      = "SELECT nodeName, value, nodeId"
@@ -127,7 +128,7 @@ func TestUploadFile(t *testing.T) {
 	})
 }
 
-func TestAddUpdateState(t *testing.T) {
+func TestUpdateJobState(t *testing.T) {
 	t.Parallel()
 	Convey("When updating the job state, no errors are returned", t, func() {
 		mock, db := NewSQLMockWithSQLStatements()
@@ -137,6 +138,20 @@ func TestAddUpdateState(t *testing.T) {
 			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).
 			WillReturnRows(sqlmock.NewRows([]string{"instanceId"}).AddRow("123"))
 		dataStoreErr := ds.UpdateJobState("123", &models.Job{State: "Start"})
+		So(dataStoreErr, ShouldBeNil)
+	})
+}
+
+func TestUpdateInstanceState(t *testing.T) {
+	t.Parallel()
+	Convey("When updating the instance state, no errors are returned", t, func() {
+		mock, db := NewSQLMockWithSQLStatements()
+		ds, err := NewDatastore(db)
+		So(err, ShouldBeNil)
+		mock.ExpectPrepare(updateInstanceSQL).ExpectQuery().
+			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).
+			WillReturnRows(sqlmock.NewRows([]string{"instanceId"}).AddRow("123"))
+		dataStoreErr := ds.UpdateInstance("123", &models.Instance{NumberOfObservations: 5})
 		So(dataStoreErr, ShouldBeNil)
 	})
 }
@@ -167,6 +182,7 @@ func NewSQLMockWithSQLStatements() (sqlmock.Sqlmock, *sql.DB) {
 	mock.ExpectPrepare(updateJobStateSQL)
 	mock.ExpectPrepare(addFileToJobSQL)
 	mock.ExpectPrepare(createInstanceSQL)
+	mock.ExpectPrepare(updateInstanceSQL)
 	mock.ExpectPrepare(findInstanceSQL)
 	mock.ExpectPrepare(addEventSQL)
 	mock.ExpectPrepare(addDimensionSQL)

@@ -59,12 +59,12 @@ type Dimension struct {
 
 // JobInstanceState - A structure used for a instance job
 type Instance struct {
-	InstanceID           string   `json:"instance_id"`
-	State                string   `json:"state"`
-	Events               []Event  `json:"events"`
-	NumberOfObservations int      `json:"number_of_observations"`
-	Headers              []string `json:"headers"`
-	LastUpdated          string   `json:"last_updated"`
+	InstanceID           string    `json:"instance_id,omitempty"`
+	State                string    `json:"state,omitempty"`
+	Events               *[]Event  `json:"events,omitempty"`
+	NumberOfObservations int       `json:"number_of_observations,omitempty"`
+	Headers              *[]string `json:"headers,omitempty"`
+	LastUpdated          string    `json:"last_updated,omitempty"`
 }
 
 // UploadedFile - a structure used for a file which has been uploaded to a bucket
@@ -133,4 +133,18 @@ func CreateEvent(reader io.Reader) (*Event, error) {
 		return nil, fmt.Errorf("Failed to parse json body")
 	}
 	return &message, message.Validate()
+}
+
+// CreateInstance - Create an instance
+func CreateInstance(reader io.Reader) (*Instance, error) {
+	bytes, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to read message body")
+	}
+	var instance Instance
+	badJSONError := json.Unmarshal(bytes, &instance)
+	if badJSONError != nil {
+		return nil, fmt.Errorf("Failed to parse json body")
+	}
+	return &instance, err
 }
