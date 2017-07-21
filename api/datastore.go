@@ -4,7 +4,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/models"
 )
 
-// DataStore - .......
+// DataStore - A interface used to store instances and jobs
 type DataStore interface {
 	AddJob(host string, job *models.Job) (models.Job, error)
 	UpdateJobState(jobID string, state *models.Job) error

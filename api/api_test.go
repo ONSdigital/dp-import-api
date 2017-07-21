@@ -27,7 +27,7 @@ func TestAddJobReturnsInternalError(t *testing.T) {
 
 func TestAddJobReturnsBadClientRequest(t *testing.T) {
 	t.Parallel()
-	Convey("When a empt json message is sent, a bad request is returned", t, func() {
+	Convey("When a empty json message is sent, a bad request is returned", t, func() {
 		reader := strings.NewReader("{ }")
 		r, err := http.NewRequest("POST", "http://localhost:21800/jobs", reader)
 		So(err, ShouldBeNil)
