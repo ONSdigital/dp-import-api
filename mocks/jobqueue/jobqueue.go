@@ -14,7 +14,7 @@ type V4File struct {
 	URL        string `avro:"file_url"`
 }
 
-func (ji *JobImporter) Queue(job *models.PublishDataset) error {
+func (ji *JobImporter) Queue(job *models.ImportData) error {
 	if ji.returnError {
 		return fmt.Errorf("Failed to queue import job")
 	}

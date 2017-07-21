@@ -7,14 +7,13 @@ import (
 	"io/ioutil"
 )
 
-// Job - A structure for an jobimport job
+// Job - A structure for an importqueue job
 type Job struct {
-	JobID             string          `json:"job_id,omitempty"`
-	Recipe            string          `json:"recipe,omitempty"`
-	State             string          `json:"state,omitempty"`
-	UploadedFiles     *[]UploadedFile `json:"files,omitempty"`
-	NumberOfInstances int             `json:"number_of_instances,omitempty"`
-	Links             JobLinks        `json:"links,omitempty"`
+	JobID         string          `json:"job_id,omitempty"`
+	Recipe        string          `json:"recipe,omitempty"`
+	State         string          `json:"state,omitempty"`
+	UploadedFiles *[]UploadedFile `json:"files,omitempty"`
+	Links         JobLinks        `json:"links,omitempty"`
 }
 
 type JobLinks struct {
@@ -23,8 +22,8 @@ type JobLinks struct {
 
 // Validate - Validate the content of the structure
 func (job *Job) Validate() error {
-	if job.Recipe == "" || job.NumberOfInstances == 0 {
-		return fmt.Errorf("Missing properties to create jobimport job struct")
+	if job.Recipe == "" {
+		return fmt.Errorf("Missing properties to create importqueue job struct")
 	}
 	if job.State == "" {
 		job.State = "created"
@@ -82,11 +81,16 @@ func (s UploadedFile) Validate() error {
 	return nil
 }
 
-// PublishDataset - A structure used to create a message to data baker
-type PublishDataset struct {
-	Recipe        string         `avro:"recipe"`
-	UploadedFiles []UploadedFile `avro:"files"`
-	InstanceIds   []string       `avro:"instance_ids"`
+// ImportData - A structure used to create a message to data baker
+type ImportData struct {
+	JobId         string
+	Recipe        string         `json:"recipe,omitempty"`
+	UploadedFiles []UploadedFile `json:"files,omitempty"`
+	InstanceIds   []string
+}
+
+type DataBakerEvent struct {
+	JobId string `avro:"job_id"`
 }
 
 // CreateJob - Create a job from a reader

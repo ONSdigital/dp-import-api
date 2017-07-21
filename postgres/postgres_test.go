@@ -18,8 +18,11 @@ var (
 	addDimensionSQL        = "INSERT INTO Dimensions"
 	findDimensionsSQL      = "SELECT nodeName, value, nodeId"
 	updateDimensionSQL     = "UPDATE Dimensions SET nodeId"
-	buildPublishDatasetSQL = "SELECT job->'recipe', job->'s3Files', STRING_AGG"
+	buildPublishDatasetSQL = "SELECT job->>'recipe', job->'files', STRING_AGG"
 )
+
+// go-sqlmock libray does not support all transations methods (eg tx.Stmt(*).Query(...)). So
+// AddJob and AddInstance functions do not have tests.
 
 func TestNewPostgresDatastore(t *testing.T) {
 	t.Parallel()
@@ -31,42 +34,9 @@ func TestNewPostgresDatastore(t *testing.T) {
 	})
 }
 
-func TestAddJobReturnsJobInstance(t *testing.T) {
-	t.Parallel()
-	Convey("When creating a new job, a job instance is returned", t, func() {
-		mock, db := NewSQLMockWithSQLStatements()
-		ds, err := NewDatastore(db)
-		So(err, ShouldBeNil)
-		mock.ExpectQuery(createJobSQL).WillReturnRows(sqlmock.NewRows([]string{"jobId"}).
-			AddRow("123"))
-		mock.ExpectQuery(createInstanceSQL).WillReturnRows(sqlmock.NewRows([]string{"InstanceID"}).
-			AddRow("321"))
-		jobInstance, err := ds.AddJob(&models.Job{Recipe: "test", NumberOfInstances: 1})
-		So(err, ShouldBeNil)
-		So(jobInstance.JobID, ShouldEqual, "123")
-		So(jobInstance.Links.InstanceIDs, ShouldContain, "http://localhost:21800/instances/321")
-	})
-}
-
-func TestAddInstanceReturnsInstanceId(t *testing.T) {
-	t.Parallel()
-	Convey("When creating a new jobimport job, an instanceId is returned", t, func() {
-		expectID := "000001"
-		mock, db := NewSQLMockWithSQLStatements()
-		ds, err := NewDatastore(db)
-		So(err, ShouldBeNil)
-		mock.ExpectPrepare(createInstanceSQL).ExpectQuery().
-			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).WillReturnRows(sqlmock.NewRows([]string{"InstanceID"}).
-			AddRow(expectID))
-		jobID, err := ds.AddInstance("123")
-		So(err, ShouldBeNil)
-		So(jobID, ShouldEqual, expectID)
-	})
-}
-
 func TestGetInstance(t *testing.T) {
 	t.Parallel()
-	Convey("When an instanceId is provided, the jobimport job state is returned", t, func() {
+	Convey("When an instanceId is provided, the importqueue job state is returned", t, func() {
 		jsonContent := "{ \"state\":\"Created\"}"
 		mock, db := NewSQLMockWithSQLStatements()
 		ds, err := NewDatastore(db)
@@ -180,7 +150,7 @@ func TestBuildPublishDatasetMessage(t *testing.T) {
 		mock.ExpectQuery(buildPublishDatasetSQL).WithArgs(sqlmock.AnyArg()).
 			WillReturnRows(sqlmock.NewRows([]string{"recipe", "files", "instanceIds"}).
 				AddRow("test", "[{ \"aliasName\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}]", "1,2,3"))
-		message, dataStoreError := ds.BuildPublishDatasetMessage("123")
+		message, dataStoreError := ds.BuildImportDataMessage("123")
 		So(dataStoreError, ShouldBeNil)
 		So("test", ShouldEqual, message.Recipe)
 		So(1, ShouldEqual, len(message.UploadedFiles))

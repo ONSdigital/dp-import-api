@@ -11,7 +11,7 @@ func TestGetRetrunsDefaultValues(t *testing.T) {
 		configuration, error := Get()
 		So(error, ShouldBeNil)
 		So(configuration.BindAddr, ShouldEqual, ":21800")
-		So(configuration.DatabakerImportTopic, ShouldEqual, "data-bake")
+		So(configuration.DatabakerImportTopic, ShouldEqual, "data-bake-job-available")
 		So(configuration.KafkaMaxBytes, ShouldEqual, 2000000)
 	})
 }

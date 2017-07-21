@@ -24,12 +24,11 @@ func TestCreateJobWithEmptyJson(t *testing.T) {
 
 func TestCreateJobWithDataset(t *testing.T) {
 	Convey("When a job has a valid json body, a message is returned", t, func() {
-		reader := strings.NewReader("{ \"recipe\": \"test123\", \"number_of_instances\":1}")
+		reader := strings.NewReader("{ \"recipe\": \"test123\"}")
 		job, jobError := CreateJob(reader)
 		So(jobError, ShouldBeNil)
 		So(job.Validate(), ShouldBeNil)
 		So(job.Recipe, ShouldEqual, "test123")
-		So(job.NumberOfInstances, ShouldEqual, 1)
 	})
 }
 

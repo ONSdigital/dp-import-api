@@ -3,9 +3,8 @@ package postgres
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
+	"github.com/ONSdigital/dp-import-api/errors"
 	"github.com/ONSdigital/dp-import-api/models"
-	"github.com/ONSdigital/dp-import-api/utils"
 	"strings"
 	"time"
 )
@@ -44,36 +43,39 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 	addDimension := prepare("INSERT INTO Dimensions(instanceId, nodeName, value) VALUES($1, $2, $3)", db)
 	getDimensions := prepare("SELECT nodeName, value, nodeId FROM Dimensions WHERE instanceId = $1", db)
 	addNodeID := prepare("UPDATE Dimensions SET nodeId = $1 WHERE instanceId = $2 AND nodeName = $3 RETURNING instanceId", db)
-	createPublishMessage := prepare("SELECT job->'recipe', job->'s3Files', STRING_AGG(instanceId::TEXT, ', ') FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE jobs.jobId = $1 GROUP BY jobs.job", db)
+	createPublishMessage := prepare("SELECT job->>'recipe', job->'files', STRING_AGG(instanceId::TEXT, ', ') FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE jobs.jobId = $1 GROUP BY jobs.job", db)
 	return Datastore{db: db, addJob: addJob, updateJob: updateJob, addInstance: addInstance,
 		findInstance: findInstance, addFileToJob: addFileToJob, addEvent: addEvent, addDimension: addDimension,
 		getDimensions: getDimensions, addNodeID: addNodeID, createPublishMessage: createPublishMessage}, nil
 }
 
 // AddJob - Add a job to be stored in postgres.
-func (ds Datastore) AddJob(newjob *models.Job) (models.Job, error) {
+func (ds Datastore) AddJob(host string, newjob *models.Job) (models.Job, error) {
 	bytes, error := json.Marshal(newjob)
-	fmt.Println(string(bytes))
 	if error != nil {
 		return models.Job{}, error
 	}
-	row := ds.addJob.QueryRow(bytes)
+	tx, _ := ds.db.Begin()
+	row := tx.Stmt(ds.addJob).QueryRow(bytes)
 	var jobID sql.NullString
 	rowError := row.Scan(&jobID)
 	if rowError != nil {
 		return models.Job{}, rowError
 	}
-	instanceIDs := []string{}
-	for i := 0; i < newjob.NumberOfInstances; i++ {
-		id, instanceIDErr := ds.AddInstance(jobID.String)
-		if instanceIDErr != nil {
-			return models.Job{}, instanceIDErr
+
+	id, instanceIDErr := ds.AddInstance(tx, jobID.String)
+	if instanceIDErr != nil {
+		if txError := tx.Rollback(); txError != nil {
+			return models.Job{}, txError
 		}
-		url := "http://localhost:21800/instances/" + id
-		instanceIDs = append(instanceIDs, url)
+		return models.Job{}, instanceIDErr
 	}
+	if txError := tx.Commit(); txError != nil {
+		return models.Job{}, txError
+	}
+	url := host + "/instances/" + id
 	newjob.JobID = jobID.String
-	newjob.Links.InstanceIDs = instanceIDs
+	newjob.Links.InstanceIDs = []string{url}
 	return *newjob, nil
 }
 
@@ -100,13 +102,13 @@ func (ds Datastore) UpdateJobState(jobID string, job *models.Job) error {
 }
 
 // AddInstance - Add an instance and relate it to a job.
-func (ds Datastore) AddInstance(jobID string) (string, error) {
+func (ds Datastore) AddInstance(tx *sql.Tx, jobID string) (string, error) {
 	job := models.Instance{State: "Created", LastUpdated: time.Now().UTC().String(), Events: []models.Event{}}
 	bytes, error := json.Marshal(job)
 	if error != nil {
 		return "", error
 	}
-	row := ds.addInstance.QueryRow(jobID, bytes)
+	row := tx.Stmt(ds.addInstance).QueryRow(jobID, bytes)
 	var instanceID sql.NullString
 	rowError := row.Scan(&instanceID)
 	if rowError != nil {
@@ -185,8 +187,8 @@ func (ds Datastore) AddNodeID(instanceID, nodeID string, message *models.Dimensi
 	return convertError(error)
 }
 
-// BuildPublishDatasetMessage - Build a publish message to send to data baker
-func (ds Datastore) BuildPublishDatasetMessage(jobID string) (*models.PublishDataset, error) {
+// BuildImportDataMessage - Build a publish message to send to data baker
+func (ds Datastore) BuildImportDataMessage(jobID string) (*models.ImportData, error) {
 	row := ds.createPublishMessage.QueryRow(jobID)
 	var recipe, filesAsJSON, instancIds sql.NullString
 	error := row.Scan(&recipe, &filesAsJSON, &instancIds)
@@ -198,7 +200,8 @@ func (ds Datastore) BuildPublishDatasetMessage(jobID string) (*models.PublishDat
 	if err != nil {
 		return nil, err
 	}
-	return &models.PublishDataset{Recipe: recipe.String,
+	return &models.ImportData{JobId: jobID,
+		Recipe:        recipe.String,
 		UploadedFiles: files,
 		InstanceIds:   strings.Split(instancIds.String, ",")}, nil
 }
@@ -206,7 +209,7 @@ func (ds Datastore) BuildPublishDatasetMessage(jobID string) (*models.PublishDat
 func convertError(err error) error {
 	switch {
 	case err == sql.ErrNoRows:
-		return utils.JobNotFoundError
+		return errors.JobNotFoundError
 	case err != nil:
 		return err
 	}

@@ -25,9 +25,9 @@ DP Import API
 | POSTGRES_URL         | user=dp dbname=ImportJobs sslmode=disable | URL to a Postgres services
 | KAFKA_ADDR           | localhost:9092                            | A list of kafka brokers
 | KAFKA_MAX_BYTES      | 200000                                    | The max message size for kafka producer
-| DATABAKER_IMPORT_TOPIC | data-baker                              | The topic to place messages on
-|                      |                                           |
-|                      |                                       |
+| DATABAKER_IMPORT_TOPIC | data-bake-job-available                 | The topic to place messages to data-baker
+| INPUT_FILE_AVAILABLE_TOPIC  | input-file-available               | The topic to place V4 files
+| HOST                 |  "http://localhost:21800"                 | The host name used to build URLs
 
 ### Contributing
 

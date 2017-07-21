@@ -4,24 +4,15 @@ import (
 	"github.com/ONSdigital/go-ns/avro"
 )
 
-var PublishDatasetEvent = `{
+var DataBakerEvent = `{
   "type": "record",
   "name": "publish-dataset",
   "fields": [
-  { "name": "recipe", "type": "string" },
-  { "name": "instance_ids", "type": { "type": "array", "items": "string"}},
-  { "name": "files", "type": { "type": "array", "items": {
-    "name": "file", "type": "record", "fields": [
-     { "name": "alias-name", "type": "string"},
-     { "name": "url", "type": "string"}
-]
-}
-}
-}
-]
+  { "name": "job_id", "type": "string" }
+  ]
 }`
 
-var ImoprtV4FileEvent = `{
+var ImportV4FileEvent = `{
   "type": "record",
   "name": "input-file-available",
   "fields": [
@@ -30,10 +21,10 @@ var ImoprtV4FileEvent = `{
   ]
 }`
 
-var PublishDataset *avro.Schema = &avro.Schema{
-	Definition: PublishDatasetEvent,
+var DataBaker *avro.Schema = &avro.Schema{
+	Definition: DataBakerEvent,
 }
 
-var ImoprtV4File *avro.Schema = &avro.Schema{
-	Definition: ImoprtV4FileEvent,
+var ImportV4File *avro.Schema = &avro.Schema{
+	Definition: ImportV4FileEvent,
 }
