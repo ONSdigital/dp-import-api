@@ -6,12 +6,13 @@ import (
 	"github.com/ONSdigital/go-ns/log"
 
 	"database/sql"
+	"net/http"
+	"os"
+
 	"github.com/ONSdigital/dp-import-api/config"
 	"github.com/ONSdigital/dp-import-api/importqueue"
 	"github.com/ONSdigital/go-ns/kafka"
 	_ "github.com/lib/pq"
-	"net/http"
-	"os"
 )
 
 func main() {
@@ -37,13 +38,13 @@ func main() {
 	}
 	dataBakerProducer := kafka.NewProducer(configuration.Brokers, configuration.DatabakerImportTopic, configuration.KafkaMaxBytes)
 	directProducer := kafka.NewProducer(configuration.Brokers, configuration.InputFileAvailableTopic, configuration.KafkaMaxBytes)
-	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output, directProducer.Output)
+	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
 	importAPI := api.CreateImportAPI(configuration.Host, postgresDataStore, &jobQueue)
 	httpCloseError := http.ListenAndServe(configuration.BindAddr, importAPI.Router)
 	if httpCloseError != nil {
 		log.Error(httpCloseError, log.Data{"BIND_ADDR": configuration.BindAddr,
 			"TOPICS": []string{configuration.DatabakerImportTopic, configuration.InputFileAvailableTopic}})
 	}
-	dataBakerProducer.Closer <- true
-	directProducer.Closer <- true
+	dataBakerProducer.Closer() <- true
+	directProducer.Closer() <- true
 }
