@@ -17,25 +17,26 @@ const internalError = "Internal server error"
 type ImportAPI struct {
 	host      string
 	dataStore DataStore
-	Router    *mux.Router
+	router    *mux.Router
 	jobQueue  JobQueue
 }
+// f func(http.ResponseWriter, *http.Request))
+//
 
-// CreateImportAPI - Create the api with all the routes configured
-func CreateImportAPI(host string, dataStore DataStore, jobQueue JobQueue) *ImportAPI {
-	router := mux.NewRouter()
-	api := ImportAPI{host: host, dataStore: dataStore, Router: router, jobQueue: jobQueue}
+// CreateImportAPI - Createerr the api with all the routes configured
+func CreateImportAPI(host string, router *mux.Router ,dataStore DataStore, jobQueue JobQueue) *ImportAPI {
+	api := ImportAPI{host: host, dataStore: dataStore, router: router, jobQueue: jobQueue}
 	// External API for florence
-	api.Router.HandleFunc("/jobs", api.addJob).Methods("POST")
-	api.Router.HandleFunc("/jobs/{jobId}", api.updateJob).Methods("PUT")
-	api.Router.HandleFunc("/jobs/{jobId}/files", api.addUploadedFile).Methods("PUT")
-	api.Router.HandleFunc("/instances/{instanceId}", api.getInstance).Methods("GET")
+	api.router.Path("/jobs").Methods("POST").HandlerFunc(api.addJob)
+	api.router.Path("/jobs/{jobId}").Methods("PUT").HandlerFunc(api.updateJob)
+	api.router.Path("/jobs/{jobId}/files").Methods("PUT").HandlerFunc( api.addUploadedFile)
+	api.router.Path("/instances/{instanceId}", ).Methods("GET").HandlerFunc(api.getInstance)
 	// Internal API
-	api.Router.HandleFunc("/instances/{instanceId}", api.updateInstance).Methods("PUT")
-	api.Router.HandleFunc("/instances/{instanceId}/events", api.addEvent).Methods("PUT")
-	api.Router.HandleFunc("/instances/{instanceId}/dimensions/{dimension_name}/options/{value}", api.addDimension).Methods("PUT")
-	api.Router.HandleFunc("/instances/{instanceId}/dimensions/{dimension_name}/nodeid/{value}", api.addNodeID).Methods("PUT")
-	api.Router.HandleFunc("/instances/{instanceId}/dimensions", api.getDimensions).Methods("GET")
+	api.router.Path("/instances/{instanceId}").Methods("PUT").HandlerFunc(api.updateInstance)
+	api.router.Path("/instances/{instanceId}/events").Methods("PUT").HandlerFunc(api.addEvent)
+	api.router.Path("/instances/{instanceId}/dimensions/{dimension_name}/options/{value}").Methods("PUT").HandlerFunc(api.addDimension)
+	api.router.Path("/instances/{instanceId}/dimensions/{dimension_name}/nodeid/{value}").Methods("PUT").HandlerFunc(api.addNodeID)
+	api.router.Path("/instances/{instanceId}/dimensions").Methods("GET").HandlerFunc(api.getDimensions)
 
 	return &api
 }
@@ -47,8 +48,8 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}
-	if validationError := newJob.Validate(); validationError != nil {
-		log.Error(validationError, log.Data{})
+	if err = newJob.Validate(); err != nil {
+		log.Error(err, log.Data{})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}

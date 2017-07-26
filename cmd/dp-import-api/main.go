@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gorilla/mux"
 	"github.com/ONSdigital/dp-import-api/config"
 	"github.com/ONSdigital/dp-import-api/importqueue"
 	"github.com/ONSdigital/go-ns/kafka"
@@ -24,8 +25,8 @@ func main() {
 	}
 
 	log.Info("Starting importqueue api", log.Data{"BIND_ADDR": configuration.BindAddr,
-		"TOPICS":  []string{configuration.DatabakerImportTopic, configuration.InputFileAvailableTopic},
-		"BROKERS": configuration.Brokers})
+		"topics":  []string{configuration.DatabakerImportTopic, configuration.InputFileAvailableTopic},
+		"brokers": configuration.Brokers})
 	db, postgresErr := sql.Open("postgres", configuration.PostgresURL)
 	if postgresErr != nil {
 		log.ErrorC("DB open error", postgresErr, nil)
@@ -38,9 +39,12 @@ func main() {
 	}
 	dataBakerProducer := kafka.NewProducer(configuration.Brokers, configuration.DatabakerImportTopic, configuration.KafkaMaxBytes)
 	directProducer := kafka.NewProducer(configuration.Brokers, configuration.InputFileAvailableTopic, configuration.KafkaMaxBytes)
+
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
-	importAPI := api.CreateImportAPI(configuration.Host, postgresDataStore, &jobQueue)
-	httpCloseError := http.ListenAndServe(configuration.BindAddr, importAPI.Router)
+	router := mux.NewRouter()
+	_ = api.CreateImportAPI(configuration.Host,router, postgresDataStore, &jobQueue)
+	httpCloseError := http.ListenAndServe(configuration.BindAddr, router)
+	
 	if httpCloseError != nil {
 		log.Error(httpCloseError, log.Data{"BIND_ADDR": configuration.BindAddr,
 			"TOPICS": []string{configuration.DatabakerImportTopic, configuration.InputFileAvailableTopic}})
