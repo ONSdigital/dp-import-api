@@ -18,36 +18,36 @@ import (
 
 func main() {
 	log.Namespace = "dp-import-api"
-	configuration, configErr := config.Get()
+	config, configErr := config.Get()
 	if configErr != nil {
 		log.Error(configErr, nil)
 		os.Exit(1)
 	}
 
-	log.Info("Starting importqueue api", log.Data{"BIND_ADDR": configuration.BindAddr,
-		"topics":  []string{configuration.DatabakerImportTopic, configuration.InputFileAvailableTopic},
-		"brokers": configuration.Brokers})
-	db, postgresErr := sql.Open("postgres", configuration.PostgresURL)
-	if postgresErr != nil {
-		log.ErrorC("DB open error", postgresErr, nil)
+	log.Info("Starting importqueue api", log.Data{"bind_addr": config.BindAddr,
+		"topics":  []string{config.DatabakerImportTopic, config.InputFileAvailableTopic},
+		"brokers": config.Brokers})
+	db, err := sql.Open("postgres", config.PostgresURL)
+	if err != nil {
+		log.ErrorC("DB open error", err, nil)
 		os.Exit(1)
 	}
-	postgresDataStore, dataStoreError := postgres.NewDatastore(db)
-	if dataStoreError != nil {
-		log.ErrorC("Create postgres error", dataStoreError, nil)
+	postgresDataStore, err := postgres.NewDatastore(db)
+	if err != nil {
+		log.ErrorC("Create postgres error", err, nil)
 		os.Exit(1)
 	}
-	dataBakerProducer := kafka.NewProducer(configuration.Brokers, configuration.DatabakerImportTopic, configuration.KafkaMaxBytes)
-	directProducer := kafka.NewProducer(configuration.Brokers, configuration.InputFileAvailableTopic, configuration.KafkaMaxBytes)
+	dataBakerProducer := kafka.NewProducer(config.Brokers, config.DatabakerImportTopic, config.KafkaMaxBytes)
+	directProducer := kafka.NewProducer(config.Brokers, config.InputFileAvailableTopic, config.KafkaMaxBytes)
 
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
 	router := mux.NewRouter()
-	_ = api.CreateImportAPI(configuration.Host,router, postgresDataStore, &jobQueue)
-	httpCloseError := http.ListenAndServe(configuration.BindAddr, router)
-	
-	if httpCloseError != nil {
-		log.Error(httpCloseError, log.Data{"BIND_ADDR": configuration.BindAddr,
-			"TOPICS": []string{configuration.DatabakerImportTopic, configuration.InputFileAvailableTopic}})
+	_ = api.CreateImportAPI(config.Host,router, postgresDataStore, &jobQueue)
+	err = http.ListenAndServe(config.BindAddr, router)
+
+	if err != nil {
+		log.Error(err, log.Data{"bind_addr": config.BindAddr,
+			"topic": []string{config.DatabakerImportTopic, config.InputFileAvailableTopic}})
 	}
 	dataBakerProducer.Closer() <- true
 	directProducer.Closer() <- true

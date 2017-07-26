@@ -102,8 +102,8 @@ func CreateJob(reader io.Reader) (*Job, error) {
 		return nil, fmt.Errorf("Failed to read message body")
 	}
 	var job Job
-	badJSONError := json.Unmarshal(bytes, &job)
-	if badJSONError != nil {
+	err = json.Unmarshal(bytes, &job)
+	if err != nil {
 		return nil, fmt.Errorf("Failed to parse json body")
 	}
 	return &job, nil
@@ -116,8 +116,8 @@ func CreateUploadedFile(reader io.Reader) (*UploadedFile, error) {
 		return nil, fmt.Errorf("Failed to read message body")
 	}
 	var message UploadedFile
-	badJSONError := json.Unmarshal(bytes, &message)
-	if badJSONError != nil {
+	err = json.Unmarshal(bytes, &message)
+	if err != nil {
 		return nil, fmt.Errorf("Failed to parse json body")
 	}
 	return &message, message.Validate()
@@ -130,8 +130,8 @@ func CreateEvent(reader io.Reader) (*Event, error) {
 		return nil, fmt.Errorf("Failed to read message body")
 	}
 	var message Event
-	badJSONError := json.Unmarshal(bytes, &message)
-	if badJSONError != nil {
+	err = json.Unmarshal(bytes, &message)
+	if err != nil {
 		return nil, fmt.Errorf("Failed to parse json body")
 	}
 	return &message, message.Validate()
@@ -144,8 +144,8 @@ func CreateInstance(reader io.Reader) (*Instance, error) {
 		return nil, fmt.Errorf("Failed to read message body")
 	}
 	var instance Instance
-	badJSONError := json.Unmarshal(bytes, &instance)
-	if badJSONError != nil {
+	err = json.Unmarshal(bytes, &instance)
+	if err != nil {
 		return nil, fmt.Errorf("Failed to parse json body")
 	}
 	return &instance, err

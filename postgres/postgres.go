@@ -53,27 +53,27 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 
 // AddJob - Add a job to be stored in postgres.
 func (ds Datastore) AddJob(host string, newjob *models.Job) (models.Job, error) {
-	bytes, error := json.Marshal(newjob)
-	if error != nil {
-		return models.Job{}, error
+	bytes, err := json.Marshal(newjob)
+	if err != nil {
+		return models.Job{}, err
 	}
 	tx, _ := ds.db.Begin()
 	row := tx.Stmt(ds.addJob).QueryRow(bytes)
 	var jobID sql.NullString
-	rowError := row.Scan(&jobID)
-	if rowError != nil {
-		return models.Job{}, rowError
+	err = row.Scan(&jobID)
+	if err != nil {
+		return models.Job{}, err
 	}
 
-	id, instanceIDErr := ds.AddInstance(tx, jobID.String)
-	if instanceIDErr != nil {
-		if txError := tx.Rollback(); txError != nil {
-			return models.Job{}, txError
+	id, err := ds.AddInstance(tx, jobID.String)
+	if err != nil {
+		if err = tx.Rollback(); err != nil {
+			return models.Job{}, err
 		}
-		return models.Job{}, instanceIDErr
+		return models.Job{}, err
 	}
-	if txError := tx.Commit(); txError != nil {
-		return models.Job{}, txError
+	if err := tx.Commit(); err != nil {
+		return models.Job{}, err
 	}
 	url := host + "/instances/" + id
 	newjob.JobID = jobID.String
@@ -86,35 +86,33 @@ func (ds Datastore) AddUploadedFile(instanceID string, message *models.UploadedF
 	row := ds.addFileToJob.QueryRow(message.AliasName, message.URL, instanceID)
 	var returnedInstanceID sql.NullString
 	// Check that a instanceID is returned if not, no rows where update so return a job not found error
-	error := row.Scan(&returnedInstanceID)
-	return convertError(error)
+	return convertError(row.Scan(&returnedInstanceID))
 }
 
 // UpdateJobState - Update the state of a job.
 func (ds Datastore) UpdateJobState(jobID string, job *models.Job) error {
-	json, jsonErr := json.Marshal(job)
-	if jsonErr != nil {
-		return jsonErr
+	json, err := json.Marshal(job)
+	if err != nil {
+		return err
 	}
 	row := ds.updateJob.QueryRow(string(json), jobID)
 	var jobIDReturned sql.NullString
 	// Check that a instanceId is returned if not, no rows where update so return a job not found error
-	dataStoreError := row.Scan(&jobIDReturned)
-	return dataStoreError
+	return convertError(row.Scan(&jobIDReturned))
 }
 
 // AddInstance - Add an instance and relate it to a job.
 func (ds Datastore) AddInstance(tx *sql.Tx, jobID string) (string, error) {
-	job := models.Instance{State: "Created", LastUpdated: time.Now().UTC().String(), Events: &[]models.Event{}}
-	bytes, error := json.Marshal(job)
-	if error != nil {
-		return "", error
+	job := models.Instance{State: "created", LastUpdated: time.Now().UTC().String(), Events: &[]models.Event{}}
+	bytes, err := json.Marshal(job)
+	if err != nil {
+		return "", err
 	}
 	row := tx.Stmt(ds.addInstance).QueryRow(jobID, bytes)
 	var instanceID sql.NullString
-	rowError := row.Scan(&instanceID)
-	if rowError != nil {
-		return "", rowError
+	err = row.Scan(&instanceID)
+	if err != nil {
+		return "", err
 	}
 	return instanceID.String, nil
 }
@@ -123,14 +121,14 @@ func (ds Datastore) AddInstance(tx *sql.Tx, jobID string) (string, error) {
 func (ds Datastore) GetInstance(instanceID string) (models.Instance, error) {
 	row := ds.findInstance.QueryRow(instanceID)
 	var job sql.NullString
-	rowError := row.Scan(&job)
-	if rowError != nil {
-		return models.Instance{}, convertError(rowError)
+	err := row.Scan(&job)
+	if err != nil {
+		return models.Instance{}, convertError(err)
 	}
 	var importJob models.Instance
-	error := json.Unmarshal([]byte(job.String), &importJob)
-	if error != nil {
-		return models.Instance{}, error
+	err = json.Unmarshal([]byte(job.String), &importJob)
+	if err != nil {
+		return models.Instance{}, err
 	}
 	importJob.InstanceID = instanceID
 	return importJob, nil
@@ -138,15 +136,14 @@ func (ds Datastore) GetInstance(instanceID string) (models.Instance, error) {
 
 // UpdateInstance - Update an instance in postgres
 func (ds Datastore) UpdateInstance(instanceID string, instance *models.Instance) error {
-	json, jsonErr := json.Marshal(instance)
-	if jsonErr != nil {
-		return jsonErr
+	json, err := json.Marshal(instance)
+	if err != nil {
+		return err
 	}
 	row := ds.updateInstance.QueryRow(string(json), instanceID)
 	var instanceIDReturned sql.NullString
 	// Check that a instanceId is returned if not, no rows where update so return a job not found error
-	dataStoreError := row.Scan(&instanceIDReturned)
-	return dataStoreError
+	return  convertError(row.Scan(&instanceIDReturned))
 }
 
 // AddEvent - Add an event into an instance.
@@ -154,8 +151,7 @@ func (ds Datastore) AddEvent(instanceID string, event *models.Event) error {
 	row := ds.addEvent.QueryRow(event.Type, event.Time, event.Message, event.MessageOffset, instanceID)
 	var returnedInstanceID sql.NullString
 	// Check that a instanceID is returned if not, no rows where update so return a job not found error
-	error := row.Scan(&returnedInstanceID)
-	return convertError(error)
+	return convertError(row.Scan(&returnedInstanceID))
 }
 
 // AddDimension - Add a dimension to cache in postgres
@@ -165,9 +161,9 @@ func (ds Datastore) AddDimension(instanceID string, dimension *models.Dimension)
 	if err != nil {
 		return err
 	}
-	res, queryError := ds.addDimension.Query(instanceID, dimension.Name, dimension.Value)
-	if queryError != nil {
-		return queryError
+	res, err := ds.addDimension.Query(instanceID, dimension.Name, dimension.Value)
+	if err != nil {
+		return err
 	}
 	return res.Close()
 }
@@ -198,20 +194,19 @@ func (ds Datastore) GetDimension(instanceID string) ([]models.Dimension, error) 
 func (ds Datastore) AddNodeID(instanceID, nodeID string, message *models.Dimension) error {
 	row := ds.addNodeID.QueryRow(message.NodeID, instanceID, nodeID)
 	var returnedInstanceID sql.NullString
-	error := row.Scan(&returnedInstanceID)
-	return convertError(error)
+	return convertError(row.Scan(&returnedInstanceID))
 }
 
 // BuildImportDataMessage - Build a publish message to send to data baker
 func (ds Datastore) BuildImportDataMessage(jobID string) (*models.ImportData, error) {
 	row := ds.createPublishMessage.QueryRow(jobID)
 	var recipe, filesAsJSON, instancIds sql.NullString
-	error := row.Scan(&recipe, &filesAsJSON, &instancIds)
-	if error != nil {
-		return nil, error
+	err := row.Scan(&recipe, &filesAsJSON, &instancIds)
+	if err != nil {
+		return nil, err
 	}
 	var files []models.UploadedFile
-	err := json.Unmarshal([]byte(filesAsJSON.String), &files)
+	err = json.Unmarshal([]byte(filesAsJSON.String), &files)
 	if err != nil {
 		return nil, err
 	}
