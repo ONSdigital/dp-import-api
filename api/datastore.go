@@ -9,7 +9,7 @@ type DataStore interface {
 	AddJob(host string, job *models.Job) (models.Job, error)
 	UpdateJobState(jobID string, state *models.Job) error
 	GetInstance(instanceID string) (models.Instance, error)
-	UpdateInstance(instanceId string, instance *models.Instance) error
+	UpdateInstance(instanceID string, instance *models.Instance) error
 	AddUploadedFile(instanceID string, message *models.UploadedFile) error
 	AddEvent(instanceID string, event *models.Event) error
 	AddDimension(instanceID string, dimension *models.Dimension) error

@@ -3,7 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"encoding/json"
-	"github.com/ONSdigital/dp-import-api/errors"
+	"github.com/ONSdigital/dp-import-api/api-errors"
 	"github.com/ONSdigital/dp-import-api/models"
 	"strings"
 	"time"
@@ -136,6 +136,7 @@ func (ds Datastore) GetInstance(instanceID string) (models.Instance, error) {
 	return importJob, nil
 }
 
+// UpdateInstance - Update an instance in postgres
 func (ds Datastore) UpdateInstance(instanceID string, instance *models.Instance) error {
 	json, jsonErr := json.Marshal(instance)
 	if jsonErr != nil {
@@ -214,16 +215,16 @@ func (ds Datastore) BuildImportDataMessage(jobID string) (*models.ImportData, er
 	if err != nil {
 		return nil, err
 	}
-	return &models.ImportData{JobId: jobID,
+	return &models.ImportData{JobID: jobID,
 		Recipe:        recipe.String,
 		UploadedFiles: files,
-		InstanceIds:   strings.Split(instancIds.String, ",")}, nil
+		InstanceIDs:   strings.Split(instancIds.String, ",")}, nil
 }
 
 func convertError(err error) error {
 	switch {
 	case err == sql.ErrNoRows:
-		return errors.JobNotFoundError
+		return api_errors.JobNotFoundError
 	case err != nil:
 		return err
 	}

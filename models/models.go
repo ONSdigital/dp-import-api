@@ -16,6 +16,7 @@ type Job struct {
 	Links         JobLinks        `json:"links,omitempty"`
 }
 
+// JobLinks - A list of links to instance jobs
 type JobLinks struct {
 	InstanceIDs []string `json:"instance_ids"`
 }
@@ -57,7 +58,7 @@ type Dimension struct {
 	NodeID string `json:"node_id"`
 }
 
-// JobInstanceState - A structure used for a instance job
+// Instance - A structure used for a instance job
 type Instance struct {
 	InstanceID           string    `json:"instance_id,omitempty"`
 	State                string    `json:"state,omitempty"`
@@ -83,14 +84,15 @@ func (s UploadedFile) Validate() error {
 
 // ImportData - A structure used to create a message to data baker
 type ImportData struct {
-	JobId         string
+	JobID         string
 	Recipe        string         `json:"recipe,omitempty"`
 	UploadedFiles []UploadedFile `json:"files,omitempty"`
-	InstanceIds   []string
+	InstanceIDs   []string
 }
 
+// DataBakerEvent - An event used to trigger the databaker process
 type DataBakerEvent struct {
-	JobId string `avro:"job_id"`
+	JobID string `avro:"job_id"`
 }
 
 // CreateJob - Create a job from a reader

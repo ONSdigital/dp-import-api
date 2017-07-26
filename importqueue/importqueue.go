@@ -1,10 +1,10 @@
 package importqueue
 
 import (
-	"fmt"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/dp-import-api/schema"
 	"strings"
+	"errors"
 )
 
 type importQueue struct {
@@ -12,6 +12,7 @@ type importQueue struct {
 	databakerQueue chan []byte
 }
 
+// V4File - A V4 file to import into a graph database
 type V4File struct {
 	InstanceId string `avro:"instance_id"`
 	URL        string `avro:"file_url"`
@@ -23,11 +24,10 @@ func CreateImportQueue(databakerQueue, v4Queue chan []byte) importQueue {
 
 func (q *importQueue) Queue(job *models.ImportData) error {
 	if strings.ToLower(job.Recipe) == "v4" {
-		if len(job.InstanceIds) != 1 && len(job.UploadedFiles) != 1 {
-			return fmt.Errorf("InstanceIds and uploaded files must be 1")
+		if len(job.InstanceIDs) != 1 && len(job.UploadedFiles) != 1 {
+			return errors.New("InstanceIds and uploaded files must be 1")
 		}
-		file := V4File{InstanceId: job.InstanceIds[0], URL: job.UploadedFiles[0].URL}
-		fmt.Println("%+v\n", file)
+		file := V4File{InstanceId: job.InstanceIDs[0], URL: job.UploadedFiles[0].URL}
 		bytes, avroError := schema.ImportV4File.Marshal(file)
 		if avroError != nil {
 			return avroError
@@ -36,7 +36,7 @@ func (q *importQueue) Queue(job *models.ImportData) error {
 
 	} else {
 
-		bytes, avroError := schema.DataBaker.Marshal(models.DataBakerEvent{JobId: job.JobId})
+		bytes, avroError := schema.DataBaker.Marshal(models.DataBakerEvent{JobID: job.JobID})
 		if avroError != nil {
 			return avroError
 		}

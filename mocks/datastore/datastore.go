@@ -1,12 +1,12 @@
 package mocks
 
 import (
-	"fmt"
-	"github.com/ONSdigital/dp-import-api/errors"
 	"github.com/ONSdigital/dp-import-api/models"
+	"github.com/ONSdigital/dp-import-api/api-errors"
+	"errors"
 )
 
-var internalError = fmt.Errorf("DataStore internal error")
+var internalError = errors.New("DataStore internal error")
 
 type DataStore struct {
 	NotFound      bool
@@ -22,7 +22,7 @@ func (ds *DataStore) AddJob(host string, importJob *models.Job) (models.Job, err
 
 func (ds *DataStore) AddInstance(joId string) (string, error) {
 	if ds.NotFound {
-		return "", errors.JobNotFoundError
+		return "", api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
 		return "", internalError
@@ -32,7 +32,7 @@ func (ds *DataStore) AddInstance(joId string) (string, error) {
 
 func (ds *DataStore) UpdateJobState(string, *models.Job) error {
 	if ds.NotFound {
-		return errors.JobNotFoundError
+		return api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
 		return internalError
@@ -42,7 +42,7 @@ func (ds *DataStore) UpdateJobState(string, *models.Job) error {
 
 func (ds *DataStore) GetInstance(instanceId string) (models.Instance, error) {
 	if ds.NotFound {
-		return models.Instance{}, errors.JobNotFoundError
+		return models.Instance{}, api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
 		return models.Instance{}, internalError
@@ -52,7 +52,7 @@ func (ds *DataStore) GetInstance(instanceId string) (models.Instance, error) {
 
 func (ds *DataStore) UpdateInstance(instanceId string, instance *models.Instance) error {
 	if ds.NotFound {
-		return errors.JobNotFoundError
+		return api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
 		return internalError
@@ -62,7 +62,7 @@ func (ds *DataStore) UpdateInstance(instanceId string, instance *models.Instance
 
 func (ds *DataStore) AddUploadedFile(instanceId string, s3file *models.UploadedFile) error {
 	if ds.NotFound {
-		return errors.JobNotFoundError
+		return api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
 		return internalError
@@ -72,7 +72,7 @@ func (ds *DataStore) AddUploadedFile(instanceId string, s3file *models.UploadedF
 
 func (ds *DataStore) AddEvent(instanceId string, event *models.Event) error {
 	if ds.NotFound {
-		return errors.JobNotFoundError
+		return api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
 		return internalError
@@ -82,7 +82,7 @@ func (ds *DataStore) AddEvent(instanceId string, event *models.Event) error {
 
 func (ds *DataStore) AddDimension(instanceId string, dimension *models.Dimension) error {
 	if ds.NotFound {
-		return errors.JobNotFoundError
+		return api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
 		return internalError
@@ -92,7 +92,7 @@ func (ds *DataStore) AddDimension(instanceId string, dimension *models.Dimension
 
 func (ds *DataStore) GetDimension(instanceId string) ([]models.Dimension, error) {
 	if ds.NotFound {
-		return []models.Dimension{}, errors.JobNotFoundError
+		return []models.Dimension{}, api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
 		return []models.Dimension{}, internalError
@@ -102,7 +102,7 @@ func (ds *DataStore) GetDimension(instanceId string) ([]models.Dimension, error)
 
 func (ds *DataStore) AddNodeID(instanceId, nodeId string, message *models.Dimension) error {
 	if ds.NotFound {
-		return errors.JobNotFoundError
+		return api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
 		return internalError
@@ -112,11 +112,11 @@ func (ds *DataStore) AddNodeID(instanceId, nodeId string, message *models.Dimens
 
 func (ds *DataStore) BuildImportDataMessage(jobId string) (*models.ImportData, error) {
 	if ds.NotFound {
-		return nil, errors.JobNotFoundError
+		return nil, api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
 		return nil, internalError
 	}
-	return &models.ImportData{Recipe: "test", InstanceIds: []string{"1", "2", "3"},
+	return &models.ImportData{Recipe: "test", InstanceIDs: []string{"1", "2", "3"},
 		UploadedFiles: []models.UploadedFile{models.UploadedFile{URL: "s3//aws/bucket/file.xls", AliasName: "test"}}}, nil
 }

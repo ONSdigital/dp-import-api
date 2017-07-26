@@ -14,7 +14,7 @@ var (
 	addFileToJobSQL        = "UPDATE Jobs SET job = jsonb_set"
 	createInstanceSQL      = "INSERT INTO Instances"
 	findInstanceSQL        = "SELECT instance FROM Instances WHERE"
-	updateInstanceSQL         = "UPDATE Instances set instance = instance"
+	updateInstanceSQL      = "UPDATE Instances set instance = instance"
 	addEventSQL            = "UPDATE Instances SET instance = jsonb_set"
 	addDimensionSQL        = "INSERT INTO Dimensions"
 	findDimensionsSQL      = "SELECT nodeName, value, nodeId"
@@ -169,7 +169,7 @@ func TestBuildPublishDatasetMessage(t *testing.T) {
 		So(dataStoreError, ShouldBeNil)
 		So("test", ShouldEqual, message.Recipe)
 		So(1, ShouldEqual, len(message.UploadedFiles))
-		So(3, ShouldEqual, len(message.InstanceIds))
+		So(3, ShouldEqual, len(message.InstanceIDs))
 	})
 }
 
