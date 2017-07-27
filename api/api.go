@@ -21,7 +21,7 @@ type ImportAPI struct {
 	jobQueue  JobQueue
 }
 
-// CreateImportAPI - Createerr the api with all the routes configured
+// Create the api with all the routes configured
 func CreateImportAPI(host string, router *mux.Router ,dataStore DataStore, jobQueue JobQueue) *ImportAPI {
 	api := ImportAPI{host: host, dataStore: dataStore, router: router, jobQueue: jobQueue}
 	// External API for florence

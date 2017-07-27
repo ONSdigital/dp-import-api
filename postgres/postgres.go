@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// Datastore - A structure to hold SQL statements to be used to gather information or insert about Jobs and instances
+// A structure to hold SQL statements to be used to gather information or insert about Jobs and instances
 type Datastore struct {
 	db                   *sql.DB
 	addJob               *sql.Stmt
@@ -33,7 +33,7 @@ func prepare(sql string, db *sql.DB) *sql.Stmt {
 	return statement
 }
 
-// NewDatastore - Create a postgres datastore. This is used to store and find information about jobs and instances.
+// Create a postgres datastore. This is used to store and find information about jobs and instances.
 func NewDatastore(db *sql.DB) (Datastore, error) {
 	addJob := prepare("INSERT INTO Jobs(job) VALUES($1) RETURNING jobId", db)
 	updateJob := prepare("UPDATE Jobs set job = job || jsonb($1::TEXT) WHERE jobId = $2 RETURNING jobId", db)
@@ -51,7 +51,7 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 		getDimensions: getDimensions, addNodeID: addNodeID, createPublishMessage: createPublishMessage}, nil
 }
 
-// AddJob - Add a job to be stored in postgres.
+// Add a job to be stored in postgres.
 func (ds Datastore) AddJob(host string, newjob *models.Job) (models.Job, error) {
 	bytes, err := json.Marshal(newjob)
 	if err != nil {
@@ -81,7 +81,7 @@ func (ds Datastore) AddJob(host string, newjob *models.Job) (models.Job, error) 
 	return *newjob, nil
 }
 
-// AddUploadedFile -  Add an uploaded file to a job.
+// Add an uploaded file to a job
 func (ds Datastore) AddUploadedFile(instanceID string, message *models.UploadedFile) error {
 	row := ds.addFileToJob.QueryRow(message.AliasName, message.URL, instanceID)
 	var returnedInstanceID sql.NullString
@@ -89,7 +89,7 @@ func (ds Datastore) AddUploadedFile(instanceID string, message *models.UploadedF
 	return convertError(row.Scan(&returnedInstanceID))
 }
 
-// UpdateJobState - Update the state of a job.
+// Update the state of a job.
 func (ds Datastore) UpdateJobState(jobID string, job *models.Job) error {
 	json, err := json.Marshal(job)
 	if err != nil {
@@ -101,7 +101,7 @@ func (ds Datastore) UpdateJobState(jobID string, job *models.Job) error {
 	return convertError(row.Scan(&jobIDReturned))
 }
 
-// AddInstance - Add an instance and relate it to a job.
+// Add an instance and relate it to a job
 func (ds Datastore) AddInstance(tx *sql.Tx, jobID string) (string, error) {
 	job := models.Instance{State: "created", LastUpdated: time.Now().UTC().String(), Events: &[]models.Event{}}
 	bytes, err := json.Marshal(job)
@@ -117,7 +117,7 @@ func (ds Datastore) AddInstance(tx *sql.Tx, jobID string) (string, error) {
 	return instanceID.String, nil
 }
 
-// GetInstance - Get an instance from postgres.
+// Get an instance from postgres
 func (ds Datastore) GetInstance(instanceID string) (models.Instance, error) {
 	row := ds.findInstance.QueryRow(instanceID)
 	var job sql.NullString
@@ -134,7 +134,7 @@ func (ds Datastore) GetInstance(instanceID string) (models.Instance, error) {
 	return importJob, nil
 }
 
-// UpdateInstance - Update an instance in postgres
+// Update an instance in postgres
 func (ds Datastore) UpdateInstance(instanceID string, instance *models.Instance) error {
 	json, err := json.Marshal(instance)
 	if err != nil {
@@ -146,7 +146,7 @@ func (ds Datastore) UpdateInstance(instanceID string, instance *models.Instance)
 	return  convertError(row.Scan(&instanceIDReturned))
 }
 
-// AddEvent - Add an event into an instance.
+// Add an event into an instance
 func (ds Datastore) AddEvent(instanceID string, event *models.Event) error {
 	row := ds.addEvent.QueryRow(event.Type, event.Time, event.Message, event.MessageOffset, instanceID)
 	var returnedInstanceID sql.NullString
@@ -154,7 +154,7 @@ func (ds Datastore) AddEvent(instanceID string, event *models.Event) error {
 	return convertError(row.Scan(&returnedInstanceID))
 }
 
-// AddDimension - Add a dimension to cache in postgres
+// Add a dimension to cache in postgres
 func (ds Datastore) AddDimension(instanceID string, dimension *models.Dimension) error {
 	// Check that an instance exists else return an error
 	_, err := ds.GetInstance(instanceID)
@@ -168,7 +168,7 @@ func (ds Datastore) AddDimension(instanceID string, dimension *models.Dimension)
 	return res.Close()
 }
 
-// GetDimension - Get all dimensions related to an instanceID
+// Get all dimensions related to an instanceID
 func (ds Datastore) GetDimension(instanceID string) ([]models.Dimension, error) {
 	_, err := ds.GetInstance(instanceID)
 	if err != nil {
@@ -190,14 +190,14 @@ func (ds Datastore) GetDimension(instanceID string) ([]models.Dimension, error) 
 	return dimensions, nil
 }
 
-// AddNodeID - Add nodeID for a dimension.
+// Add nodeID for a dimension
 func (ds Datastore) AddNodeID(instanceID, nodeID string, message *models.Dimension) error {
 	row := ds.addNodeID.QueryRow(message.NodeID, instanceID, nodeID)
 	var returnedInstanceID sql.NullString
 	return convertError(row.Scan(&returnedInstanceID))
 }
 
-// BuildImportDataMessage - Build a publish message to send to data baker
+// Build a publish message to send to data baker
 func (ds Datastore) BuildImportDataMessage(jobID string) (*models.ImportData, error) {
 	row := ds.createPublishMessage.QueryRow(jobID)
 	var recipe, filesAsJSON, instancIds sql.NullString

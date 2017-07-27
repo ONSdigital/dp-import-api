@@ -8,7 +8,7 @@ import (
 	"fmt"
 )
 
-// Job - A structure for an importqueue job
+// A structure for an importqueue job
 type Job struct {
 	JobID         string          `json:"job_id,omitempty"`
 	Recipe        string          `json:"recipe,omitempty"`
@@ -17,12 +17,12 @@ type Job struct {
 	Links         JobLinks        `json:"links,omitempty"`
 }
 
-// JobLinks - A list of links to instance jobs
+// A list of links to instance jobs
 type JobLinks struct {
 	InstanceIDs []string `json:"instance_ids"`
 }
 
-// Validate - Validate the content of the structure
+//Validate the content of the structure
 func (job *Job) Validate() error {
 	if job.Recipe == "" {
 		return errors.New("Missing properties to create importqueue job struct")
@@ -36,7 +36,7 @@ func (job *Job) Validate() error {
 	return nil
 }
 
-// Event - A structure for an event for an instance
+// A structure for an event for an instance
 type Event struct {
 	Type          string `json:"type"`
 	Time          string `json:"time"`
@@ -44,7 +44,7 @@ type Event struct {
 	MessageOffset string `json:"messageOffset"`
 }
 
-// Validate - Validate the content of the structure
+// Validate the content of the structure
 func (e Event) Validate() error {
 	if e.MessageOffset == "" || e.Time == "" || e.Type == "" || e.Message == "" {
 		return fmt.Errorf("Invalid event structure")
@@ -52,14 +52,14 @@ func (e Event) Validate() error {
 	return nil
 }
 
-// Dimension - A structure for a dimension
+// A structure for a dimension
 type Dimension struct {
 	Name   string `json:"dimension_name"`
 	Value  string `json:"value"`
 	NodeID string `json:"node_id"`
 }
 
-// Instance - A structure used for a instance job
+// A structure used for a instance job
 type Instance struct {
 	InstanceID           string    `json:"instance_id,omitempty"`
 	State                string    `json:"state,omitempty"`
@@ -69,13 +69,13 @@ type Instance struct {
 	LastUpdated          string    `json:"last_updated,omitempty"`
 }
 
-// UploadedFile - a structure used for a file which has been uploaded to a bucket
+//  A structure used for a file which has been uploaded to a bucket
 type UploadedFile struct {
 	AliasName string `json:"alias_name" avro:"alias-name"`
 	URL       string `json:"url" avro:"url"`
 }
 
-// Validate - Validate the content of the structure
+// Validate the content of the structure
 func (s UploadedFile) Validate() error {
 	if s.URL == "" || s.AliasName == "" {
 		return fmt.Errorf("Invalid s3 file structure")
@@ -83,7 +83,7 @@ func (s UploadedFile) Validate() error {
 	return nil
 }
 
-// ImportData - A structure used to create a message to data baker
+// A structure used to create a message to data baker
 type ImportData struct {
 	JobID         string
 	Recipe        string         `json:"recipe,omitempty"`
@@ -91,12 +91,12 @@ type ImportData struct {
 	InstanceIDs   []string
 }
 
-// DataBakerEvent - An event used to trigger the databaker process
+// An event used to trigger the databaker process
 type DataBakerEvent struct {
 	JobID string `avro:"job_id"`
 }
 
-// CreateJob - Create a job from a reader
+// Create a job from a reader
 func CreateJob(reader io.Reader) (*Job, error) {
 	bytes, err := ioutil.ReadAll(reader)
 	if err != nil {
@@ -110,7 +110,7 @@ func CreateJob(reader io.Reader) (*Job, error) {
 	return &job, nil
 }
 
-// CreateUploadedFile - Create a uploaded file from a reader
+// Create a uploaded file from a reader
 func CreateUploadedFile(reader io.Reader) (*UploadedFile, error) {
 	bytes, err := ioutil.ReadAll(reader)
 	if err != nil {
@@ -124,7 +124,7 @@ func CreateUploadedFile(reader io.Reader) (*UploadedFile, error) {
 	return &message, message.Validate()
 }
 
-// CreateEvent - Create an event from a reader
+// Create an event from a reader
 func CreateEvent(reader io.Reader) (*Event, error) {
 	bytes, err := ioutil.ReadAll(reader)
 	if err != nil {
@@ -138,7 +138,7 @@ func CreateEvent(reader io.Reader) (*Event, error) {
 	return &message, message.Validate()
 }
 
-// CreateInstance - Create an instance
+// Create an instance
 func CreateInstance(reader io.Reader) (*Instance, error) {
 	bytes, err := ioutil.ReadAll(reader)
 	if err != nil {

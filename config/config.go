@@ -2,7 +2,8 @@ package config
 
 import "github.com/ian-kent/gofigure"
 
-type appConfiguration struct {
+// A structure which hold information for configuring the import API
+type Configuration struct {
 	BindAddr                string   `env:"BIND_ADDR" flag:"bind-addr" flagDesc:"The port to bind to"`
 	Host                    string   `env:"HOST" flag:"host" flagDesc:"The host name used to build URLs"`
 	Brokers                 []string `env:"KAFKA_ADDR" flag:"kafka-addr" flagDesc:"The kafka broker addresses"`
@@ -12,18 +13,17 @@ type appConfiguration struct {
 	PostgresURL             string   `env:"POSTGRES_URL" flag:"postgres-url" flagDesc:"The URL address to connect to a postgres instance'"`
 }
 
-var cfg *appConfiguration
+var cfg *Configuration
 
-// Get - configures the application and returns the configuration
-func Get() (*appConfiguration, error) {
+// Configures the application and returns the configuration structure
+func Get() (*Configuration, error) {
 	if cfg != nil {
 		return cfg, nil
 	}
 
-
 	brokers := []string{"localhost:9092"}
 
-	cfg = &appConfiguration{
+	cfg = &Configuration{
 		BindAddr:                ":21800",
 		Host:                    "http://localhost:21800",
 		Brokers:                 brokers,
