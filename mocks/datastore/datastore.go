@@ -20,7 +20,7 @@ func (ds *DataStore) AddJob(host string, importJob *models.Job) (models.Job, err
 	return models.Job{JobID: "34534543543"}, nil
 }
 
-func (ds *DataStore) AddInstance(joId string) (string, error) {
+func (ds *DataStore) AddInstance(joID string) (string, error) {
 	if ds.NotFound {
 		return "", api_errors.JobNotFoundError
 	}
@@ -40,7 +40,7 @@ func (ds *DataStore) UpdateJobState(string, *models.Job) error {
 	return nil
 }
 
-func (ds *DataStore) GetInstance(instanceId string) (models.Instance, error) {
+func (ds *DataStore) GetInstance(instanceID string) (models.Instance, error) {
 	if ds.NotFound {
 		return models.Instance{}, api_errors.JobNotFoundError
 	}
@@ -50,7 +50,7 @@ func (ds *DataStore) GetInstance(instanceId string) (models.Instance, error) {
 	return models.Instance{InstanceID: "234234", State: "Created"}, nil
 }
 
-func (ds *DataStore) UpdateInstance(instanceId string, instance *models.Instance) error {
+func (ds *DataStore) UpdateInstance(instanceID string, instance *models.Instance) error {
 	if ds.NotFound {
 		return api_errors.JobNotFoundError
 	}
@@ -60,7 +60,7 @@ func (ds *DataStore) UpdateInstance(instanceId string, instance *models.Instance
 	return nil
 }
 
-func (ds *DataStore) AddUploadedFile(instanceId string, s3file *models.UploadedFile) error {
+func (ds *DataStore) AddUploadedFile(instanceID string, s3file *models.UploadedFile) error {
 	if ds.NotFound {
 		return api_errors.JobNotFoundError
 	}
@@ -70,7 +70,7 @@ func (ds *DataStore) AddUploadedFile(instanceId string, s3file *models.UploadedF
 	return nil
 }
 
-func (ds *DataStore) AddEvent(instanceId string, event *models.Event) error {
+func (ds *DataStore) AddEvent(instanceID string, event *models.Event) error {
 	if ds.NotFound {
 		return api_errors.JobNotFoundError
 	}
@@ -80,7 +80,7 @@ func (ds *DataStore) AddEvent(instanceId string, event *models.Event) error {
 	return nil
 }
 
-func (ds *DataStore) AddDimension(instanceId string, dimension *models.Dimension) error {
+func (ds *DataStore) AddDimension(instanceID string, dimension *models.Dimension) error {
 	if ds.NotFound {
 		return api_errors.JobNotFoundError
 	}
@@ -90,7 +90,7 @@ func (ds *DataStore) AddDimension(instanceId string, dimension *models.Dimension
 	return nil
 }
 
-func (ds *DataStore) GetDimension(instanceId string) ([]models.Dimension, error) {
+func (ds *DataStore) GetDimension(instanceID string) ([]models.Dimension, error) {
 	if ds.NotFound {
 		return []models.Dimension{}, api_errors.JobNotFoundError
 	}
@@ -100,7 +100,7 @@ func (ds *DataStore) GetDimension(instanceId string) ([]models.Dimension, error)
 	return []models.Dimension{models.Dimension{Name: "1234-geography.newport", Value: "newport", NodeID: "234234234"}}, nil
 }
 
-func (ds *DataStore) AddNodeID(instanceId, nodeId string, message *models.Dimension) error {
+func (ds *DataStore) AddNodeID(instanceID, nodeID string, message *models.Dimension) error {
 	if ds.NotFound {
 		return api_errors.JobNotFoundError
 	}
@@ -110,7 +110,7 @@ func (ds *DataStore) AddNodeID(instanceId, nodeId string, message *models.Dimens
 	return nil
 }
 
-func (ds *DataStore) BuildImportDataMessage(jobId string) (*models.ImportData, error) {
+func (ds *DataStore) BuildImportDataMessage(jobID string) (*models.ImportData, error) {
 	if ds.NotFound {
 		return nil, api_errors.JobNotFoundError
 	}
