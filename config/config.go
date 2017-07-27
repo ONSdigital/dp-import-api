@@ -12,19 +12,19 @@ type appConfiguration struct {
 	PostgresURL             string   `env:"POSTGRES_URL" flag:"postgres-url" flagDesc:"The URL address to connect to a postgres instance'"`
 }
 
-var configuration *appConfiguration
+var cfg *appConfiguration
 
 // Get - configures the application and returns the configuration
 func Get() (*appConfiguration, error) {
-	if configuration != nil {
-		return configuration, nil
+	if cfg != nil {
+		return cfg, nil
 	}
 
 	var brokers []string
 
 	brokers = append(brokers, "localhost:9092")
 
-	configuration = &appConfiguration{
+	cfg = &appConfiguration{
 		BindAddr:                ":21800",
 		Host:                    "http://localhost:21800",
 		Brokers:                 brokers,
@@ -34,9 +34,9 @@ func Get() (*appConfiguration, error) {
 		PostgresURL:             "user=dp dbname=ImportJobs sslmode=disable",
 	}
 
-	if err := gofigure.Gofigure(configuration); err != nil {
-		return configuration, err
+	if err := gofigure.Gofigure(cfg); err != nil {
+		return cfg, err
 	}
 
-	return configuration, nil
+	return cfg, nil
 }

@@ -43,6 +43,7 @@ func CreateImportAPI(host string, router *mux.Router ,dataStore DataStore, jobQu
 
 func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 	newJob, err := models.CreateJob(r.Body)
+	defer r.Body.Close()
 	if err != nil {
 		log.Error(err, log.Data{})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
@@ -80,6 +81,7 @@ func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	jobID := vars["jobId"]
 	uploadedFile, err := models.CreateUploadedFile(r.Body)
+	defer r.Body.Close()
 	if err != nil {
 		log.Error(err, log.Data{"file": uploadedFile, "job_id": jobID})
 		http.Error(w, "bad client request received", http.StatusBadRequest)
@@ -98,6 +100,7 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	jobID := vars["jobId"]
 	job, err := models.CreateJob(r.Body)
+	defer r.Body.Close()
 	if err != nil {
 		log.Error(err, log.Data{"jobState": job, "job_id": jobID})
 		http.Error(w, "bad client request received", http.StatusBadRequest)
@@ -154,8 +157,8 @@ func (api *ImportAPI) getInstance(w http.ResponseWriter, r *http.Request) {
 func (api *ImportAPI) updateInstance(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	instanceID := vars["instanceId"]
-
 	instance, err := models.CreateInstance(r.Body)
+	defer r.Body.Close()
 	if err != nil {
 		log.Error(err, log.Data{"instance_id": instanceID, "instance": instance})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
@@ -174,6 +177,7 @@ func (api *ImportAPI) addEvent(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	instanceID := vars["instanceId"]
 	event, err := models.CreateEvent(r.Body)
+	defer r.Body.Close()
 	if err != nil {
 		log.Error(err, log.Data{"instance_id": instanceID, "event": event})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)

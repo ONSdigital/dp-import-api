@@ -2,9 +2,10 @@ package models
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
+	"errors"
 	"io/ioutil"
+	"fmt"
 )
 
 // Job - A structure for an importqueue job
@@ -24,7 +25,7 @@ type JobLinks struct {
 // Validate - Validate the content of the structure
 func (job *Job) Validate() error {
 	if job.Recipe == "" {
-		return fmt.Errorf("Missing properties to create importqueue job struct")
+		return errors.New("Missing properties to create importqueue job struct")
 	}
 	if job.State == "" {
 		job.State = "created"
