@@ -20,8 +20,6 @@ type ImportAPI struct {
 	router    *mux.Router
 	jobQueue  JobQueue
 }
-// f func(http.ResponseWriter, *http.Request))
-//
 
 // CreateImportAPI - Createerr the api with all the routes configured
 func CreateImportAPI(host string, router *mux.Router ,dataStore DataStore, jobQueue JobQueue) *ImportAPI {

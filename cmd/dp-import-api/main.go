@@ -18,9 +18,9 @@ import (
 
 func main() {
 	log.Namespace = "dp-import-api"
-	config, configErr := config.Get()
-	if configErr != nil {
-		log.Error(configErr, nil)
+	config, err := config.Get()
+	if err != nil {
+		log.Error(err, nil)
 		os.Exit(1)
 	}
 

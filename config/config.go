@@ -20,9 +20,8 @@ func Get() (*appConfiguration, error) {
 		return cfg, nil
 	}
 
-	var brokers []string
 
-	brokers = append(brokers, "localhost:9092")
+	brokers := []string{"localhost:9092"}
 
 	cfg = &appConfiguration{
 		BindAddr:                ":21800",
