@@ -2,7 +2,7 @@ package config
 
 import "github.com/ian-kent/gofigure"
 
-// A structure which hold information for configuring the import API
+// Configuration structure which hold information for configuring the import API
 type Configuration struct {
 	BindAddr                string   `env:"BIND_ADDR" flag:"bind-addr" flagDesc:"The port to bind to"`
 	Host                    string   `env:"HOST" flag:"host" flagDesc:"The host name used to build URLs"`
@@ -15,7 +15,7 @@ type Configuration struct {
 
 var cfg *Configuration
 
-// Configures the application and returns the configuration structure
+// Get the application and returns the configuration structure
 func Get() (*Configuration, error) {
 	if cfg != nil {
 		return cfg, nil
@@ -33,9 +33,6 @@ func Get() (*Configuration, error) {
 		PostgresURL:             "user=dp dbname=ImportJobs sslmode=disable",
 	}
 
-	if err := gofigure.Gofigure(cfg); err != nil {
-		return cfg, err
-	}
+	return cfg, gofigure.Gofigure(cfg)
 
-	return cfg, nil
 }

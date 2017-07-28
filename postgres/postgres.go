@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// A structure to hold SQL statements to be used to gather information or insert about Jobs and instances
+// Datastore to hold SQL statements to be used to gather information or to insert Jobs and instances
 type Datastore struct {
 	db                   *sql.DB
 	addJob               *sql.Stmt
@@ -33,7 +33,7 @@ func prepare(sql string, db *sql.DB) *sql.Stmt {
 	return statement
 }
 
-// Create a postgres datastore. This is used to store and find information about jobs and instances.
+// NewDatastore used to store jobs and instances in postgres
 func NewDatastore(db *sql.DB) (Datastore, error) {
 	addJob := prepare("INSERT INTO Jobs(job) VALUES($1) RETURNING jobId", db)
 	updateJob := prepare("UPDATE Jobs set job = job || jsonb($1::TEXT) WHERE jobId = $2 RETURNING jobId", db)

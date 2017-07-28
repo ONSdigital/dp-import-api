@@ -20,7 +20,7 @@ func TestQueueV4File(t *testing.T) {
 		var file V4File
 		schema.ImportV4File.Unmarshal(bytes, &file)
 		So(file.URL, ShouldEqual, job.UploadedFiles[0].URL)
-		So(file.InstanceId, ShouldEqual, job.InstanceIDs[0])
+		So(file.InstanceID, ShouldEqual, job.InstanceIDs[0])
 	})
 }
 

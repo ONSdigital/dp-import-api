@@ -7,29 +7,30 @@ import (
 	"errors"
 )
 
-type importQueue struct {
+// ImportQueue used to send import jobs via kafka topic
+type ImportQueue struct {
 	v4Queue        chan []byte
 	databakerQueue chan []byte
 }
 
-// A V4 file to import into a graph database
+// V4File to import into a graph database
 type V4File struct {
-	InstanceId string `avro:"instance_id"`
+	InstanceID string `avro:"instance_id"`
 	URL        string `avro:"file_url"`
 }
 
-// Create a import queue for databaker evenets and v4 files
-func CreateImportQueue(databakerQueue, v4Queue chan []byte) importQueue {
-	return importQueue{databakerQueue: databakerQueue, v4Queue: v4Queue}
+// CreateImportQueue used to queue data baker evenets and v4 files
+func CreateImportQueue(databakerQueue, v4Queue chan []byte) ImportQueue {
+	return ImportQueue{databakerQueue: databakerQueue, v4Queue: v4Queue}
 }
 
 // Queue an import event
-func (q *importQueue) Queue(job *models.ImportData) error {
+func (q *ImportQueue) Queue(job *models.ImportData) error {
 	if strings.ToLower(job.Recipe) == "v4" {
 		if len(job.InstanceIDs) != 1 && len(job.UploadedFiles) != 1 {
 			return errors.New("InstanceIds and uploaded files must be 1")
 		}
-		file := V4File{InstanceId: job.InstanceIDs[0], URL: job.UploadedFiles[0].URL}
+		file := V4File{InstanceID: job.InstanceIDs[0], URL: job.UploadedFiles[0].URL}
 		bytes, avroError := schema.ImportV4File.Marshal(file)
 		if avroError != nil {
 			return avroError
