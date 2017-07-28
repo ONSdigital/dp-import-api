@@ -9,22 +9,22 @@
 			"revisionTime": "2017-06-02T08:59:07Z"
 		},
 		{
-			"checksumSHA1": "YxxkxEm/b17iPTtEQM2LrgUZZ+A=",
+			"checksumSHA1": "dzh4fF9o6j+mJEbJn5utm8Q+Pyg=",
 			"path": "github.com/ONSdigital/go-ns/avro",
-			"revision": "b6df6305d81f0303357be843f87d5225681cef54",
-			"revisionTime": "2017-07-10T15:03:31Z"
+			"revision": "c493b1568574c9720d7805f23ce6271ac445dc57",
+			"revisionTime": "2017-07-28T08:24:17Z"
 		},
 		{
-			"checksumSHA1": "H1urt43SqHdE7w9jeKZMky7Iuo4=",
+			"checksumSHA1": "dF3c6fF99+C/Y09aqUqJ9ouiHPE=",
 			"path": "github.com/ONSdigital/go-ns/kafka",
-			"revision": "d43ea97cc004982b0f4522f25a84ddfb3bbcb574",
-			"revisionTime": "2017-07-24T14:56:24Z"
+			"revision": "c493b1568574c9720d7805f23ce6271ac445dc57",
+			"revisionTime": "2017-07-28T08:24:17Z"
 		},
 		{
 			"checksumSHA1": "AjbjbhFVAOP/1NU5HL+uy+X/yJo=",
 			"path": "github.com/ONSdigital/go-ns/log",
-			"revision": "b6df6305d81f0303357be843f87d5225681cef54",
-			"revisionTime": "2017-07-10T15:03:31Z"
+			"revision": "c493b1568574c9720d7805f23ce6271ac445dc57",
+			"revisionTime": "2017-07-28T08:24:17Z"
 		},
 		{
 			"checksumSHA1": "+Jp0tVXfQ1TM8T+oun82oJtME5U=",
@@ -66,8 +66,8 @@
 			"checksumSHA1": "I6MnUzkLJt+sh73CodD0NKswFrs=",
 			"origin": "github.com/ONSdigital/go-ns/vendor/github.com/go-avro/avro",
 			"path": "github.com/go-avro/avro",
-			"revision": "b6df6305d81f0303357be843f87d5225681cef54",
-			"revisionTime": "2017-07-10T15:03:31Z"
+			"revision": "c493b1568574c9720d7805f23ce6271ac445dc57",
+			"revisionTime": "2017-07-28T08:24:17Z"
 		},
 		{
 			"checksumSHA1": "p/8vSviYF91gFflhrt5vkyksroo=",
@@ -121,8 +121,8 @@
 			"checksumSHA1": "hBgLmZ/4mCxmnH88mqFKBkpJFUY=",
 			"origin": "github.com/ONSdigital/go-ns/vendor/github.com/mgutz/ansi",
 			"path": "github.com/mgutz/ansi",
-			"revision": "b6df6305d81f0303357be843f87d5225681cef54",
-			"revisionTime": "2017-07-10T15:03:31Z"
+			"revision": "c493b1568574c9720d7805f23ce6271ac445dc57",
+			"revisionTime": "2017-07-28T08:24:17Z"
 		},
 		{
 			"checksumSHA1": "FGg99nQ56Fo3radSCuU1AeEUJug=",

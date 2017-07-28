@@ -70,7 +70,7 @@ func (this *Assertion) So(actual interface{}, assert assertion, expected ...inte
 // for running assertions on arbitrary arguments in any context, be it for testing or even
 // application logging. It allows you to perform assertion-like behavior (and get nicely
 // formatted messages detailing discrepancies) but without the program blowing up or panicking.
-// All that is required is to importqueue this package and call `So` with one of the assertions
+// All that is required is to import this package and call `So` with one of the assertions
 // exported by this package as the second parameter.
 // The first return parameter is a boolean indicating if the assertion was true. The second
 // return parameter is the well-formatted message showing why an assertion was incorrect, or

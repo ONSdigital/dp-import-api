@@ -34,11 +34,19 @@ func main() {
 	}
 	postgresDataStore, err := postgres.NewDatastore(db)
 	if err != nil {
-		log.ErrorC("Create postgres error", err, nil)
+		log.ErrorC("postgres datastore error", err, nil)
 		os.Exit(1)
 	}
-	dataBakerProducer := kafka.NewProducer(config.Brokers, config.DatabakerImportTopic, config.KafkaMaxBytes)
-	directProducer := kafka.NewProducer(config.Brokers, config.InputFileAvailableTopic, config.KafkaMaxBytes)
+	dataBakerProducer, err := kafka.NewProducer(config.Brokers, config.DatabakerImportTopic, config.KafkaMaxBytes)
+	if err != nil {
+		log.ErrorC("data baker kafka producer error", err, nil)
+		os.Exit(1)
+	}
+	directProducer, err := kafka.NewProducer(config.Brokers, config.InputFileAvailableTopic, config.KafkaMaxBytes)
+	if err != nil {
+		log.ErrorC("direct kafka producer error", err, nil)
+		os.Exit(1)
+	}
 
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
 	router := mux.NewRouter()
