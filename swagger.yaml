@@ -311,9 +311,6 @@ definitions:
             description: "A list of URL to instances"
             items:
               type: string
-      number_of_instances:
-        description: "The number of instances within a job"
-        type: integer
       files:
         description: "A list of all files to be used in the job"
         type: array
