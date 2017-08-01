@@ -7,6 +7,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/models"
 	"strings"
 	"time"
+	"github.com/satori/go.uuid"
 )
 
 // Datastore to hold SQL statements to be used to gather information or to insert Jobs and instances
@@ -37,12 +38,12 @@ func prepare(sql string, db *sql.DB) *sql.Stmt {
 
 // NewDatastore used to store jobs and instances in postgres
 func NewDatastore(db *sql.DB) (Datastore, error) {
-	addJob := prepare("INSERT INTO Jobs(job) VALUES($1) RETURNING jobId", db)
+	addJob := prepare("INSERT INTO Jobs(jobid,job) VALUES($1, $2) RETURNING jobId", db)
 	getJob := prepare("SELECT instanceId, job FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE Jobs.jobId = $1 ", db)
 	getJobs := prepare("SELECT Jobs.jobId, instanceId, job FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId)", db)
 	updateJob := prepare("UPDATE Jobs set job = job || jsonb($1::TEXT) WHERE jobId = $2 RETURNING jobId", db)
 	addFileToJob := prepare("UPDATE Jobs SET job = jsonb_set(job, '{files}', (SELECT (job->'files')  || TO_JSONB(json_build_object('alaisName',$1::TEXT,'url',$2::TEXT)) FROM Jobs WHERE jobId = $3), true) WHERE jobId = $3 RETURNING jobId", db)
-	addInstance := prepare("INSERT INTO Instances(jobId, instance) VALUES($1, $2) RETURNING instanceId", db)
+	addInstance := prepare("INSERT INTO Instances(instanceId, jobId, instance) VALUES($1, $2, $3) RETURNING instanceId", db)
 	findInstance := prepare("SELECT instance FROM Instances WHERE instanceId = $1", db)
 	updateInstance := prepare("UPDATE Instances set instance = instance || jsonb($1::TEXT) WHERE instanceId = $2 RETURNING instanceId", db)
 	addEvent := prepare("UPDATE Instances SET instance = jsonb_set(instance, '{events}', (SELECT (instance->'events')  || TO_JSONB(json_build_object('type', $1::TEXT, 'time', $2::TEXT, 'message', $3::TEXT, 'messageOffset', $4::TEXT)) FROM Instances WHERE instanceid = $5), true) WHERE instanceid = $5 RETURNING instanceId", db)
@@ -65,7 +66,8 @@ func (ds Datastore) AddJob(host string, newjob *models.Job) (models.Job, error) 
 	if err != nil {
 		return models.Job{}, err
 	}
-	row := tx.Stmt(ds.addJob).QueryRow(bytes)
+	uuid := uuid.NewV4().String()
+	row := tx.Stmt(ds.addJob).QueryRow(uuid, bytes)
 	var jobID sql.NullString
 	err = row.Scan(&jobID)
 	if err != nil {
@@ -162,7 +164,8 @@ func (ds Datastore) AddInstance(tx *sql.Tx, jobID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	row := tx.Stmt(ds.addInstance).QueryRow(jobID, bytes)
+	uuid := uuid.NewV4().String()
+	row := tx.Stmt(ds.addInstance).QueryRow(uuid, jobID, bytes)
 	var instanceID sql.NullString
 	err = row.Scan(&instanceID)
 	if err != nil {
