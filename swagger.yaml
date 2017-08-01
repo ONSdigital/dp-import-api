@@ -406,6 +406,10 @@ definitions:
         type: string
         readOnly: true
         description: "A unique id for a job"
+      job_url:
+        description: "A URL to the job which this instance is contained in"
+        type: string
+        example: "http://localhost:21800/jobs/042e216a-7822-4fa0-a3d6-e3f5248ffc35"
       state:
         type: string
         description: |

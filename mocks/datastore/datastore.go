@@ -57,7 +57,7 @@ func (ds *DataStore) UpdateJobState(string, *models.Job) error {
 	return nil
 }
 
-func (ds *DataStore) GetInstance(instanceID string) (models.Instance, error) {
+func (ds *DataStore) GetInstance(host, instanceID string) (models.Instance, error) {
 	if ds.NotFound {
 		return models.Instance{}, api_errors.JobNotFoundError
 	}

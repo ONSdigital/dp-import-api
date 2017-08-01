@@ -15,7 +15,7 @@ const (
 	updateJobStateSQL      = "UPDATE Jobs set job = job"
 	addFileToJobSQL        = "UPDATE Jobs SET job = jsonb_set"
 	createInstanceSQL      = "INSERT INTO Instances"
-	findInstanceSQL        = "SELECT instance FROM Instances WHERE"
+	findInstanceSQL        = "SELECT instance, jobId FROM Instances WHERE"
 	updateInstanceSQL      = "UPDATE Instances set instance = instance"
 	addEventSQL            = "UPDATE Instances SET instance = jsonb_set"
 	addDimensionSQL        = "INSERT INTO Dimensions"
@@ -46,9 +46,9 @@ func TestGetInstance(t *testing.T) {
 		ds, err := NewDatastore(db)
 		So(err, ShouldBeNil)
 		mock.ExpectPrepare(findInstanceSQL).ExpectQuery().
-			WithArgs(sqlmock.AnyArg()).WillReturnRows(sqlmock.NewRows([]string{"job"}).
-			AddRow(jsonContent))
-		state, err := ds.GetInstance("any")
+			WithArgs(sqlmock.AnyArg()).WillReturnRows(sqlmock.NewRows([]string{"jobId","instance"}).
+			AddRow( jsonContent, "1"))
+		state, err := ds.GetInstance("http://localhost:80", "any")
 		So(err, ShouldBeNil)
 		So(state.State, ShouldEqual, "Created")
 	})
@@ -109,7 +109,7 @@ func TestGetDimensions(t *testing.T) {
 		ds, err := NewDatastore(db)
 		So(err, ShouldBeNil)
 		mock.ExpectPrepare(findInstanceSQL).ExpectQuery().WithArgs(sqlmock.AnyArg()).
-			WillReturnRows(sqlmock.NewRows([]string{"job"}).AddRow("{}"))
+			WillReturnRows(sqlmock.NewRows([]string{"instance", "jobId"}).AddRow("{}", "1"))
 		mock.ExpectPrepare(findDimensionsSQL).ExpectQuery().
 			WithArgs(sqlmock.AnyArg()).
 			WillReturnRows(sqlmock.NewRows([]string{"nodeName", "value", "nodeId"}).
@@ -141,7 +141,7 @@ func TestAddDimension(t *testing.T) {
 		ds, err := NewDatastore(db)
 		So(err, ShouldBeNil)
 		mock.ExpectPrepare(findInstanceSQL).ExpectQuery().WithArgs(sqlmock.AnyArg()).
-			WillReturnRows(sqlmock.NewRows([]string{"job"}).AddRow("{}"))
+			WillReturnRows(sqlmock.NewRows([]string{"instance", "jobId"}).AddRow("{}", "1"))
 		mock.ExpectPrepare(addDimensionSQL).ExpectQuery().
 			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 			WillReturnRows(sqlmock.NewRows([]string{}))

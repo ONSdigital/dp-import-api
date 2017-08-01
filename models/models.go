@@ -61,6 +61,7 @@ type Dimension struct {
 // Instance which presents a single dataset being imported
 type Instance struct {
 	InstanceID           string    `json:"instance_id,omitempty"`
+	JobURL               string    `json:"job_url,omitempty"`
 	State                string    `json:"state,omitempty"`
 	Events               *[]Event  `json:"events,omitempty"`
 	NumberOfObservations int       `json:"number_of_observations,omitempty"`

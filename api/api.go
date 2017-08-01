@@ -190,7 +190,7 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 func (api *ImportAPI) getInstance(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	instanceID := vars["instanceId"]
-	instanceState, err := api.dataStore.GetInstance(instanceID)
+	instanceState, err := api.dataStore.GetInstance(api.host, instanceID)
 	if err != nil {
 		log.Error(err, log.Data{"instanceID": instanceID})
 		setErrorCode(w, err)

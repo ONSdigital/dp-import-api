@@ -48,7 +48,7 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 	updateJob := prepare("UPDATE Jobs set job = job || jsonb($1::TEXT) WHERE jobId = $2 RETURNING jobId", db)
 	addFileToJob := prepare("UPDATE Jobs SET job = jsonb_set(job, '{files}', (SELECT (job->'files')  || TO_JSONB(json_build_object('alaisName',$1::TEXT,'url',$2::TEXT)) FROM Jobs WHERE jobId = $3), true) WHERE jobId = $3 RETURNING jobId", db)
 	addInstance := prepare("INSERT INTO Instances(instanceId, jobId, instance) VALUES($1, $2, $3) RETURNING instanceId", db)
-	findInstance := prepare("SELECT instance FROM Instances WHERE instanceId = $1", db)
+	findInstance := prepare("SELECT instance, jobId FROM Instances WHERE instanceId = $1", db)
 	updateInstance := prepare("UPDATE Instances set instance = instance || jsonb($1::TEXT) WHERE instanceId = $2 RETURNING instanceId", db)
 	addEvent := prepare("UPDATE Instances SET instance = jsonb_set(instance, '{events}', (SELECT (instance->'events')  || TO_JSONB(json_build_object('type', $1::TEXT, 'time', $2::TEXT, 'message', $3::TEXT, 'messageOffset', $4::TEXT)) FROM Instances WHERE instanceid = $5), true) WHERE instanceid = $5 RETURNING instanceId", db)
 	addDimension := prepare("INSERT INTO Dimensions(instanceId, dimensionName, value) VALUES($1, $2, $3)", db)
@@ -185,20 +185,21 @@ func (ds Datastore) AddInstance(tx *sql.Tx, jobID string) (string, error) {
 }
 
 // GetInstance from postgres
-func (ds Datastore) GetInstance(instanceID string) (models.Instance, error) {
+func (ds Datastore) GetInstance(host, instanceID string) (models.Instance, error) {
 	row := ds.findInstance.QueryRow(instanceID)
-	var job sql.NullString
-	err := row.Scan(&job)
+	var instanceJSON , jobID sql.NullString
+	err := row.Scan(&instanceJSON, &jobID)
 	if err != nil {
 		return models.Instance{}, convertError(err)
 	}
-	var importJob models.Instance
-	err = json.Unmarshal([]byte(job.String), &importJob)
+	var instance models.Instance
+	err = json.Unmarshal([]byte(instanceJSON.String), &instance)
 	if err != nil {
 		return models.Instance{}, err
 	}
-	importJob.InstanceID = instanceID
-	return importJob, nil
+	instance.InstanceID = instanceID
+	instance.JobURL = host + "/jobs/" + jobID.String
+	return instance, nil
 }
 
 // UpdateInstance in postgres
@@ -224,7 +225,7 @@ func (ds Datastore) AddEvent(instanceID string, event *models.Event) error {
 // AddDimension to cache in postgres
 func (ds Datastore) AddDimension(instanceID string, dimension *models.Dimension) error {
 	// Check that an instance exists else return an error
-	_, err := ds.GetInstance(instanceID)
+	_, err := ds.GetInstance(instanceID, "")
 	if err != nil {
 		return err
 	}
@@ -237,7 +238,7 @@ func (ds Datastore) AddDimension(instanceID string, dimension *models.Dimension)
 
 // GetDimensions related to an instanceID
 func (ds Datastore) GetDimensions(instanceID string) ([]models.Dimension, error) {
-	_, err := ds.GetInstance(instanceID)
+	_, err := ds.GetInstance(instanceID, "")
 	if err != nil {
 		return []models.Dimension{}, err
 	}
