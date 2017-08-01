@@ -20,6 +20,23 @@ func (ds *DataStore) AddJob(host string, importJob *models.Job) (models.Job, err
 	return models.Job{JobID: "34534543543"}, nil
 }
 
+func (ds *DataStore) GetJobs(host string) ([]models.Job, error) {
+	if ds.InternalError {
+		return []models.Job{}, internalError
+	}
+	return []models.Job{ models.Job{JobID: "34534543543"}}, nil
+}
+
+func (ds *DataStore) GetJob(host string, jobID string) (models.Job, error) {
+	if ds.InternalError {
+		return models.Job{}, internalError
+	}
+	if ds.NotFound {
+		return models.Job{}, api_errors.JobNotFoundError
+	}
+	return models.Job{JobID: "34534543543"}, nil
+}
+
 func (ds *DataStore) AddInstance(joID string) (string, error) {
 	if ds.NotFound {
 		return "", api_errors.JobNotFoundError
@@ -90,7 +107,7 @@ func (ds *DataStore) AddDimension(instanceID string, dimension *models.Dimension
 	return nil
 }
 
-func (ds *DataStore) GetDimension(instanceID string) ([]models.Dimension, error) {
+func (ds *DataStore) GetDimensions(instanceID string) ([]models.Dimension, error) {
 	if ds.NotFound {
 		return []models.Dimension{}, api_errors.JobNotFoundError
 	}

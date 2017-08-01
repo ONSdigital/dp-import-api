@@ -34,6 +34,13 @@ parameters:
     schema:
       $ref: '#/definitions/Job'
     required: true
+  job_states:
+    name: job_states
+    description: "A list of comma separated job states to filter on. Eg created,submitted"
+    type: array
+    items:
+      type: string
+    in: query
   instance:
     name: instance
     description: "A state of an instance"
@@ -80,6 +87,24 @@ securityDefinitions:
     name: internal-token
 paths:
   /jobs:
+    get:
+      tags:
+      - "External Interface"
+      summary: "Get a list of all jobs"
+      description: "Lists can be filtered by the job state"
+      produces:
+       - "application/json"
+      parameters:
+      - $ref: '#/parameters/job_states'
+      security:
+      - FlorenceAPIKey: []
+      responses:
+        200:
+          description: "A list of jobs has been returned"
+          schema:
+            $ref: '#/definitions/JobList'
+        500:
+          $ref: '#/responses/InternalError'
     post:
       tags:
       - "External Interface"
@@ -125,6 +150,26 @@ paths:
           description: "JobId does not match any import jobs"
         500:
           $ref: '#/responses/InternalError'
+    get:
+        tags:
+        - "External Interface"
+        summary: "Get a job"
+        description: "Get information about a single job"
+        parameters:
+         - $ref: '#/parameters/job_id'
+        produces:
+        - "application/json"
+        security:
+        - FlorenceAPIKey: []
+        responses:
+          200:
+            description: "Return a single jobs information"
+            schema:
+              $ref: '#/definitions/Job'
+          404:
+            description: "JobId does not match any import jobs"
+          500:
+            $ref: '#/responses/InternalError'
   /jobs/{job_id}/files:
     put:
       tags:
@@ -281,6 +326,11 @@ responses:
   InternalError:
     description: "Failed to process the request due to an internal error"
 definitions:
+  JobList:
+    description: "A list of import jobs"
+    type: array
+    items:
+      $ref: '#/definitions/Job'
   Job:
     type: object
     description: "An object returned when an import job is created"

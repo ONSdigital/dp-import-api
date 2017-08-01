@@ -8,8 +8,10 @@ import (
 	"testing"
 )
 
-var (
+const (
 	createJobSQL           = "INSERT INTO Jobs"
+	getJobSQL              = "SELECT instanceId, job FROM Jobs "
+	getJobsSQL             = "SELECT Jobs.jobId, instanceId"
 	updateJobStateSQL      = "UPDATE Jobs set job = job"
 	addFileToJobSQL        = "UPDATE Jobs SET job = jsonb_set"
 	createInstanceSQL      = "INSERT INTO Instances"
@@ -51,6 +53,39 @@ func TestGetInstance(t *testing.T) {
 	})
 }
 
+func TestGetJobs(t *testing.T) {
+	t.Parallel()
+	Convey("When get jobs is called, a list of jobs are returned", t, func() {
+		jsonContent := "{ \"state\":\"Created\"}"
+		mock, db := NewSQLMockWithSQLStatements()
+		ds, err := NewDatastore(db)
+		So(err, ShouldBeNil)
+		mock.ExpectPrepare(getJobsSQL).ExpectQuery().
+			WillReturnRows(sqlmock.NewRows([]string{"jobid", "instanceid","json"}).
+			AddRow(1, 1, jsonContent))
+		jobs, err := ds.GetJobs("localhost")
+		So(err, ShouldBeNil)
+		So(jobs[0].State, ShouldEqual, "Created")
+	})
+}
+
+func TestGetJob(t *testing.T) {
+	t.Parallel()
+	Convey("When get jobs is called, a list of jobs are returned", t, func() {
+		jsonContent := "{ \"state\":\"Created\"}"
+		mock, db := NewSQLMockWithSQLStatements()
+		ds, err := NewDatastore(db)
+		So(err, ShouldBeNil)
+		mock.ExpectPrepare(getJobSQL).ExpectQuery().
+			WithArgs(sqlmock.AnyArg()).WillReturnRows(sqlmock.NewRows([]string{"instanceid","json"}).
+			AddRow( 1, jsonContent))
+		state, err := ds.GetJob("localhost", "123")
+		So(err, ShouldBeNil)
+		So(state.State, ShouldEqual, "Created")
+	})
+}
+
+
 func TestAddEvent(t *testing.T) {
 	t.Parallel()
 	Convey("When adding an event, no error is returned", t, func() {
@@ -78,7 +113,7 @@ func TestGetDimensions(t *testing.T) {
 			WithArgs(sqlmock.AnyArg()).
 			WillReturnRows(sqlmock.NewRows([]string{"nodeName", "value", "nodeId"}).
 				AddRow("node1", "0", "1").AddRow("node2", "2", "2"))
-		dimensions, dataStoreErr := ds.GetDimension("123")
+		dimensions, dataStoreErr := ds.GetDimensions("123")
 		So(dataStoreErr, ShouldBeNil)
 		So(len(dimensions), ShouldEqual, 2)
 	})
@@ -179,6 +214,8 @@ func NewSQLMockWithSQLStatements() (sqlmock.Sqlmock, *sql.DB) {
 	mock.ExpectBegin()
 	mock.MatchExpectationsInOrder(false)
 	mock.ExpectPrepare(createJobSQL)
+	mock.ExpectPrepare(getJobSQL)
+	mock.ExpectPrepare(getJobsSQL)
 	mock.ExpectPrepare(updateJobStateSQL)
 	mock.ExpectPrepare(addFileToJobSQL)
 	mock.ExpectPrepare(createInstanceSQL)

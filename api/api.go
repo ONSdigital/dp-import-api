@@ -26,6 +26,8 @@ func CreateImportAPI(host string, router *mux.Router ,dataStore DataStore, jobQu
 	api := ImportAPI{host: host, dataStore: dataStore, router: router, jobQueue: jobQueue}
 	// External API for florence
 	api.router.Path("/jobs").Methods("POST").HandlerFunc(api.addJob)
+	api.router.Path("/jobs").Methods("GET").HandlerFunc(api.getJobs)
+	api.router.Path("/jobs/{jobId}").Methods("GET").HandlerFunc(api.getJob)
 	api.router.Path("/jobs/{jobId}").Methods("PUT").HandlerFunc(api.updateJob)
 	api.router.Path("/jobs/{jobId}/files").Methods("PUT").HandlerFunc( api.addUploadedFile)
 	api.router.Path("/instances/{instanceId}", ).Methods("GET").HandlerFunc(api.getInstance)
@@ -73,6 +75,54 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Info("created new import job", log.Data{"job": jobInstance})
+}
+
+func (api * ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
+	jobs, err := api.dataStore.GetJobs(api.host)
+	if err != nil {
+		log.Error(err, log.Data{})
+		http.Error(w, internalError, http.StatusInternalServerError)
+		return
+	}
+	bytes, err := json.Marshal(jobs)
+	if err != nil {
+		log.Error(err, log.Data{"Jobs": jobs})
+		http.Error(w, internalError, http.StatusInternalServerError)
+		return
+	}
+	setJSONContentType(w)
+	_, err = w.Write(bytes)
+	if err != nil {
+		log.Error(err, log.Data{})
+		http.Error(w, internalError, http.StatusInternalServerError)
+		return
+	}
+	log.Info("Returning a list of import jobs", log.Data{})
+}
+
+func (api * ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	jobID := vars["jobId"]
+	job, err := api.dataStore.GetJob(api.host, jobID)
+	if err != nil {
+		log.Error(err, log.Data{})
+		setErrorCode(w, err)
+		return
+	}
+	bytes, err := json.Marshal(job)
+	if err != nil {
+		log.Error(err, log.Data{"Jobs": job})
+		http.Error(w, internalError, http.StatusInternalServerError)
+		return
+	}
+	setJSONContentType(w)
+	_, err = w.Write(bytes)
+	if err != nil {
+		log.Error(err, log.Data{})
+		http.Error(w, internalError, http.StatusInternalServerError)
+		return
+	}
+	log.Info("Returning an import jobs", log.Data{"job_id": jobID})
 }
 
 func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
@@ -194,7 +244,7 @@ func (api *ImportAPI) addEvent(w http.ResponseWriter, r *http.Request) {
 func (api *ImportAPI) getDimensions(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	instanceID := vars["instanceId"]
-	dimensions, err := api.dataStore.GetDimension(instanceID)
+	dimensions, err := api.dataStore.GetDimensions(instanceID)
 	if err != nil {
 		setErrorCode(w, err)
 		return
