@@ -1,9 +1,9 @@
 package mocks
 
 import (
-	"github.com/ONSdigital/dp-import-api/models"
-	"github.com/ONSdigital/dp-import-api/api-errors"
 	"errors"
+	"github.com/ONSdigital/dp-import-api/api-errors"
+	"github.com/ONSdigital/dp-import-api/models"
 )
 
 var internalError = errors.New("DataStore internal error")
@@ -24,7 +24,7 @@ func (ds *DataStore) GetJobs(host string, filter []string) ([]models.Job, error)
 	if ds.InternalError {
 		return []models.Job{}, internalError
 	}
-	return []models.Job{ models.Job{JobID: "34534543543"}}, nil
+	return []models.Job{models.Job{JobID: "34534543543"}}, nil
 }
 
 func (ds *DataStore) GetJob(host string, jobID string) (models.Job, error) {
@@ -115,6 +115,16 @@ func (ds *DataStore) GetDimensions(instanceID string) ([]models.Dimension, error
 		return []models.Dimension{}, internalError
 	}
 	return []models.Dimension{models.Dimension{Name: "1234-geography.newport", Value: "newport", NodeID: "234234234"}}, nil
+}
+
+func (ds *DataStore) GetDimensionValues(instanceID, dimensionName string) (models.UniqueDimensionValues, error) {
+	if ds.NotFound {
+		return models.UniqueDimensionValues{}, api_errors.JobNotFoundError
+	}
+	if ds.InternalError {
+		return models.UniqueDimensionValues{}, internalError
+	}
+	return models.UniqueDimensionValues{Name: dimensionName, Values: []string{"123", "321"}}, nil
 }
 
 func (ds *DataStore) AddNodeID(instanceID, nodeID string, message *models.Dimension) error {

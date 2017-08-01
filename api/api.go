@@ -32,12 +32,14 @@ func CreateImportAPI(host string, router *mux.Router ,dataStore DataStore, jobQu
 	api.router.Path("/jobs/{jobId}").Methods("PUT").HandlerFunc(api.updateJob)
 	api.router.Path("/jobs/{jobId}/files").Methods("PUT").HandlerFunc( api.addUploadedFile)
 	api.router.Path("/instances/{instanceId}", ).Methods("GET").HandlerFunc(api.getInstance)
+	api.router.Path("/instances/{instanceId}/dimensions").Methods("GET").HandlerFunc(api.getDimensions)
+	api.router.Path("/instances/{instanceId}/dimensions/{dimension_name}/options").Methods("GET").HandlerFunc(api.getDimensionValues)
 	// Internal API
 	api.router.Path("/instances/{instanceId}").Methods("PUT").HandlerFunc(api.updateInstance)
 	api.router.Path("/instances/{instanceId}/events").Methods("PUT").HandlerFunc(api.addEvent)
 	api.router.Path("/instances/{instanceId}/dimensions/{dimension_name}/options/{value}").Methods("PUT").HandlerFunc(api.addDimension)
 	api.router.Path("/instances/{instanceId}/dimensions/{dimension_name}/nodeid/{value}").Methods("PUT").HandlerFunc(api.addNodeID)
-	api.router.Path("/instances/{instanceId}/dimensions").Methods("GET").HandlerFunc(api.getDimensions)
+
 
 	return &api
 }
@@ -290,6 +292,32 @@ func (api *ImportAPI) addDimension(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Info("dimension added", log.Data{"instance_id": instanceID, "name": dimensionName, "value": dimensionValue})
+}
+
+func (api *ImportAPI) getDimensionValues(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	instanceID := vars["instanceId"]
+	dimensionName := vars["dimension_name"]
+	dimensionValues, err := api.dataStore.GetDimensionValues(instanceID, dimensionName)
+	if err != nil {
+		log.Error(err, log.Data{"instance_id": instanceID, "name": dimensionName})
+		http.Error(w, internalError, http.StatusInternalServerError)
+		return
+	}
+	bytes, err := json.Marshal(dimensionValues)
+	if err != nil {
+		log.Error(err, log.Data{"instance_id": instanceID, "dimensionValues": dimensionValues})
+		http.Error(w, internalError, http.StatusInternalServerError)
+		return
+	}
+	setJSONContentType(w)
+	_, err = w.Write(bytes)
+	if err != nil {
+		log.Error(err, log.Data{"instance_id": instanceID, "dimensionValues": dimensionValues})
+		http.Error(w, internalError, http.StatusInternalServerError)
+		return
+	}
+	log.Info("returned dimension values", log.Data{"instance_id": instanceID})
 }
 
 func (api *ImportAPI) addNodeID(w http.ResponseWriter, r *http.Request) {

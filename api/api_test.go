@@ -226,6 +226,18 @@ func TestAddDimensionReturnsOK(t *testing.T) {
 	})
 }
 
+func TestGetDimensionValuesReturnsOK(t *testing.T) {
+	t.Parallel()
+	Convey("When getting a list of dimension values with a valid instanceId and name, it returns an OK code", t, func() {
+		r, err := http.NewRequest("GET", "http://localhost:21800/instances/12345/dimensions/321/options", nil)
+		So(err, ShouldBeNil)
+		w := httptest.NewRecorder()
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{}, &mock_jobqueue.JobImporter{})
+		api.router.ServeHTTP(w, r)
+		So(w.Code, ShouldEqual, http.StatusOK)
+	})
+}
+
 func TestAddNodeIdReturnsNotFound(t *testing.T) {
 	t.Parallel()
 	Convey("When adding a node id for a dimension with an invalid instanceId, it returns a not found code", t, func() {

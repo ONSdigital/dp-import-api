@@ -2,8 +2,8 @@ package models
 
 import (
 	"encoding/json"
-	"io"
 	"errors"
+	"io"
 	"io/ioutil"
 )
 
@@ -93,6 +93,12 @@ type ImportData struct {
 // DataBakerEvent used to trigger the databaker process
 type DataBakerEvent struct {
 	JobID string `avro:"job_id"`
+}
+
+// UniqueDimensionValues hold all the unique values from a dimension
+type UniqueDimensionValues struct {
+	Name   string   `json:"dimension_id"`
+	Values []string `json:"values"`
 }
 
 // CreateJob from a json message

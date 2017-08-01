@@ -20,6 +20,7 @@ const (
 	addEventSQL            = "UPDATE Instances SET instance = jsonb_set"
 	addDimensionSQL        = "INSERT INTO Dimensions"
 	findDimensionsSQL      = "SELECT dimensionName, value, nodeId"
+	getDimensionValuesSQL = "SELECT dimensions.value FROM dimensions"
 	updateDimensionSQL     = "UPDATE Dimensions SET nodeId"
 	buildPublishDatasetSQL = "SELECT job->>'recipe', job->'files', STRING_AGG"
 )
@@ -149,6 +150,21 @@ func TestAddDimension(t *testing.T) {
 	})
 }
 
+func TestGetDimensionValues(t *testing.T) {
+	t.Parallel()
+	Convey("When getting a list of dimension values, no errors are returned", t, func() {
+		mock, db := NewSQLMockWithSQLStatements()
+		ds, err := NewDatastore(db)
+		So(err, ShouldBeNil)
+		mock.ExpectPrepare(getDimensionValuesSQL).ExpectQuery().WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).
+			WillReturnRows(sqlmock.NewRows([]string{"values"}).AddRow("35").AddRow("45"))
+		dimension, err := ds.GetDimensionValues("123","age")
+		So(err, ShouldBeNil)
+		So(dimension.Values, ShouldContain, "35")
+		So(dimension.Values, ShouldContain, "45")
+	})
+}
+
 func TestUploadFile(t *testing.T) {
 	t.Parallel()
 	Convey("When adding an uploaded file, no errors are returned", t, func() {
@@ -224,6 +240,7 @@ func NewSQLMockWithSQLStatements() (sqlmock.Sqlmock, *sql.DB) {
 	mock.ExpectPrepare(addEventSQL)
 	mock.ExpectPrepare(addDimensionSQL)
 	mock.ExpectPrepare(findDimensionsSQL)
+	mock.ExpectPrepare(getDimensionValuesSQL)
 	mock.ExpectPrepare(updateDimensionSQL)
 	mock.ExpectPrepare(buildPublishDatasetSQL)
 	_, dbError := db.Begin()

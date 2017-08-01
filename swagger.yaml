@@ -213,6 +213,62 @@ paths:
           description: "InstanceId does not match any import jobs"
         500:
           $ref: '#/responses/InternalError'
+  /instances/{instance_id}/dimensions:
+    get:
+      tags:
+      - "External Interface"
+      summary: "Get all dimensions from an instance"
+      description: "Get all dimensions from an instance"
+      parameters:
+      - $ref: '#/parameters/instance_id'
+      produces:
+      - "application/json"
+      security:
+      - InternalAPIKey: []
+      responses:
+        200:
+          description: "Return a list of dimensions"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Dimension'
+        404:
+          description: "InstanceId does not match any instances"
+        500:
+          $ref: '#/responses/InternalError'
+  /instances/{instance_id}/dimensions/{dimension_id}/options:
+    get:
+      tags:
+      - "External Interface"
+      summary: "Get all unique values from a dimension"
+      description: "Get all unique values from a dimension"
+      parameters:
+      - $ref: '#/parameters/instance_id'
+      - $ref: '#/parameters/dimension_id'
+      produces:
+      - "application/json"
+      security:
+      - InternalAPIKey: []
+      responses:
+        200:
+          description: "Return a list of unique values"
+          schema:
+            type: object
+            properties:
+              dimension_id:
+                description: "The name of the dimension"
+                type: string
+              values:
+                description: "A list of all unique values within a dimension"
+                type: array
+                items:
+                  type: string
+        400:
+          description: "instance_id does not match any instances"
+        404:
+          description: "dimension_id does not match any dimensions within the instance"
+        500:
+          $ref: '#/responses/InternalError'
     put:
       tags:
       - "Internal Interface"
@@ -251,29 +307,6 @@ paths:
           description: "The event was added to the instance"
         400:
           description: "Invalid json message sent"
-        404:
-          description: "InstanceId does not match any instances"
-        500:
-          $ref: '#/responses/InternalError'
-  /instances/{instance_id}/dimensions:
-    get:
-      tags:
-      - "Internal Interface"
-      summary: "Get all dimensions from an instance"
-      description: "Get all dimensions from an instance"
-      parameters:
-      - $ref: '#/parameters/instance_id'
-      produces:
-      - "application/json"
-      security:
-      - InternalAPIKey: []
-      responses:
-        200:
-          description: "Return a list of dimensions"
-          schema:
-            type: array
-            items:
-              $ref: '#/definitions/Dimension'
         404:
           description: "InstanceId does not match any instances"
         500:
