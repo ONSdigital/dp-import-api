@@ -8,7 +8,10 @@ import (
 	"strings"
 	"time"
 	"github.com/satori/go.uuid"
+    pg "github.com/lib/pq"
 )
+
+var allFilterStates = []string{"created", "submitted", "completed", "error"}
 
 // Datastore to hold SQL statements to be used to gather information or to insert Jobs and instances
 type Datastore struct {
@@ -40,16 +43,16 @@ func prepare(sql string, db *sql.DB) *sql.Stmt {
 func NewDatastore(db *sql.DB) (Datastore, error) {
 	addJob := prepare("INSERT INTO Jobs(jobid,job) VALUES($1, $2) RETURNING jobId", db)
 	getJob := prepare("SELECT instanceId, job FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE Jobs.jobId = $1 ", db)
-	getJobs := prepare("SELECT Jobs.jobId, instanceId, job FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId)", db)
+	getJobs := prepare("SELECT Jobs.jobId, instanceId, job FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE Jobs.job->>'state' = ANY ($1::TEXT[])", db)
 	updateJob := prepare("UPDATE Jobs set job = job || jsonb($1::TEXT) WHERE jobId = $2 RETURNING jobId", db)
 	addFileToJob := prepare("UPDATE Jobs SET job = jsonb_set(job, '{files}', (SELECT (job->'files')  || TO_JSONB(json_build_object('alaisName',$1::TEXT,'url',$2::TEXT)) FROM Jobs WHERE jobId = $3), true) WHERE jobId = $3 RETURNING jobId", db)
 	addInstance := prepare("INSERT INTO Instances(instanceId, jobId, instance) VALUES($1, $2, $3) RETURNING instanceId", db)
 	findInstance := prepare("SELECT instance FROM Instances WHERE instanceId = $1", db)
 	updateInstance := prepare("UPDATE Instances set instance = instance || jsonb($1::TEXT) WHERE instanceId = $2 RETURNING instanceId", db)
 	addEvent := prepare("UPDATE Instances SET instance = jsonb_set(instance, '{events}', (SELECT (instance->'events')  || TO_JSONB(json_build_object('type', $1::TEXT, 'time', $2::TEXT, 'message', $3::TEXT, 'messageOffset', $4::TEXT)) FROM Instances WHERE instanceid = $5), true) WHERE instanceid = $5 RETURNING instanceId", db)
-	addDimension := prepare("INSERT INTO Dimensions(instanceId, nodeName, value) VALUES($1, $2, $3)", db)
-	getDimensions := prepare("SELECT nodeName, value, nodeId FROM Dimensions WHERE instanceId = $1", db)
-	addNodeID := prepare("UPDATE Dimensions SET nodeId = $1 WHERE instanceId = $2 AND nodeName = $3 RETURNING instanceId", db)
+	addDimension := prepare("INSERT INTO Dimensions(instanceId, dimensionName, value) VALUES($1, $2, $3)", db)
+	getDimensions := prepare("SELECT dimensionName, value, nodeId FROM Dimensions WHERE instanceId = $1", db)
+	addNodeID := prepare("UPDATE Dimensions SET nodeId = $1 WHERE instanceId = $2 AND dimensionName = $3 RETURNING instanceId", db)
 	createPublishMessage := prepare("SELECT job->>'recipe', job->'files', STRING_AGG(instanceId::TEXT, ', ') FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE jobs.jobId = $1 GROUP BY jobs.job", db)
 	return Datastore{db: db, addJob: addJob, getJob: getJob, getJobs: getJobs, updateJob: updateJob, addInstance: addInstance, updateInstance: updateInstance,
 		findInstance: findInstance, addFileToJob: addFileToJob, addEvent: addEvent, addDimension: addDimension,
@@ -91,8 +94,11 @@ func (ds Datastore) AddJob(host string, newjob *models.Job) (models.Job, error) 
 }
 
 // GetJobs returns a list of import jobs
-func (ds Datastore) GetJobs(host string) ([]models.Job, error) {
-	rows, err := ds.getJobs.Query()
+func (ds Datastore) GetJobs(host string, filter []string) ([]models.Job, error) {
+	if len(filter) == 0 {
+		filter = allFilterStates
+	}
+	rows, err := ds.getJobs.Query(pg.Array(filter))
 	if err !=nil {
 		return []models.Job{}, err
 	}

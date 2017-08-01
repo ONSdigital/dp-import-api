@@ -16,7 +16,7 @@ CREATE TABLE Instances(
 CREATE TABLE Dimensions(
   id SERIAL PRIMARY KEY,
   instanceId TEXT,
-  nodeName TEXT,
+  dimensionName TEXT,
   value TEXT,
   nodeId TEXT
 );

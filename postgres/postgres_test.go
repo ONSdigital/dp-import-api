@@ -19,7 +19,7 @@ const (
 	updateInstanceSQL      = "UPDATE Instances set instance = instance"
 	addEventSQL            = "UPDATE Instances SET instance = jsonb_set"
 	addDimensionSQL        = "INSERT INTO Dimensions"
-	findDimensionsSQL      = "SELECT nodeName, value, nodeId"
+	findDimensionsSQL      = "SELECT dimensionName, value, nodeId"
 	updateDimensionSQL     = "UPDATE Dimensions SET nodeId"
 	buildPublishDatasetSQL = "SELECT job->>'recipe', job->'files', STRING_AGG"
 )
@@ -63,7 +63,7 @@ func TestGetJobs(t *testing.T) {
 		mock.ExpectPrepare(getJobsSQL).ExpectQuery().
 			WillReturnRows(sqlmock.NewRows([]string{"jobid", "instanceid","json"}).
 			AddRow(1, 1, jsonContent))
-		jobs, err := ds.GetJobs("localhost")
+		jobs, err := ds.GetJobs("localhost", []string{})
 		So(err, ShouldBeNil)
 		So(jobs[0].State, ShouldEqual, "Created")
 	})

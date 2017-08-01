@@ -9,6 +9,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/gorilla/mux"
+	"strings"
 )
 
 const internalError = "Internal server error"
@@ -26,7 +27,7 @@ func CreateImportAPI(host string, router *mux.Router ,dataStore DataStore, jobQu
 	api := ImportAPI{host: host, dataStore: dataStore, router: router, jobQueue: jobQueue}
 	// External API for florence
 	api.router.Path("/jobs").Methods("POST").HandlerFunc(api.addJob)
-	api.router.Path("/jobs").Methods("GET").HandlerFunc(api.getJobs)
+	api.router.Path("/jobs").Methods("GET").HandlerFunc(api.getJobs).Queries()
 	api.router.Path("/jobs/{jobId}").Methods("GET").HandlerFunc(api.getJob)
 	api.router.Path("/jobs/{jobId}").Methods("PUT").HandlerFunc(api.updateJob)
 	api.router.Path("/jobs/{jobId}/files").Methods("PUT").HandlerFunc( api.addUploadedFile)
@@ -78,7 +79,14 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api * ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
-	jobs, err := api.dataStore.GetJobs(api.host)
+	filtersQuery := r.URL.Query().Get("job_states")
+	var filterList [] string
+	if filtersQuery == "" {
+		filterList = nil
+	} else {
+		filterList = strings.Split(filtersQuery, ",")
+	}
+	jobs, err := api.dataStore.GetJobs(api.host, filterList)
 	if err != nil {
 		log.Error(err, log.Data{})
 		http.Error(w, internalError, http.StatusInternalServerError)
@@ -97,7 +105,7 @@ func (api * ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
-	log.Info("Returning a list of import jobs", log.Data{})
+	log.Info("Returning a list of import jobs", log.Data{"filter":filtersQuery})
 }
 
 func (api * ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {

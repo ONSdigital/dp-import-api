@@ -20,7 +20,7 @@ func (ds *DataStore) AddJob(host string, importJob *models.Job) (models.Job, err
 	return models.Job{JobID: "34534543543"}, nil
 }
 
-func (ds *DataStore) GetJobs(host string) ([]models.Job, error) {
+func (ds *DataStore) GetJobs(host string, filter []string) ([]models.Job, error) {
 	if ds.InternalError {
 		return []models.Job{}, internalError
 	}
