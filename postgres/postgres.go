@@ -53,13 +53,13 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 	addEvent := prepare("UPDATE Instances SET instance = jsonb_set(instance, '{events}', (SELECT (instance->'events')  || TO_JSONB(json_build_object('type', $1::TEXT, 'time', $2::TEXT, 'message', $3::TEXT, 'messageOffset', $4::TEXT)) FROM Instances WHERE instanceid = $5), true) WHERE instanceid = $5 RETURNING instanceId", db)
 	addDimension := prepare("INSERT INTO Dimensions(instanceId, dimensionName, value) VALUES($1, $2, $3)", db)
 	getDimensions := prepare("SELECT dimensionName, value, nodeId FROM Dimensions WHERE instanceId = $1", db)
-	getDimensionValues := prepare("SELECT dimensions.value FROM dimensions WHERE instanceid = $1 AND dimensionname = $2" ,db)
+	getDimensionValues := prepare("SELECT dimensions.value FROM dimensions WHERE instanceid = $1 AND dimensionname = $2", db)
 	addNodeID := prepare("UPDATE Dimensions SET nodeId = $1 WHERE instanceId = $2 AND dimensionName = $3 RETURNING instanceId", db)
 	createPublishMessage := prepare("SELECT job->>'recipe', job->'files', STRING_AGG(instanceId::TEXT, ', ') FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE jobs.jobId = $1 GROUP BY jobs.job", db)
 
 	return Datastore{db: db, addJob: addJob, getJob: getJob, getJobs: getJobs, updateJob: updateJob, addInstance: addInstance, updateInstance: updateInstance,
 		findInstance: findInstance, addFileToJob: addFileToJob, addEvent: addEvent, addDimension: addDimension,
-		getDimensions: getDimensions, getDimensionValues:getDimensionValues, addNodeID: addNodeID,
+		getDimensions: getDimensions, getDimensionValues: getDimensionValues, addNodeID: addNodeID,
 		createPublishMessage: createPublishMessage}, nil
 }
 
@@ -103,7 +103,7 @@ func (ds Datastore) GetJobs(host string, filter []string) ([]models.Job, error) 
 		filter = allFilterStates
 	}
 	rows, err := ds.getJobs.Query(pg.Array(filter))
-	if err !=nil {
+	if err != nil {
 		return []models.Job{}, err
 	}
 
@@ -187,7 +187,7 @@ func (ds Datastore) AddInstance(tx *sql.Tx, jobID string) (string, error) {
 // GetInstance from postgres
 func (ds Datastore) GetInstance(host, instanceID string) (models.Instance, error) {
 	row := ds.findInstance.QueryRow(instanceID)
-	var instanceJSON , jobID sql.NullString
+	var instanceJSON, jobID sql.NullString
 	err := row.Scan(&instanceJSON, &jobID)
 	if err != nil {
 		return models.Instance{}, convertError(err)
@@ -211,7 +211,7 @@ func (ds Datastore) UpdateInstance(instanceID string, instance *models.Instance)
 	row := ds.updateInstance.QueryRow(string(json), instanceID)
 	var instanceIDReturned sql.NullString
 	// Check that a instanceId is returned if not, no rows where update so return a job not found error
-	return  convertError(row.Scan(&instanceIDReturned))
+	return convertError(row.Scan(&instanceIDReturned))
 }
 
 // AddEvent into an instance
@@ -278,7 +278,7 @@ func (ds Datastore) GetDimensionValues(instanceID, dimensionName string) (models
 		return models.UniqueDimensionValues{}, api_errors.DimensionNameNotFoundError
 	}
 
-	return models.UniqueDimensionValues{Name:dimensionName, Values:values}, nil
+	return models.UniqueDimensionValues{Name: dimensionName, Values: values}, nil
 }
 
 // AddNodeID for a dimension

@@ -5,6 +5,7 @@ import (
 
 	"encoding/json"
 	"errors"
+
 	"github.com/ONSdigital/dp-import-api/api-errors"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/log"
@@ -23,15 +24,15 @@ type ImportAPI struct {
 }
 
 // CreateImportAPI returns the api with all the routes configured
-func CreateImportAPI(host string, router *mux.Router ,dataStore DataStore, jobQueue JobQueue) *ImportAPI {
+func CreateImportAPI(host string, router *mux.Router, dataStore DataStore, jobQueue JobQueue) *ImportAPI {
 	api := ImportAPI{host: host, dataStore: dataStore, router: router, jobQueue: jobQueue}
 	// External API for florence
 	api.router.Path("/jobs").Methods("POST").HandlerFunc(api.addJob)
 	api.router.Path("/jobs").Methods("GET").HandlerFunc(api.getJobs).Queries()
 	api.router.Path("/jobs/{jobId}").Methods("GET").HandlerFunc(api.getJob)
 	api.router.Path("/jobs/{jobId}").Methods("PUT").HandlerFunc(api.updateJob)
-	api.router.Path("/jobs/{jobId}/files").Methods("PUT").HandlerFunc( api.addUploadedFile)
-	api.router.Path("/instances/{instanceId}", ).Methods("GET").HandlerFunc(api.getInstance)
+	api.router.Path("/jobs/{jobId}/files").Methods("PUT").HandlerFunc(api.addUploadedFile)
+	api.router.Path("/instances/{instanceId}").Methods("GET").HandlerFunc(api.getInstance)
 	api.router.Path("/instances/{instanceId}/dimensions").Methods("GET").HandlerFunc(api.getDimensions)
 	api.router.Path("/instances/{instanceId}/dimensions/{dimension_name}/options").Methods("GET").HandlerFunc(api.getDimensionValues)
 	// Internal API
@@ -39,7 +40,6 @@ func CreateImportAPI(host string, router *mux.Router ,dataStore DataStore, jobQu
 	api.router.Path("/instances/{instanceId}/events").Methods("PUT").HandlerFunc(api.addEvent)
 	api.router.Path("/instances/{instanceId}/dimensions/{dimension_name}/options/{value}").Methods("PUT").HandlerFunc(api.addDimension)
 	api.router.Path("/instances/{instanceId}/dimensions/{dimension_name}/nodeid/{value}").Methods("PUT").HandlerFunc(api.addNodeID)
-
 
 	return &api
 }
@@ -80,9 +80,9 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 	log.Info("created new import job", log.Data{"job": jobInstance})
 }
 
-func (api * ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
+func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
 	filtersQuery := r.URL.Query().Get("job_states")
-	var filterList [] string
+	var filterList []string
 	if filtersQuery == "" {
 		filterList = nil
 	} else {
@@ -107,10 +107,10 @@ func (api * ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
-	log.Info("Returning a list of import jobs", log.Data{"filter":filtersQuery})
+	log.Info("Returning a list of import jobs", log.Data{"filter": filtersQuery})
 }
 
-func (api * ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
+func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	jobID := vars["jobId"]
 	job, err := api.dataStore.GetJob(api.host, jobID)
