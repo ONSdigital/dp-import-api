@@ -11,6 +11,7 @@ type Configuration struct {
 	InputFileAvailableTopic string   `env:"INPUT_FILE_AVAILABLE_TOPIC" flag:"input-file-available-topic" flagDesc:"The Kafka topic to import job directly"`
 	KafkaMaxBytes           int      `env:"KAFKA_MAX_BYTES" flag:"kafka-max-bytes" flagDesc:"The maximum permitted size of a message. Should be set equal to or smaller than the broker's 'message.max.bytes'"`
 	PostgresURL             string   `env:"POSTGRES_URL" flag:"postgres-url" flagDesc:"The URL address to connect to a postgres instance'"`
+	SecretKey               string   `env:"SECRET_KEY" flag:"secret-key" flagDesc:"A secret key used authentication"`
 }
 
 var cfg *Configuration
@@ -31,6 +32,7 @@ func Get() (*Configuration, error) {
 		InputFileAvailableTopic: "input-file-available",
 		KafkaMaxBytes:           2000000,
 		PostgresURL:             "user=dp dbname=ImportJobs sslmode=disable",
+		SecretKey:               "FD0108EA-825D-411C-9B1D-41EF7727F465",
 	}
 
 	return cfg, gofigure.Gofigure(cfg)

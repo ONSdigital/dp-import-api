@@ -24,8 +24,9 @@ type ImportAPI struct {
 }
 
 // CreateImportAPI returns the api with all the routes configured
-func CreateImportAPI(host string, router *mux.Router, dataStore DataStore, jobQueue JobQueue) *ImportAPI {
+func CreateImportAPI(host string, router *mux.Router, dataStore DataStore, jobQueue JobQueue, secretKey string) *ImportAPI {
 	api := ImportAPI{host: host, dataStore: dataStore, router: router, jobQueue: jobQueue}
+	auth := NewAuthenticator(secretKey, "internal-token")
 	// External API for florence
 	api.router.Path("/jobs").Methods("POST").HandlerFunc(api.addJob)
 	api.router.Path("/jobs").Methods("GET").HandlerFunc(api.getJobs).Queries()
@@ -36,10 +37,12 @@ func CreateImportAPI(host string, router *mux.Router, dataStore DataStore, jobQu
 	api.router.Path("/instances/{instanceId}/dimensions").Methods("GET").HandlerFunc(api.getDimensions)
 	api.router.Path("/instances/{instanceId}/dimensions/{dimension_name}/options").Methods("GET").HandlerFunc(api.getDimensionValues)
 	// Internal API
-	api.router.Path("/instances/{instanceId}").Methods("PUT").HandlerFunc(api.updateInstance)
-	api.router.Path("/instances/{instanceId}/events").Methods("PUT").HandlerFunc(api.addEvent)
-	api.router.Path("/instances/{instanceId}/dimensions/{dimension_name}/options/{value}").Methods("PUT").HandlerFunc(api.addDimension)
-	api.router.Path("/instances/{instanceId}/dimensions/{dimension_name}/nodeid/{value}").Methods("PUT").HandlerFunc(api.addNodeID)
+	api.router.Path("/instances/{instanceId}").Methods("PUT").HandlerFunc(auth.MiddleWareAuthentication(api.updateInstance))
+	api.router.Path("/instances/{instanceId}/events").Methods("PUT").HandlerFunc(auth.MiddleWareAuthentication(api.addEvent))
+	api.router.Path("/instances/{instanceId}/dimensions/{dimension_name}/options/{value}").
+		Methods("PUT").HandlerFunc(auth.MiddleWareAuthentication(api.addDimension))
+	api.router.Path("/instances/{instanceId}/dimensions/{dimension_name}/nodeid/{value}").Methods("PUT").
+		HandlerFunc(auth.MiddleWareAuthentication(api.addNodeID))
 
 	return &api
 }
