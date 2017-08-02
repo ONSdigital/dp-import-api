@@ -134,7 +134,7 @@ func (ds Datastore) GetJob(host string, jobID string) (models.Job, error) {
 	var instanceID, jobInfo sql.NullString
 	err := row.Scan(&instanceID, &jobInfo)
 	if err != nil {
-		return models.Job{}, err
+		return models.Job{},  convertError(err)
 	}
 	var job models.Job
 	err = json.Unmarshal([]byte(jobInfo.String), &job)
