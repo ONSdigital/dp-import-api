@@ -225,7 +225,7 @@ func (ds Datastore) AddEvent(instanceID string, event *models.Event) error {
 // AddDimension to cache in postgres
 func (ds Datastore) AddDimension(instanceID string, dimension *models.Dimension) error {
 	// Check that an instance exists else return an error
-	_, err := ds.GetInstance(instanceID, "")
+	_, err := ds.GetInstance("", instanceID)
 	if err != nil {
 		return err
 	}
@@ -238,7 +238,7 @@ func (ds Datastore) AddDimension(instanceID string, dimension *models.Dimension)
 
 // GetDimensions related to an instanceID
 func (ds Datastore) GetDimensions(instanceID string) ([]models.Dimension, error) {
-	_, err := ds.GetInstance(instanceID, "")
+	_, err := ds.GetInstance("", instanceID)
 	if err != nil {
 		return []models.Dimension{}, err
 	}
