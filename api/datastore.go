@@ -11,6 +11,7 @@ type DataStore interface {
 	GetJobs(host string, filters []string) ([]models.Job, error)
 	UpdateJobState(jobID string, state *models.Job) error
 	GetInstance(host, instanceID string) (models.Instance, error)
+	GetInstances(host string, filter []string) ([]models.Instance, error)
 	UpdateInstance(instanceID string, instance *models.Instance) error
 	AddUploadedFile(instanceID string, message *models.UploadedFile) error
 	AddEvent(instanceID string, event *models.Event) error

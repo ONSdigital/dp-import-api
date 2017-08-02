@@ -61,10 +61,11 @@ type Dimension struct {
 // Instance which presents a single dataset being imported
 type Instance struct {
 	InstanceID           string    `json:"instance_id,omitempty"`
-	JobURL               string    `json:"job_url,omitempty"`
+	Job                  IDLink    `json:"job,omitempty"`
 	State                string    `json:"state,omitempty"`
 	Events               *[]Event  `json:"events,omitempty"`
-	NumberOfObservations int       `json:"number_of_observations,omitempty"`
+	TotalObservations    int       `json:"total_observations,omitempty"`
+	InsertedObservations int       `json:"total_inserted_observations,omitempty"`
 	Headers              *[]string `json:"headers,omitempty"`
 	LastUpdated          string    `json:"last_updated,omitempty"`
 }
@@ -100,6 +101,12 @@ type DataBakerEvent struct {
 type UniqueDimensionValues struct {
 	Name   string   `json:"dimension_id"`
 	Values []string `json:"values"`
+}
+
+// IDLink holds the id and a link to the resource
+type IDLink struct {
+	ID   string `json:"id"`
+	Link string `json:"line"`
 }
 
 // CreateJob from a json message

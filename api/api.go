@@ -33,6 +33,7 @@ func CreateImportAPI(host string, router *mux.Router, dataStore DataStore, jobQu
 	api.router.Path("/jobs/{jobId}").Methods("GET").HandlerFunc(api.getJob)
 	api.router.Path("/jobs/{jobId}").Methods("PUT").HandlerFunc(api.updateJob)
 	api.router.Path("/jobs/{jobId}/files").Methods("PUT").HandlerFunc(api.addUploadedFile)
+	api.router.Path("/instances").Methods("GET").HandlerFunc(api.getInstances)
 	api.router.Path("/instances/{instanceId}").Methods("GET").HandlerFunc(api.getInstance)
 	api.router.Path("/instances/{instanceId}/dimensions").Methods("GET").HandlerFunc(api.getDimensions)
 	api.router.Path("/instances/{instanceId}/dimensions/{dimension_name}/options").Methods("GET").HandlerFunc(api.getDimensionValues)
@@ -189,6 +190,37 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 		log.Info("import job was queued", log.Data{"job_id": jobID})
 	}
 }
+
+func (api *ImportAPI) getInstances(w http.ResponseWriter, r *http.Request) {
+	filtersQuery := r.URL.Query().Get("instance_states")
+	var filterList []string
+	if filtersQuery == "" {
+		filterList = nil
+	} else {
+		filterList = strings.Split(filtersQuery, ",")
+	}
+	instances, err := api.dataStore.GetInstances(api.host, filterList)
+	if err != nil {
+		log.Error(err, log.Data{})
+		setErrorCode(w, err)
+		return
+	}
+	bytes, err := json.Marshal(instances)
+	if err != nil {
+		log.Error(err, log.Data{})
+		http.Error(w, internalError, http.StatusInternalServerError)
+		return
+	}
+	setJSONContentType(w)
+	_, err = w.Write(bytes)
+	if err != nil {
+		log.Error(err, log.Data{})
+		log.Error(err, log.Data{"instanceState": instances})
+		return
+	}
+	log.Info("returning instances information", log.Data{})
+}
+
 
 func (api *ImportAPI) getInstance(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

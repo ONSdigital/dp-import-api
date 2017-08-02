@@ -22,6 +22,7 @@ type Datastore struct {
 	updateJob            *sql.Stmt
 	addInstance          *sql.Stmt
 	findInstance         *sql.Stmt
+	getInstances         *sql.Stmt
 	updateInstance       *sql.Stmt
 	addFileToJob         *sql.Stmt
 	addEvent             *sql.Stmt
@@ -49,6 +50,7 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 	addFileToJob := prepare("UPDATE Jobs SET job = jsonb_set(job, '{files}', (SELECT (job->'files')  || TO_JSONB(json_build_object('alaisName',$1::TEXT,'url',$2::TEXT)) FROM Jobs WHERE jobId = $3), true) WHERE jobId = $3 RETURNING jobId", db)
 	addInstance := prepare("INSERT INTO Instances(instanceId, jobId, instance) VALUES($1, $2, $3) RETURNING instanceId", db)
 	findInstance := prepare("SELECT instance, jobId FROM Instances WHERE instanceId = $1", db)
+	getInstances := prepare("SELECT instanceId, instance, jobID FROM Instances WHERE instance->>'state' = ANY ($1::TEXT[])", db)
 	updateInstance := prepare("UPDATE Instances set instance = instance || jsonb($1::TEXT) WHERE instanceId = $2 RETURNING instanceId", db)
 	addEvent := prepare("UPDATE Instances SET instance = jsonb_set(instance, '{events}', (SELECT (instance->'events')  || TO_JSONB(json_build_object('type', $1::TEXT, 'time', $2::TEXT, 'message', $3::TEXT, 'messageOffset', $4::TEXT)) FROM Instances WHERE instanceid = $5), true) WHERE instanceid = $5 RETURNING instanceId", db)
 	addDimension := prepare("INSERT INTO Dimensions(instanceId, dimensionName, value) VALUES($1, $2, $3)", db)
@@ -58,7 +60,7 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 	createPublishMessage := prepare("SELECT job->>'recipe', job->'files', STRING_AGG(instanceId::TEXT, ', ') FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE jobs.jobId = $1 GROUP BY jobs.job", db)
 
 	return Datastore{db: db, addJob: addJob, getJob: getJob, getJobs: getJobs, updateJob: updateJob, addInstance: addInstance, updateInstance: updateInstance,
-		findInstance: findInstance, addFileToJob: addFileToJob, addEvent: addEvent, addDimension: addDimension,
+		findInstance: findInstance, getInstances: getInstances, addFileToJob: addFileToJob, addEvent: addEvent, addDimension: addDimension,
 		getDimensions: getDimensions, getDimensionValues: getDimensionValues, addNodeID: addNodeID,
 		createPublishMessage: createPublishMessage}, nil
 }
@@ -169,7 +171,8 @@ func (ds Datastore) UpdateJobState(jobID string, job *models.Job) error {
 
 // AddInstance which relates to a job
 func (ds Datastore) AddInstance(tx *sql.Tx, jobID string) (string, error) {
-	job := models.Instance{State: "created", LastUpdated: time.Now().UTC().String(), Events: &[]models.Event{}}
+	job := models.Instance{State: "created", LastUpdated: time.Now().UTC().String(),
+		Events: &[]models.Event{}, TotalObservations:-1, InsertedObservations:-1}
 	bytes, err := json.Marshal(job)
 	if err != nil {
 		return "", err
@@ -198,8 +201,33 @@ func (ds Datastore) GetInstance(host, instanceID string) (models.Instance, error
 		return models.Instance{}, err
 	}
 	instance.InstanceID = instanceID
-	instance.JobURL = host + "/jobs/" + jobID.String
+	instance.Job = models.IDLink{ ID: jobID.String, Link: host + "/jobs/" + jobID.String}
 	return instance, nil
+}
+
+// GetInstances from postgres
+func (ds Datastore) GetInstances(host string, filter []string) ([]models.Instance, error) {
+	if len(filter) == 0 {
+		filter = allFilterStates
+	}
+	var instances []models.Instance
+	rows, err := ds.getInstances.Query(pg.Array(filter))
+	if err != nil {
+		return []models.Instance{}, err
+	}
+	for rows.Next() {
+		var instanceID, instanceJSON, jobID sql.NullString
+		err = rows.Scan(&instanceID, &instanceJSON, &jobID)
+		var instance models.Instance
+		err = json.Unmarshal([]byte(instanceJSON.String), &instance)
+		if err != nil {
+			return []models.Instance{}, err
+		}
+		instance.InstanceID = instanceID.String
+		instance.Job = models.IDLink{ ID: jobID.String, Link: host + "/jobs/" + jobID.String}
+		instances = append(instances, instance)
+	}
+	return instances, nil
 }
 
 // UpdateInstance in postgres
