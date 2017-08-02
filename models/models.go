@@ -106,7 +106,7 @@ type UniqueDimensionValues struct {
 // IDLink holds the id and a link to the resource
 type IDLink struct {
 	ID   string `json:"id"`
-	Link string `json:"line"`
+	Link string `json:"link"`
 }
 
 // CreateJob from a json message
