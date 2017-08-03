@@ -221,7 +221,6 @@ func (api *ImportAPI) getInstances(w http.ResponseWriter, r *http.Request) {
 	log.Info("returning instances information", log.Data{})
 }
 
-
 func (api *ImportAPI) getInstance(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	instanceID := vars["instanceId"]

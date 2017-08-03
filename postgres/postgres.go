@@ -3,12 +3,13 @@ package postgres
 import (
 	"database/sql"
 	"encoding/json"
-	"github.com/ONSdigital/dp-import-api/api-errors"
-	"github.com/ONSdigital/dp-import-api/models"
 	"strings"
 	"time"
+
+	"github.com/ONSdigital/dp-import-api/api-errors"
+	"github.com/ONSdigital/dp-import-api/models"
+	pg "github.com/lib/pq"
 	"github.com/satori/go.uuid"
-    pg "github.com/lib/pq"
 )
 
 var allFilterStates = []string{"created", "submitted", "completed", "error"}
@@ -138,7 +139,7 @@ func (ds Datastore) GetJob(host string, jobID string) (models.Job, error) {
 	var instanceID, jobInfo sql.NullString
 	err := row.Scan(&instanceID, &jobInfo)
 	if err != nil {
-		return models.Job{},  convertError(err)
+		return models.Job{}, convertError(err)
 	}
 	var job models.Job
 	err = json.Unmarshal([]byte(jobInfo.String), &job)
@@ -175,7 +176,7 @@ func (ds Datastore) UpdateJobState(jobID string, job *models.Job) error {
 // AddInstance which relates to a job
 func (ds Datastore) AddInstance(tx *sql.Tx, jobID string) (string, error) {
 	job := models.Instance{State: "created", LastUpdated: time.Now().UTC().String(),
-		Events: &[]models.Event{}, TotalObservations:-1, InsertedObservations:-1}
+		Events: &[]models.Event{}, TotalObservations: -1, InsertedObservations: -1}
 	bytes, err := json.Marshal(job)
 	if err != nil {
 		return "", err
@@ -204,7 +205,7 @@ func (ds Datastore) GetInstance(host, instanceID string) (models.Instance, error
 		return models.Instance{}, err
 	}
 	instance.InstanceID = instanceID
-	instance.Job = models.IDLink{ ID: jobID.String, Link: host + "/jobs/" + jobID.String}
+	instance.Job = models.IDLink{ID: jobID.String, Link: host + "/jobs/" + jobID.String}
 	return instance, nil
 }
 
@@ -227,7 +228,7 @@ func (ds Datastore) GetInstances(host string, filter []string) ([]models.Instanc
 			return []models.Instance{}, err
 		}
 		instance.InstanceID = instanceID.String
-		instance.Job = models.IDLink{ ID: jobID.String, Link: host + "/jobs/" + jobID.String}
+		instance.Job = models.IDLink{ID: jobID.String, Link: host + "/jobs/" + jobID.String}
 		instances = append(instances, instance)
 	}
 	return instances, nil
