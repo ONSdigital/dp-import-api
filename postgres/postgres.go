@@ -119,9 +119,8 @@ func (ds Datastore) GetJobs(host string, filter []string) ([]models.Job, error) 
 		if err != nil {
 			return []models.Job{}, err
 		}
-		url := host + "/instances/" + instanceID.String
 		job.JobID = jobID.String
-		job.Links.InstanceIDs = []string{url}
+		job.Links.InstanceIDs = []string{buildInstanceURL(host, instanceID.String)}
 		jobs = append(jobs, job)
 
 	}
@@ -141,9 +140,8 @@ func (ds Datastore) GetJob(host string, jobID string) (models.Job, error) {
 	if err != nil {
 		return models.Job{}, err
 	}
-	url := host + "/instances/" + instanceID.String
 	job.JobID = jobID
-	job.Links.InstanceIDs = []string{url}
+	job.Links.InstanceIDs = []string{buildInstanceURL(host, instanceID.String)}
 	return job, nil
 }
 
@@ -198,9 +196,10 @@ func (ds Datastore) GetInstance(host, instanceID string) (models.Instance, error
 		return models.Instance{}, err
 	}
 	instance.InstanceID = instanceID
-	instance.JobURL = host + "/jobs/" + jobID.String
+	instance.JobURL = buildJobURL(host, jobID.String)
 	return instance, nil
 }
+
 
 // UpdateInstance in postgres
 func (ds Datastore) UpdateInstance(instanceID string, instance *models.Instance) error {
@@ -244,7 +243,7 @@ func (ds Datastore) GetDimensions(instanceID string) ([]models.Dimension, error)
 	}
 	rows, err := ds.getDimensions.Query(instanceID)
 	if err != nil {
-		return []models.Dimension{}, err
+		return []models.Dimension{}, convertError(err)
 	}
 	dimensions := []models.Dimension{}
 	for rows.Next() {
@@ -315,4 +314,12 @@ func convertError(err error) error {
 		return err
 	}
 	return nil
+}
+
+func buildInstanceURL(host, id string) string {
+	return host + "/instances/" + id
+}
+
+func buildJobURL(host, id string) string {
+	return host + "/jobs/" + id
 }
