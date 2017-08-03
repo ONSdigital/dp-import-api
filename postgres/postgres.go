@@ -96,6 +96,7 @@ func (ds Datastore) AddJob(host string, newjob *models.Job) (models.Job, error) 
 	url := host + "/instances/" + id
 	newjob.JobID = jobID.String
 	newjob.Links.InstanceIDs = []string{url}
+	newjob.Instances = []models.InstanceLink{models.InstanceLink{ID: id, Link: url}}
 	return *newjob, nil
 }
 
@@ -124,6 +125,7 @@ func (ds Datastore) GetJobs(host string, filter []string) ([]models.Job, error) 
 		url := host + "/instances/" + instanceID.String
 		job.JobID = jobID.String
 		job.Links.InstanceIDs = []string{url}
+		job.Instances = []models.InstanceLink{models.InstanceLink{ID: instanceID.String, Link: url}}
 		jobs = append(jobs, job)
 
 	}
@@ -146,6 +148,7 @@ func (ds Datastore) GetJob(host string, jobID string) (models.Job, error) {
 	url := host + "/instances/" + instanceID.String
 	job.JobID = jobID
 	job.Links.InstanceIDs = []string{url}
+	job.Instances = []models.InstanceLink{models.InstanceLink{ID: instanceID.String, Link: url}}
 	return job, nil
 }
 

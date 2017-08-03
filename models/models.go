@@ -14,11 +14,18 @@ type Job struct {
 	State         string          `json:"state,omitempty"`
 	UploadedFiles *[]UploadedFile `json:"files,omitempty"`
 	Links         JobLinks        `json:"links,omitempty"`
+	Instances     []InstanceLink  `json:"instances,omitempty"`
 }
 
 // JobLinks to the number of instances within a job
 type JobLinks struct {
 	InstanceIDs []string `json:"instance_ids"`
+}
+
+// InstanceLink holds details for an instance within a job
+type InstanceLink struct {
+	ID   string `json:"id"`
+	Link string `json:"link"`
 }
 
 // Validate the content of a job
