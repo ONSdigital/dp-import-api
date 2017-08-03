@@ -123,9 +123,8 @@ func (ds Datastore) GetJobs(host string, filter []string) ([]models.Job, error) 
 		if err != nil {
 			return []models.Job{}, err
 		}
-		url := host + "/instances/" + instanceID.String
 		job.JobID = jobID.String
-		job.Instances = []models.IDLink{models.IDLink{ID: instanceID.String, Link: url}}
+		job.Instances = []models.IDLink{models.IDLink{ID: instanceID.String, Link: buildInstanceURL(host, instanceID.String)}}
 		jobs = append(jobs, job)
 
 	}
@@ -145,9 +144,10 @@ func (ds Datastore) GetJob(host string, jobID string) (models.Job, error) {
 	if err != nil {
 		return models.Job{}, err
 	}
-	url := host + "/instances/" + instanceID.String
 	job.JobID = jobID
-	job.Instances = []models.IDLink{models.IDLink{ID: instanceID.String, Link: url}}
+
+	job.Instances = []models.IDLink{models.IDLink{ID: instanceID.String, Link: buildInstanceURL(host, instanceID.String)}}
+
 	return job, nil
 }
 
@@ -203,7 +203,7 @@ func (ds Datastore) GetInstance(host, instanceID string) (models.Instance, error
 		return models.Instance{}, err
 	}
 	instance.InstanceID = instanceID
-	instance.Job = models.IDLink{ID: jobID.String, Link: host + "/jobs/" + jobID.String}
+	instance.Job = models.IDLink{ID: jobID.String, Link: buildJobURL(host, jobID.String)}
 	return instance, nil
 }
 
@@ -226,7 +226,7 @@ func (ds Datastore) GetInstances(host string, filter []string) ([]models.Instanc
 			return []models.Instance{}, err
 		}
 		instance.InstanceID = instanceID.String
-		instance.Job = models.IDLink{ID: jobID.String, Link: host + "/jobs/" + jobID.String}
+		instance.Job = models.IDLink{ID: jobID.String, Link: buildJobURL(host, jobID.String)}
 		instances = append(instances, instance)
 	}
 	return instances, nil
@@ -274,7 +274,7 @@ func (ds Datastore) GetDimensions(instanceID string) ([]models.Dimension, error)
 	}
 	rows, err := ds.getDimensions.Query(instanceID)
 	if err != nil {
-		return []models.Dimension{}, err
+		return []models.Dimension{}, convertError(err)
 	}
 	dimensions := []models.Dimension{}
 	for rows.Next() {
@@ -345,4 +345,12 @@ func convertError(err error) error {
 		return err
 	}
 	return nil
+}
+
+func buildInstanceURL(host, id string) string {
+	return host + "/instances/" + id
+}
+
+func buildJobURL(host, id string) string {
+	return host + "/jobs/" + id
 }
