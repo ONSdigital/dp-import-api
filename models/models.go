@@ -13,19 +13,12 @@ type Job struct {
 	Recipe        string          `json:"recipe,omitempty"`
 	State         string          `json:"state,omitempty"`
 	UploadedFiles *[]UploadedFile `json:"files,omitempty"`
-	Links         JobLinks        `json:"links,omitempty"`
-	Instances     []InstanceLink  `json:"instances,omitempty"`
+	Instances     []IDLink  `json:"instances,omitempty"`
 }
 
 // JobLinks to the number of instances within a job
 type JobLinks struct {
 	InstanceIDs []string `json:"instance_ids"`
-}
-
-// InstanceLink holds details for an instance within a job
-type InstanceLink struct {
-	ID   string `json:"id"`
-	Link string `json:"link"`
 }
 
 // Validate the content of a job
@@ -71,8 +64,8 @@ type Instance struct {
 	Job                  IDLink    `json:"job,omitempty"`
 	State                string    `json:"state,omitempty"`
 	Events               *[]Event  `json:"events,omitempty"`
-	TotalObservations    int       `json:"total_observations,omitempty"`
-	InsertedObservations int       `json:"total_inserted_observations,omitempty"`
+	TotalObservations    *int      `json:"total_observations,omitempty"`
+	InsertedObservations *int      `json:"total_inserted_observations,omitempty"`
 	Headers              *[]string `json:"headers,omitempty"`
 	LastUpdated          string    `json:"last_updated,omitempty"`
 }

@@ -18,6 +18,7 @@ const (
 	createInstanceSQL      = "INSERT INTO Instances"
 	findInstanceSQL        = "SELECT instance, jobId FROM Instances WHERE"
 	updateInstanceSQL      = "UPDATE Instances set instance = instance"
+	getInstancesSQL        = "SELECT instanceId, instance, jobID FROM"
 	addEventSQL            = "UPDATE Instances SET instance = jsonb_set"
 	addDimensionSQL        = "INSERT INTO Dimensions"
 	findDimensionsSQL      = "SELECT dimensionName, value, nodeId"
@@ -41,7 +42,7 @@ func TestNewPostgresDatastore(t *testing.T) {
 
 func TestGetInstance(t *testing.T) {
 	t.Parallel()
-	Convey("When an instanceId is provided, the importqueue job state is returned", t, func() {
+	Convey("When an instanceId is provided, the instance state is returned", t, func() {
 		jsonContent := "{ \"state\":\"Created\"}"
 		mock, db := NewSQLMockWithSQLStatements()
 		ds, err := NewDatastore(db)
@@ -52,6 +53,22 @@ func TestGetInstance(t *testing.T) {
 		state, err := ds.GetInstance("http://localhost:80", "any")
 		So(err, ShouldBeNil)
 		So(state.State, ShouldEqual, "Created")
+	})
+}
+
+func TestGetInstances(t *testing.T) {
+	t.Parallel()
+	Convey("When a request for all, a list of instances are returned", t, func() {
+		jsonContent := "{ \"state\":\"Created\"}"
+		mock, db := NewSQLMockWithSQLStatements()
+		ds, err := NewDatastore(db)
+		So(err, ShouldBeNil)
+		mock.ExpectQuery(getInstancesSQL).
+			WithArgs(sqlmock.AnyArg()).WillReturnRows(sqlmock.NewRows([]string{"id", "instance", "jobId"}).
+			AddRow("1", jsonContent, "1"))
+		instances, err := ds.GetInstances("http://localhost:80", []string{})
+		So(err, ShouldBeNil)
+		So(instances[0].State, ShouldEqual, "Created")
 	})
 }
 
@@ -202,7 +219,7 @@ func TestUpdateInstanceState(t *testing.T) {
 		mock.ExpectPrepare(updateInstanceSQL).ExpectQuery().
 			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).
 			WillReturnRows(sqlmock.NewRows([]string{"instanceId"}).AddRow("123"))
-		dataStoreErr := ds.UpdateInstance("123", &models.Instance{TotalObservations: 5})
+		dataStoreErr := ds.UpdateInstance("123", &models.Instance{TotalObservations: new(int)})
 		So(dataStoreErr, ShouldBeNil)
 	})
 }
@@ -237,6 +254,7 @@ func NewSQLMockWithSQLStatements() (sqlmock.Sqlmock, *sql.DB) {
 	mock.ExpectPrepare(createInstanceSQL)
 	mock.ExpectPrepare(updateInstanceSQL)
 	mock.ExpectPrepare(findInstanceSQL)
+	mock.ExpectPrepare(getInstancesSQL)
 	mock.ExpectPrepare(addEventSQL)
 	mock.ExpectPrepare(addDimensionSQL)
 	mock.ExpectPrepare(findDimensionsSQL)

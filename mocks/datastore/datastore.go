@@ -67,6 +67,14 @@ func (ds *DataStore) GetInstance(host, instanceID string) (models.Instance, erro
 	return models.Instance{InstanceID: "234234", State: "Created"}, nil
 }
 
+func (ds *DataStore) GetInstances(host string, filter []string) ([]models.Instance, error) {
+
+	if ds.InternalError {
+		return []models.Instance{}, internalError
+	}
+	return []models.Instance{models.Instance{InstanceID: "234234", State: "Created"}}, nil
+}
+
 func (ds *DataStore) UpdateInstance(instanceID string, instance *models.Instance) error {
 	if ds.NotFound {
 		return api_errors.JobNotFoundError

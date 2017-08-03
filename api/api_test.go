@@ -3,13 +3,13 @@ package api
 import (
 	"github.com/ONSdigital/dp-import-api/mocks/datastore"
 	"github.com/ONSdigital/dp-import-api/mocks/jobqueue"
+	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"github.com/gorilla/mux"
-	"io"
 )
 
 var host = "http://localhost:80"
@@ -23,7 +23,7 @@ func TestAddJobReturnsInternalError(t *testing.T) {
 		r, err := createRequestWithAuth("POST", "http://localhost:21800/jobs", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{InternalError:true}, &mock_jobqueue.JobImporter{}, secretKey)
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{InternalError: true}, &mock_jobqueue.JobImporter{}, secretKey)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusInternalServerError)
 	})
@@ -35,7 +35,7 @@ func TestGetJobsReturnsInternalError(t *testing.T) {
 		r, err := createRequestWithAuth("GET", "http://localhost:21800/jobs", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{InternalError:true}, &mock_jobqueue.JobImporter{}, secretKey)
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{InternalError: true}, &mock_jobqueue.JobImporter{}, secretKey)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusInternalServerError)
 	})
@@ -59,7 +59,7 @@ func TestGetJobReturnsNotFound(t *testing.T) {
 		r, err := createRequestWithAuth("GET", "http://localhost:21800/jobs/000000", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound:true}, &mock_jobqueue.JobImporter{}, secretKey)
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound: true}, &mock_jobqueue.JobImporter{}, secretKey)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusNotFound)
 	})
@@ -84,7 +84,7 @@ func TestAddJobReturnsBadClientRequest(t *testing.T) {
 		r, err := createRequestWithAuth("POST", "http://localhost:21800/jobs", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound:true}, &mock_jobqueue.JobImporter{}, secretKey)
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound: true}, &mock_jobqueue.JobImporter{}, secretKey)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusBadRequest)
 	})
@@ -110,9 +110,33 @@ func TestGetInstanceReturnsNotFound(t *testing.T) {
 		r, err := createRequestWithAuth("GET", "http://localhost:21800/instances/12345", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound:true}, &mock_jobqueue.JobImporter{}, secretKey)
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound: true}, &mock_jobqueue.JobImporter{}, secretKey)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusNotFound)
+	})
+}
+
+func TestGetInstancesReturnsOk(t *testing.T) {
+	t.Parallel()
+	Convey("When a get request for an instances, returns a ok code", t, func() {
+		r, err := createRequestWithAuth("GET", "http://localhost:21800/instances", nil)
+		So(err, ShouldBeNil)
+		w := httptest.NewRecorder()
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{}, &mock_jobqueue.JobImporter{}, secretKey)
+		api.router.ServeHTTP(w, r)
+		So(w.Code, ShouldEqual, http.StatusOK)
+	})
+}
+
+func TestGetInstancesReturnsInternalError(t *testing.T) {
+	t.Parallel()
+	Convey("When a get request for an instances with invalid datastire, returns an internal error", t, func() {
+		r, err := createRequestWithAuth("GET", "http://localhost:21800/instances", nil)
+		So(err, ShouldBeNil)
+		w := httptest.NewRecorder()
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{InternalError:true}, &mock_jobqueue.JobImporter{}, secretKey)
+		api.router.ServeHTTP(w, r)
+		So(w.Code, ShouldEqual, http.StatusInternalServerError)
 	})
 }
 
@@ -129,7 +153,7 @@ func TestUpdateInstanceReturnsOk(t *testing.T) {
 	})
 }
 
-func TestGetImportJobReturnsImportJob(t *testing.T) {
+func TestGetImportJobReturnsOk(t *testing.T) {
 	t.Parallel()
 	Convey("When a get request for an importqueue job has a valid instance id, it state is returned", t, func() {
 		r, err := createRequestWithAuth("GET", "http://localhost:21800/instances/12345", nil)
@@ -148,7 +172,7 @@ func TestAddS3FileReturnsNotFound(t *testing.T) {
 		r, err := createRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound:true}, &mock_jobqueue.JobImporter{}, secretKey)
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound: true}, &mock_jobqueue.JobImporter{}, secretKey)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusNotFound)
 	})
@@ -160,7 +184,7 @@ func TestGetDimensionsReturnsNotFound(t *testing.T) {
 		r, err := createRequestWithAuth("GET", "http://localhost:21800/instances/12345/dimensions", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound:true}, &mock_jobqueue.JobImporter{}, secretKey)
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound: true}, &mock_jobqueue.JobImporter{}, secretKey)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusNotFound)
 	})
@@ -185,7 +209,7 @@ func TestAddEventReturnsNotFound(t *testing.T) {
 		r, err := createRequestWithAuth("PUT", "http://localhost:21800/instances/12345/events", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound:true}, &mock_jobqueue.JobImporter{}, secretKey)
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound: true}, &mock_jobqueue.JobImporter{}, secretKey)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusNotFound)
 	})
@@ -286,7 +310,7 @@ func TestUpdateJobStateReturnsNotFound(t *testing.T) {
 		r, err := createRequestWithAuth("PUT", "http://localhost:21800/jobs/12345", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound:true}, &mock_jobqueue.JobImporter{}, secretKey)
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound: true}, &mock_jobqueue.JobImporter{}, secretKey)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusNotFound)
 	})

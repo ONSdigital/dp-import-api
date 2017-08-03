@@ -167,6 +167,7 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 		log.Error(err, log.Data{"jobState": job, "job_id": jobID})
 		http.Error(w, "bad client request received", http.StatusBadRequest)
 	}
+
 	err = api.dataStore.UpdateJobState(jobID, job)
 	if err != nil {
 		log.Error(err, log.Data{"job": job, "job_id": jobID})
