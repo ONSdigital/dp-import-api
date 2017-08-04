@@ -22,7 +22,7 @@ func (a *Authenticator) Check(handle func(http.ResponseWriter, *http.Request)) h
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		key := r.Header.Get(a.headerName)
 		if key == "" {
-			http.Error(w, "No authentication cookie provided", http.StatusForbidden)
+			http.Error(w, "No authentication header provided", http.StatusForbidden)
 			log.Error(errors.New("Client missing token"), log.Data{"header":a.headerName})
 			return
 		}

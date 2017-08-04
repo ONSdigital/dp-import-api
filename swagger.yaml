@@ -284,6 +284,10 @@ paths:
           description: "The event was added to the instance"
         400:
           description: "Invalid json message sent"
+        401:
+          $ref: '#/responses/UnauthorisedError'
+        403:
+          $ref: '#/responses/ForbiddenError'
         404:
           description: "InstanceId does not match any instances"
         500:
@@ -307,6 +311,10 @@ paths:
           description: "The event was added to the instance"
         400:
           description: "Invalid json message sent"
+        401:
+          $ref: '#/responses/UnauthorisedError'
+        403:
+          $ref: '#/responses/ForbiddenError'
         404:
           description: "InstanceId does not match any instances"
         500:
@@ -329,6 +337,10 @@ paths:
       responses:
         200:
           description: "The dimension was added"
+        401:
+          $ref: '#/responses/UnauthorisedError'
+        403:
+          $ref: '#/responses/ForbiddenError'
         404:
           description: "InstanceId does not match any instances"
         500:
@@ -351,6 +363,10 @@ paths:
       responses:
         200:
           description: "Updated the dimension with the nodeId"
+        401:
+          $ref: '#/responses/UnauthorisedError'
+        403:
+          $ref: '#/responses/ForbiddenError'
         404:
           description: "InstanceId does not match any instances"
         500:
@@ -358,6 +374,10 @@ paths:
 responses:
   InternalError:
     description: "Failed to process the request due to an internal error"
+  ForbiddenError:
+    description: "No header with a token key was provided"
+  UnauthorisedError:
+    description: "The token provided is unauthorised to carry out this operation"
 definitions:
   JobList:
     description: "A list of import jobs"
