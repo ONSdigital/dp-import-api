@@ -16,22 +16,23 @@ var allFilterStates = []string{"created", "submitted", "completed", "error"}
 
 // Datastore to hold SQL statements to be used to gather information or to insert Jobs and instances
 type Datastore struct {
-	db                   *sql.DB
-	addJob               *sql.Stmt
-	getJob               *sql.Stmt
-	getJobs              *sql.Stmt
-	updateJob            *sql.Stmt
-	addInstance          *sql.Stmt
-	findInstance         *sql.Stmt
-	getInstances         *sql.Stmt
-	updateInstance       *sql.Stmt
-	addFileToJob         *sql.Stmt
-	addEvent             *sql.Stmt
-	addDimension         *sql.Stmt
-	getDimensions        *sql.Stmt
-	getDimensionValues   *sql.Stmt
-	addNodeID            *sql.Stmt
-	createPublishMessage *sql.Stmt
+	db                        *sql.DB
+	addJob                    *sql.Stmt
+	getJob                    *sql.Stmt
+	getJobs                   *sql.Stmt
+	updateJobNoRestrictions   *sql.Stmt
+	updateJobWithRestrictions *sql.Stmt
+	addInstance               *sql.Stmt
+	findInstance              *sql.Stmt
+	getInstances              *sql.Stmt
+	updateInstance            *sql.Stmt
+	addFileToJob              *sql.Stmt
+	addEvent                  *sql.Stmt
+	addDimension              *sql.Stmt
+	getDimensions             *sql.Stmt
+	getDimensionValues        *sql.Stmt
+	addNodeID                 *sql.Stmt
+	createPublishMessage      *sql.Stmt
 }
 
 func prepare(sql string, db *sql.DB) *sql.Stmt {
@@ -47,7 +48,8 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 	addJob := prepare("INSERT INTO Jobs(jobid,job) VALUES($1, $2) RETURNING jobId", db)
 	getJob := prepare("SELECT instanceId, job FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE Jobs.jobId = $1 ", db)
 	getJobs := prepare("SELECT Jobs.jobId, instanceId, job FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE Jobs.job->>'state' = ANY ($1::TEXT[])", db)
-	updateJob := prepare("UPDATE Jobs set job = job || jsonb($1::TEXT) WHERE jobId = $2 RETURNING jobId", db)
+	updateJobNoRestrictions := prepare("UPDATE Jobs set job = job || jsonb($1::TEXT) WHERE jobId = $2 RETURNING jobId", db)
+	updateJobWithRestrictions := prepare("UPDATE Jobs set job = job || jsonb($1::TEXT) WHERE jobId = $2 AND job->>'state' = 'created' RETURNING jobId", db)
 	addFileToJob := prepare("UPDATE Jobs SET job = jsonb_set(job, '{files}', (SELECT (job->'files')  || TO_JSONB(json_build_object('alaisName',$1::TEXT,'url',$2::TEXT)) FROM Jobs WHERE jobId = $3), true) WHERE jobId = $3 RETURNING jobId", db)
 	addInstance := prepare("INSERT INTO Instances(instanceId, jobId, instance) VALUES($1, $2, $3) RETURNING instanceId", db)
 	findInstance := prepare("SELECT instance, jobId FROM Instances WHERE instanceId = $1", db)
@@ -60,9 +62,9 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 	addNodeID := prepare("UPDATE Dimensions SET nodeId = $1 WHERE instanceId = $2 AND dimensionName = $3 RETURNING instanceId", db)
 	createPublishMessage := prepare("SELECT job->>'recipe', job->'files', STRING_AGG(instanceId::TEXT, ', ') FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE jobs.jobId = $1 GROUP BY jobs.job", db)
 
-	return Datastore{db: db, addJob: addJob, getJob: getJob, getJobs: getJobs, updateJob: updateJob, addInstance: addInstance, updateInstance: updateInstance,
-		findInstance: findInstance, getInstances: getInstances, addFileToJob: addFileToJob, addEvent: addEvent, addDimension: addDimension,
-		getDimensions: getDimensions, getDimensionValues: getDimensionValues, addNodeID: addNodeID,
+	return Datastore{db: db, addJob: addJob, getJob: getJob, getJobs: getJobs, updateJobNoRestrictions: updateJobNoRestrictions, updateJobWithRestrictions: updateJobWithRestrictions,
+		addInstance: addInstance, updateInstance: updateInstance, findInstance: findInstance, getInstances: getInstances, addFileToJob: addFileToJob, addEvent: addEvent,
+		addDimension: addDimension, getDimensions: getDimensions, getDimensionValues: getDimensionValues, addNodeID: addNodeID,
 		createPublishMessage: createPublishMessage}, nil
 }
 
@@ -160,15 +162,31 @@ func (ds Datastore) AddUploadedFile(instanceID string, message *models.UploadedF
 }
 
 // UpdateJobState configure the jobs state
-func (ds Datastore) UpdateJobState(jobID string, job *models.Job) error {
+func (ds Datastore) UpdateJobState(jobID string, job *models.Job, withOutRestrictions bool) error {
+	// Check that the job exists
+	_, err := ds.GetJob("", jobID)
+	if err != nil {
+		return err
+	}
 	json, err := json.Marshal(job)
 	if err != nil {
 		return err
 	}
-	row := ds.updateJob.QueryRow(string(json), jobID)
+	var updateStmt *sql.Stmt
+	if withOutRestrictions {
+		updateStmt = ds.updateJobNoRestrictions
+	} else {
+		updateStmt = ds.updateJobWithRestrictions
+	}
+
+	row := updateStmt.QueryRow(string(json), jobID)
 	var jobIDReturned sql.NullString
-	// Check that a instanceId is returned if not, no rows where update so return a job not found error
-	return convertError(row.Scan(&jobIDReturned))
+	err = row.Scan(&jobIDReturned)
+	// If no rows where updated but the job exists the request didn't have the right to update job's state.
+	if err == sql.ErrNoRows {
+      return api_errors.ForbiddenOperation
+	}
+	return err
 }
 
 // AddInstance which relates to a job

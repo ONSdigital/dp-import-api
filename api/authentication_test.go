@@ -46,6 +46,24 @@ func TestMiddleWareAuthentication(t *testing.T) {
 	})
 }
 
+
+func TestMiddleWareAuthenticationWithValue(t *testing.T) {
+	t.Parallel()
+	Convey("When a valid access token is provide, true is passed to a http handler", t, func() {
+		auth := NewAuthenticator("123", "internal-token")
+		r, err := http.NewRequest("POST", "http://localhost:21800/jobs", nil)
+		r.Header.Set("internal-token","123")
+		So(err, ShouldBeNil)
+		w := httptest.NewRecorder()
+		var isRequestAuthenticated bool
+		auth.MiddleWareAuthenticationWithValue(func(w http.ResponseWriter, r *http.Request, isAuth bool) {
+			isRequestAuthenticated = isAuth
+		}).ServeHTTP(w, r)
+		So(w.Code, ShouldEqual, http.StatusOK)
+		So(isRequestAuthenticated, ShouldEqual, true)
+	})
+}
+
 func mockHTTPHandler(w http.ResponseWriter, r *http.Request) {
 
 }

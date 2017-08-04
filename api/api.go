@@ -31,7 +31,7 @@ func CreateImportAPI(host string, router *mux.Router, dataStore DataStore, jobQu
 	api.router.Path("/jobs").Methods("POST").HandlerFunc(api.addJob)
 	api.router.Path("/jobs").Methods("GET").HandlerFunc(api.getJobs).Queries()
 	api.router.Path("/jobs/{job_id}").Methods("GET").HandlerFunc(api.getJob)
-	api.router.Path("/jobs/{job_id}").Methods("PUT").HandlerFunc(api.updateJob)
+	api.router.Path("/jobs/{job_id}").Methods("PUT").HandlerFunc(auth.MiddleWareAuthenticationWithValue(api.updateJob))
 	api.router.Path("/jobs/{job_id}/files").Methods("PUT").HandlerFunc(api.addUploadedFile)
 	api.router.Path("/instances").Methods("GET").HandlerFunc(api.getInstances)
 	api.router.Path("/instances/{instance_id}").Methods("GET").HandlerFunc(api.getInstance)
@@ -158,27 +158,27 @@ func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
 	log.Info("added uploaded file to job", log.Data{"job_id": jobID, "file": uploadedFile})
 }
 
-func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
+func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request, isAuth bool) {
 	vars := mux.Vars(r)
 	jobID := vars["job_id"]
 	job, err := models.CreateJob(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		log.Error(err, log.Data{"jobState": job, "job_id": jobID})
+		log.Error(err, log.Data{"jobState": job, "job_id": jobID, "isAuth": isAuth})
 		http.Error(w, "bad client request received", http.StatusBadRequest)
 	}
 
-	err = api.dataStore.UpdateJobState(jobID, job)
+	err = api.dataStore.UpdateJobState(jobID, job, isAuth)
 	if err != nil {
 		log.Error(err, log.Data{"job": job, "job_id": jobID})
 		setErrorCode(w, err)
 		return
 	}
-	log.Info("job updated", log.Data{"job_id": jobID, "updates": job})
+	log.Info("job updated", log.Data{"jobState": job, "job_id": jobID, "isAuth": isAuth})
 	if job.State == "submitted" {
 		task, err := api.dataStore.BuildImportDataMessage(jobID)
 		if err != nil {
-			log.Error(err, log.Data{"job": job, "job_id": jobID})
+			log.Error(err, log.Data{"jobState": job, "job_id": jobID, "isAuth": isAuth})
 			setErrorCode(w, err)
 			return
 		}
@@ -188,7 +188,7 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 			setErrorCode(w, err)
 			return
 		}
-		log.Info("import job was queued", log.Data{"job_id": jobID})
+		log.Info("import job was queued", log.Data{"jobState": job, "job_id": jobID, "isAuth": isAuth})
 	}
 }
 
@@ -379,6 +379,9 @@ func setErrorCode(w http.ResponseWriter, err error) {
 	switch {
 	case err == api_errors.JobNotFoundError:
 		http.Error(w, "Resource not found", http.StatusNotFound)
+		return
+	case err == api_errors.ForbiddenOperation:
+		http.Error(w, "Forbidden operation", http.StatusForbidden)
 		return
 	case err.Error() == "No dimension name found":
 		http.Error(w, "Resource not found", http.StatusNotFound)

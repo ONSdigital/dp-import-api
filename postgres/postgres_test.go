@@ -210,10 +210,14 @@ func TestUpdateJobState(t *testing.T) {
 		mock, db := NewSQLMockWithSQLStatements()
 		ds, err := NewDatastore(db)
 		So(err, ShouldBeNil)
+		jsonContent := "{ \"state\":\"Created\"}"
+		mock.ExpectQuery(getJobSQL).
+			WithArgs(sqlmock.AnyArg()).WillReturnRows(sqlmock.NewRows([]string{"instanceid","json"}).
+			AddRow( 1, jsonContent))
 		mock.ExpectQuery(updateJobStateSQL).
 			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).
 			WillReturnRows(sqlmock.NewRows([]string{"instanceId"}).AddRow("123"))
-		dataStoreErr := ds.UpdateJobState("123", &models.Job{State: "Start"})
+		dataStoreErr := ds.UpdateJobState("123", &models.Job{State: "Start"}, true)
 		So(dataStoreErr, ShouldBeNil)
 		So(mock.ExpectationsWereMet(), ShouldBeNil)
 	})
@@ -260,6 +264,7 @@ func NewSQLMockWithSQLStatements() (sqlmock.Sqlmock, *sql.DB) {
 	mock.ExpectPrepare(createJobSQL)
 	mock.ExpectPrepare(getJobSQL)
 	mock.ExpectPrepare(getJobsSQL)
+	mock.ExpectPrepare(updateJobStateSQL)
 	mock.ExpectPrepare(updateJobStateSQL)
 	mock.ExpectPrepare(addFileToJobSQL)
 	mock.ExpectPrepare(createInstanceSQL)

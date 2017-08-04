@@ -32,3 +32,14 @@ func (a Authenticator) MiddleWareAuthentication(handle func(http.ResponseWriter,
 		handle(w, r)
 	})
 }
+
+func (a Authenticator) MiddleWareAuthenticationWithValue(handle func(http.ResponseWriter, *http.Request, bool)) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		isAuthenticated := false
+		key := r.Header.Get(a.headerName)
+		if key == a.secretKey {
+			isAuthenticated = true
+		}
+		handle(w, r, isAuthenticated)
+	})
+}

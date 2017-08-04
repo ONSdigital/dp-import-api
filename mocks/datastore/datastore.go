@@ -47,7 +47,7 @@ func (ds *DataStore) AddInstance(joID string) (string, error) {
 	return "123", nil
 }
 
-func (ds *DataStore) UpdateJobState(string, *models.Job) error {
+func (ds *DataStore) UpdateJobState(string, *models.Job, bool) error {
 	if ds.NotFound {
 		return api_errors.JobNotFoundError
 	}

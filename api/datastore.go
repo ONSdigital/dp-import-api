@@ -9,7 +9,7 @@ type DataStore interface {
 	AddJob(host string, job *models.Job) (models.Job, error)
 	GetJob(host string, jobID string) (models.Job, error)
 	GetJobs(host string, filters []string) ([]models.Job, error)
-	UpdateJobState(jobID string, state *models.Job) error
+	UpdateJobState(jobID string, state *models.Job, withOutRestrictions bool) error
 	GetInstance(host, instanceID string) (models.Instance, error)
 	GetInstances(host string, filter []string) ([]models.Instance, error)
 	UpdateInstance(instanceID string, instance *models.Instance) error
