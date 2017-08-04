@@ -34,6 +34,13 @@ parameters:
     schema:
       $ref: '#/definitions/Job'
     required: true
+  job_states:
+    name: job_states
+    description: "A list of comma separated job states to filter on. Eg created,submitted"
+    type: array
+    items:
+      type: string
+    in: query
   instance:
     name: instance
     description: "A state of an instance"
@@ -80,6 +87,24 @@ securityDefinitions:
     name: internal-token
 paths:
   /jobs:
+    get:
+      tags:
+      - "External Interface"
+      summary: "Get a list of all jobs"
+      description: "Lists can be filtered by the job state"
+      produces:
+       - "application/json"
+      parameters:
+      - $ref: '#/parameters/job_states'
+      security:
+      - FlorenceAPIKey: []
+      responses:
+        200:
+          description: "A list of jobs has been returned"
+          schema:
+            $ref: '#/definitions/JobList'
+        500:
+          $ref: '#/responses/InternalError'
     post:
       tags:
       - "External Interface"
@@ -125,6 +150,26 @@ paths:
           description: "JobId does not match any import jobs"
         500:
           $ref: '#/responses/InternalError'
+    get:
+        tags:
+        - "External Interface"
+        summary: "Get a job"
+        description: "Get information about a single job"
+        parameters:
+         - $ref: '#/parameters/job_id'
+        produces:
+        - "application/json"
+        security:
+        - FlorenceAPIKey: []
+        responses:
+          200:
+            description: "Return a single jobs information"
+            schema:
+              $ref: '#/definitions/Job'
+          404:
+            description: "JobId does not match any import jobs"
+          500:
+            $ref: '#/responses/InternalError'
   /jobs/{job_id}/files:
     put:
       tags:
@@ -168,6 +213,62 @@ paths:
           description: "InstanceId does not match any import jobs"
         500:
           $ref: '#/responses/InternalError'
+  /instances/{instance_id}/dimensions:
+    get:
+      tags:
+      - "External Interface"
+      summary: "Get all dimensions from an instance"
+      description: "Get all dimensions from an instance"
+      parameters:
+      - $ref: '#/parameters/instance_id'
+      produces:
+      - "application/json"
+      security:
+      - InternalAPIKey: []
+      responses:
+        200:
+          description: "Return a list of dimensions"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Dimension'
+        404:
+          description: "InstanceId does not match any instances"
+        500:
+          $ref: '#/responses/InternalError'
+  /instances/{instance_id}/dimensions/{dimension_id}/options:
+    get:
+      tags:
+      - "External Interface"
+      summary: "Get all unique values from a dimension"
+      description: "Get all unique values from a dimension"
+      parameters:
+      - $ref: '#/parameters/instance_id'
+      - $ref: '#/parameters/dimension_id'
+      produces:
+      - "application/json"
+      security:
+      - InternalAPIKey: []
+      responses:
+        200:
+          description: "Return a list of unique values"
+          schema:
+            type: object
+            properties:
+              dimension_id:
+                description: "The name of the dimension"
+                type: string
+              values:
+                description: "A list of all unique values within a dimension"
+                type: array
+                items:
+                  type: string
+        400:
+          description: "instance_id does not match any instances"
+        404:
+          description: "dimension_id does not match any dimensions within the instance"
+        500:
+          $ref: '#/responses/InternalError'
     put:
       tags:
       - "Internal Interface"
@@ -206,29 +307,6 @@ paths:
           description: "The event was added to the instance"
         400:
           description: "Invalid json message sent"
-        404:
-          description: "InstanceId does not match any instances"
-        500:
-          $ref: '#/responses/InternalError'
-  /instances/{instance_id}/dimensions:
-    get:
-      tags:
-      - "Internal Interface"
-      summary: "Get all dimensions from an instance"
-      description: "Get all dimensions from an instance"
-      parameters:
-      - $ref: '#/parameters/instance_id'
-      produces:
-      - "application/json"
-      security:
-      - InternalAPIKey: []
-      responses:
-        200:
-          description: "Return a list of dimensions"
-          schema:
-            type: array
-            items:
-              $ref: '#/definitions/Dimension'
         404:
           description: "InstanceId does not match any instances"
         500:
@@ -281,6 +359,11 @@ responses:
   InternalError:
     description: "Failed to process the request due to an internal error"
 definitions:
+  JobList:
+    description: "A list of import jobs"
+    type: array
+    items:
+      $ref: '#/definitions/Job'
   Job:
     type: object
     description: "An object returned when an import job is created"
@@ -323,6 +406,10 @@ definitions:
         type: string
         readOnly: true
         description: "A unique id for a job"
+      job_url:
+        description: "A URL to the job which this instance is contained in"
+        type: string
+        example: "http://localhost:21800/jobs/042e216a-7822-4fa0-a3d6-e3f5248ffc35"
       state:
         type: string
         description: |

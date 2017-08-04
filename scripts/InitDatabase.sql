@@ -3,20 +3,20 @@ DROP TABLE IF EXISTS Instances;
 DROP TABLE IF EXISTS Dimensions;
 
 CREATE TABLE Jobs(
-  jobId SERIAL PRIMARY KEY,
+  jobId TEXT PRIMARY KEY,
   job JSONB NOT NULL
 );
 
 CREATE TABLE Instances(
- instanceId SERIAL PRIMARY KEY,
- jobId INT,
+ instanceId TEXT PRIMARY KEY,
+ jobId TEXT,
  instance JSONB NOT NULL
 );
 
 CREATE TABLE Dimensions(
   id SERIAL PRIMARY KEY,
-  instanceId INT,
-  nodeName TEXT,
+  instanceId TEXT,
+  dimensionName TEXT,
   value TEXT,
   nodeId TEXT
 );

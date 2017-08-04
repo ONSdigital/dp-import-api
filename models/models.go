@@ -2,8 +2,8 @@ package models
 
 import (
 	"encoding/json"
-	"io"
 	"errors"
+	"io"
 	"io/ioutil"
 )
 
@@ -61,6 +61,7 @@ type Dimension struct {
 // Instance which presents a single dataset being imported
 type Instance struct {
 	InstanceID           string    `json:"instance_id,omitempty"`
+	JobURL               string    `json:"job_url,omitempty"`
 	State                string    `json:"state,omitempty"`
 	Events               *[]Event  `json:"events,omitempty"`
 	NumberOfObservations int       `json:"number_of_observations,omitempty"`
@@ -93,6 +94,12 @@ type ImportData struct {
 // DataBakerEvent used to trigger the databaker process
 type DataBakerEvent struct {
 	JobID string `avro:"job_id"`
+}
+
+// UniqueDimensionValues hold all the unique values from a dimension
+type UniqueDimensionValues struct {
+	Name   string   `json:"dimension_id"`
+	Values []string `json:"values"`
 }
 
 // CreateJob from a json message

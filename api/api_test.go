@@ -16,13 +16,61 @@ var host = "http://localhost:80"
 func TestAddJobReturnsInternalError(t *testing.T) {
 	t.Parallel()
 	Convey("When a no data store is available, an internal error is returned", t, func() {
-		reader := strings.NewReader("{ \"number_of_instances\": 1, \"recipe\":\"test\"}")
+		reader := strings.NewReader("{\"recipe\":\"test\"}")
 		r, err := http.NewRequest("POST", "http://localhost:21800/jobs", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
 		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{InternalError:true}, &mock_jobqueue.JobImporter{})
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusInternalServerError)
+	})
+}
+
+func TestGetJobsReturnsInternalError(t *testing.T) {
+	t.Parallel()
+	Convey("When a get jobs request has no available datastore, an internal error is returned", t, func() {
+		r, err := http.NewRequest("GET", "http://localhost:21800/jobs", nil)
+		So(err, ShouldBeNil)
+		w := httptest.NewRecorder()
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{InternalError:true}, &mock_jobqueue.JobImporter{})
+		api.router.ServeHTTP(w, r)
+		So(w.Code, ShouldEqual, http.StatusInternalServerError)
+	})
+}
+
+func TestGetJobs(t *testing.T) {
+	t.Parallel()
+	Convey("When a get jobs request has a datastore, an ok status is returned ", t, func() {
+		r, err := http.NewRequest("GET", "http://localhost:21800/jobs", nil)
+		So(err, ShouldBeNil)
+		w := httptest.NewRecorder()
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{}, &mock_jobqueue.JobImporter{})
+		api.router.ServeHTTP(w, r)
+		So(w.Code, ShouldEqual, http.StatusOK)
+	})
+}
+
+func TestGetJobReturnsNotFound(t *testing.T) {
+	t.Parallel()
+	Convey("When a get job request has a invalid jobID, a not found status is returned", t, func() {
+		r, err := http.NewRequest("GET", "http://localhost:21800/jobs/000000", nil)
+		So(err, ShouldBeNil)
+		w := httptest.NewRecorder()
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{NotFound:true}, &mock_jobqueue.JobImporter{})
+		api.router.ServeHTTP(w, r)
+		So(w.Code, ShouldEqual, http.StatusNotFound)
+	})
+}
+
+func TestGetJob(t *testing.T) {
+	t.Parallel()
+	Convey("When a no data store is available, an internal error is returned", t, func() {
+		r, err := http.NewRequest("GET", "http://localhost:21800/jobs/123", nil)
+		So(err, ShouldBeNil)
+		w := httptest.NewRecorder()
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{}, &mock_jobqueue.JobImporter{})
+		api.router.ServeHTTP(w, r)
+		So(w.Code, ShouldEqual, http.StatusOK)
 	})
 }
 
@@ -170,6 +218,18 @@ func TestAddDimensionReturnsOK(t *testing.T) {
 	t.Parallel()
 	Convey("When adding a dimension with a valid instanceId, it returns an OK code", t, func() {
 		r, err := http.NewRequest("PUT", "http://localhost:21800/instances/12345/dimensions/321/options/321", nil)
+		So(err, ShouldBeNil)
+		w := httptest.NewRecorder()
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{}, &mock_jobqueue.JobImporter{})
+		api.router.ServeHTTP(w, r)
+		So(w.Code, ShouldEqual, http.StatusOK)
+	})
+}
+
+func TestGetDimensionValuesReturnsOK(t *testing.T) {
+	t.Parallel()
+	Convey("When getting a list of dimension values with a valid instanceId and name, it returns an OK code", t, func() {
+		r, err := http.NewRequest("GET", "http://localhost:21800/instances/12345/dimensions/321/options", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
 		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{}, &mock_jobqueue.JobImporter{})
