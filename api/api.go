@@ -31,19 +31,19 @@ func CreateImportAPI(host string, router *mux.Router, dataStore DataStore, jobQu
 	api.router.Path("/jobs").Methods("POST").HandlerFunc(api.addJob)
 	api.router.Path("/jobs").Methods("GET").HandlerFunc(api.getJobs).Queries()
 	api.router.Path("/jobs/{job_id}").Methods("GET").HandlerFunc(api.getJob)
-	api.router.Path("/jobs/{job_id}").Methods("PUT").HandlerFunc(auth.MiddleWareAuthenticationWithValue(api.updateJob))
+	api.router.Path("/jobs/{job_id}").Methods("PUT").HandlerFunc(auth.ManualCheck(api.updateJob))
 	api.router.Path("/jobs/{job_id}/files").Methods("PUT").HandlerFunc(api.addUploadedFile)
 	api.router.Path("/instances").Methods("GET").HandlerFunc(api.getInstances)
 	api.router.Path("/instances/{instance_id}").Methods("GET").HandlerFunc(api.getInstance)
 	api.router.Path("/instances/{instance_id}/dimensions").Methods("GET").HandlerFunc(api.getDimensions)
 	api.router.Path("/instances/{instance_id}/dimensions/{dimension_name}/options").Methods("GET").HandlerFunc(api.getDimensionValues)
 	// Internal API
-	api.router.Path("/instances/{instance_id}").Methods("PUT").HandlerFunc(auth.MiddleWareAuthentication(api.updateInstance))
-	api.router.Path("/instances/{instance_id}/events").Methods("PUT").HandlerFunc(auth.MiddleWareAuthentication(api.addEvent))
+	api.router.Path("/instances/{instance_id}").Methods("PUT").HandlerFunc(auth.Check(api.updateInstance))
+	api.router.Path("/instances/{instance_id}/events").Methods("PUT").HandlerFunc(auth.Check(api.addEvent))
 	api.router.Path("/instances/{instance_id}/dimensions/{dimension_name}/options/{value}").
-		Methods("PUT").HandlerFunc(auth.MiddleWareAuthentication(api.addDimension))
+		Methods("PUT").HandlerFunc(auth.Check(api.addDimension))
 	api.router.Path("/instances/{instance_id}/dimensions/{dimension_name}/nodeid/{value}").Methods("PUT").
-		HandlerFunc(auth.MiddleWareAuthentication(api.addNodeID))
+		HandlerFunc(auth.Check(api.addNodeID))
 
 	return &api
 }
@@ -176,7 +176,7 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request, isAuth b
 	}
 	log.Info("job updated", log.Data{"jobState": job, "job_id": jobID, "isAuth": isAuth})
 	if job.State == "submitted" {
-		task, err := api.dataStore.BuildImportDataMessage(jobID)
+		task, err := api.dataStore.PrepareImportJob(jobID)
 		if err != nil {
 			log.Error(err, log.Data{"jobState": job, "job_id": jobID, "isAuth": isAuth})
 			setErrorCode(w, err)

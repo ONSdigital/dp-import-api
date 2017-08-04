@@ -6,16 +6,19 @@ import (
 	"errors"
 )
 
+// Authenticator A simple authentication method. This will be replaced in the future, after a thin-slices has been delivered
 type Authenticator struct {
 	secretKey string
 	headerName string
 }
 
+// NewAuthenticator is created
 func NewAuthenticator(key, headerName string) Authenticator {
 	return Authenticator{ secretKey: key, headerName: headerName}
 }
 
-func (a Authenticator) MiddleWareAuthentication(handle func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+// Check wraps a HTTP handle. If authentication fails an error code is returned else the HTTP handler is called
+func (a *Authenticator) Check(handle func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		key := r.Header.Get(a.headerName)
 		if key == "" {
@@ -33,7 +36,8 @@ func (a Authenticator) MiddleWareAuthentication(handle func(http.ResponseWriter,
 	})
 }
 
-func (a Authenticator) MiddleWareAuthenticationWithValue(handle func(http.ResponseWriter, *http.Request, bool)) http.HandlerFunc {
+// ManualCheck A boolean is set and passed to the HTP handler, its the handler responsibility to set the status code
+func (a *Authenticator) ManualCheck(handle func(http.ResponseWriter, *http.Request, bool)) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		isAuthenticated := false
 		key := r.Header.Get(a.headerName)

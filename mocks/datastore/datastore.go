@@ -145,7 +145,7 @@ func (ds *DataStore) AddNodeID(instanceID, nodeID string, message *models.Dimens
 	return nil
 }
 
-func (ds *DataStore) BuildImportDataMessage(jobID string) (*models.ImportData, error) {
+func (ds *DataStore) PrepareImportJob(jobID string) (*models.ImportData, error) {
 	if ds.NotFound {
 		return nil, api_errors.JobNotFoundError
 	}

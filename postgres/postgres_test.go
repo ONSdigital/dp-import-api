@@ -27,9 +27,6 @@ const (
 	buildPublishDatasetSQL = "SELECT job->>'recipe', job->'files', STRING_AGG"
 )
 
-// go-sqlmock libray does not support all transations methods (eg tx.Stmt(*).Query(...)). So
-// AddJob and AddInstance functions do not have tests.
-
 func TestNewPostgresDatastore(t *testing.T) {
 	t.Parallel()
 	Convey("When creating a postgres datastore no errors are returned", t, func() {
@@ -244,14 +241,17 @@ func TestBuildPublishDatasetMessage(t *testing.T) {
 		mock, db := NewSQLMockWithSQLStatements()
 		ds, err := NewDatastore(db)
 		So(err, ShouldBeNil)
-		mock.ExpectQuery(buildPublishDatasetSQL).WithArgs(sqlmock.AnyArg()).
+		mock.ExpectBegin()
+		mock.ExpectPrepare(buildPublishDatasetSQL).ExpectQuery().WithArgs(sqlmock.AnyArg()).
 			WillReturnRows(sqlmock.NewRows([]string{"recipe", "files", "instanceIds"}).
-				AddRow("test", "[{ \"aliasName\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}]", "1,2,3"))
-		message, dataStoreError := ds.BuildImportDataMessage("123")
+				AddRow("test", "[{ \"aliasName\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}]", "1"))
+		mock.ExpectPrepare(updateInstanceSQL).ExpectExec().WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg()).WillReturnResult(sqlmock.NewResult(0,1))
+		mock.ExpectCommit()
+		message, dataStoreError := ds.PrepareImportJob("123")
 		So(dataStoreError, ShouldBeNil)
 		So("test", ShouldEqual, message.Recipe)
 		So(1, ShouldEqual, len(message.UploadedFiles))
-		So(3, ShouldEqual, len(message.InstanceIDs))
+		So(1, ShouldEqual, len(message.InstanceIDs))
 		So(mock.ExpectationsWereMet(), ShouldBeNil)
 	})
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/models"
 	pg "github.com/lib/pq"
 	"github.com/satori/go.uuid"
+	"github.com/ONSdigital/go-ns/log"
 )
 
 var allFilterStates = []string{"created", "submitted", "completed", "error"}
@@ -238,6 +239,9 @@ func (ds Datastore) GetInstances(host string, filter []string) ([]models.Instanc
 	for rows.Next() {
 		var instanceID, instanceJSON, jobID sql.NullString
 		err = rows.Scan(&instanceID, &instanceJSON, &jobID)
+		if err != nil {
+			return []models.Instance{}, err
+		}
 		var instance models.Instance
 		err = json.Unmarshal([]byte(instanceJSON.String), &instance)
 		if err != nil {
@@ -336,11 +340,15 @@ func (ds Datastore) AddNodeID(instanceID, nodeID string, message *models.Dimensi
 	return convertError(row.Scan(&returnedInstanceID))
 }
 
-// BuildImportDataMessage to send to data baker
-func (ds Datastore) BuildImportDataMessage(jobID string) (*models.ImportData, error) {
-	row := ds.createPublishMessage.QueryRow(jobID)
-	var recipe, filesAsJSON, instancIds sql.NullString
-	err := row.Scan(&recipe, &filesAsJSON, &instancIds)
+// PrepareImportJob to send to data baker
+func (ds Datastore) PrepareImportJob(jobID string) (*models.ImportData, error) {
+	tx, err  := ds.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	row := tx.Stmt(ds.createPublishMessage).QueryRow(jobID)
+	var recipe, filesAsJSON, instanceIds sql.NullString
+	err = row.Scan(&recipe, &filesAsJSON, &instanceIds)
 	if err != nil {
 		return nil, err
 	}
@@ -349,10 +357,22 @@ func (ds Datastore) BuildImportDataMessage(jobID string) (*models.ImportData, er
 	if err != nil {
 		return nil, err
 	}
+	instances := strings.Split(instanceIds.String, ",")
+	for _, instance := range instances {
+		log.Info(instance, log.Data{})
+	    json, err := json.Marshal(models.Instance{State:"submitted"})
+		if err != nil {
+			return nil, tx.Rollback()
+		}
+		_, err = tx.Stmt(ds.updateInstance).Exec(string(json), instance)
+		if err != nil {
+			return nil, tx.Rollback()
+		}
+	}
 	return &models.ImportData{JobID: jobID,
 		Recipe:        recipe.String,
 		UploadedFiles: files,
-		InstanceIDs:   strings.Split(instancIds.String, ",")}, nil
+		InstanceIDs:   strings.Split(instanceIds.String, ",")}, tx.Commit()
 }
 
 func convertError(err error) error {

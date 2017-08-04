@@ -15,7 +15,7 @@ func TestMiddleWareAuthenticationReturnsForbidden(t *testing.T) {
 		r, err := http.NewRequest("POST", "http://localhost:21800/jobs", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		auth.MiddleWareAuthentication(mockHTTPHandler).ServeHTTP(w, r)
+		auth.Check(mockHTTPHandler).ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusForbidden)
 	})
 }
@@ -28,7 +28,7 @@ func TestMiddleWareAuthenticationReturnsUnauthorised(t *testing.T) {
 		r.Header.Set("internal-token","12")
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		auth.MiddleWareAuthentication(mockHTTPHandler).ServeHTTP(w, r)
+		auth.Check(mockHTTPHandler).ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusUnauthorized)
 	})
 }
@@ -41,7 +41,7 @@ func TestMiddleWareAuthentication(t *testing.T) {
 		r.Header.Set("internal-token","123")
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		auth.MiddleWareAuthentication(mockHTTPHandler).ServeHTTP(w, r)
+		auth.Check(mockHTTPHandler).ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusOK)
 	})
 }
@@ -56,7 +56,7 @@ func TestMiddleWareAuthenticationWithValue(t *testing.T) {
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
 		var isRequestAuthenticated bool
-		auth.MiddleWareAuthenticationWithValue(func(w http.ResponseWriter, r *http.Request, isAuth bool) {
+		auth.ManualCheck(func(w http.ResponseWriter, r *http.Request, isAuth bool) {
 			isRequestAuthenticated = isAuth
 		}).ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusOK)
