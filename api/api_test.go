@@ -1,15 +1,16 @@
 package api
 
 import (
-	"github.com/ONSdigital/dp-import-api/mocks/datastore"
-	"github.com/ONSdigital/dp-import-api/mocks/jobqueue"
-	"github.com/gorilla/mux"
-	. "github.com/smartystreets/goconvey/convey"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/ONSdigital/dp-import-api/mocks/datastore"
+	"github.com/ONSdigital/dp-import-api/mocks/jobqueue"
+	"github.com/gorilla/mux"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 var host = "http://localhost:80"
@@ -134,7 +135,7 @@ func TestGetInstancesReturnsInternalError(t *testing.T) {
 		r, err := createRequestWithAuth("GET", "http://localhost:21800/instances", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{InternalError:true}, &mock_jobqueue.JobImporter{}, secretKey)
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{InternalError: true}, &mock_jobqueue.JobImporter{}, secretKey)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusInternalServerError)
 	})
@@ -281,7 +282,7 @@ func TestAddNodeIdReturnsNotFound(t *testing.T) {
 func TestAddNodeIdReturnsOk(t *testing.T) {
 	t.Parallel()
 	Convey("When adding a node id for a dimension with a valid instanceId, it returns an OK code", t, func() {
-		r, err := createRequestWithAuth("PUT", "http://localhost:21800/instances/12345/dimensions/123/nodeid/321", nil)
+		r, err := createRequestWithAuth("PUT", "http://localhost:21800/instances/12345/dimensions/123/node_id/321", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
 		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{}, &mock_jobqueue.JobImporter{}, secretKey)

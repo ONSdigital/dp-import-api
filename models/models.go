@@ -13,7 +13,7 @@ type Job struct {
 	Recipe        string          `json:"recipe,omitempty"`
 	State         string          `json:"state,omitempty"`
 	UploadedFiles *[]UploadedFile `json:"files,omitempty"`
-	Instances     []IDLink  `json:"instances,omitempty"`
+	Instances     []IDLink        `json:"instances,omitempty"`
 }
 
 // JobLinks to the number of instances within a job

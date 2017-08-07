@@ -1,17 +1,16 @@
 package api
 
 import (
-	"net/http"
-
 	"encoding/json"
 	"errors"
+	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/ONSdigital/dp-import-api/api-errors"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/gorilla/mux"
-	"strings"
-	"strconv"
 )
 
 const internalError = "Internal server error"
@@ -43,7 +42,7 @@ func CreateImportAPI(host string, router *mux.Router, dataStore DataStore, jobQu
 	api.router.Path("/instances/{instance_id}/events").Methods("PUT").HandlerFunc(auth.Check(api.addEvent))
 	api.router.Path("/instances/{instance_id}/dimensions/{dimension_name}/options/{value}").
 		Methods("PUT").HandlerFunc(auth.Check(api.addDimension))
-	api.router.Path("/instances/{instance_id}/dimensions/{dimension_name}/nodeid/{value}").Methods("PUT").
+	api.router.Path("/instances/{instance_id}/dimensions/{dimension_name}/node_id/{value}").Methods("PUT").
 		HandlerFunc(auth.Check(api.addNodeID))
 	api.router.Path("/instances/{instance_id}/inserted_observations/{inserted_observations}").Methods("PUT").HandlerFunc(auth.Check(api.addInsertedObservations))
 
