@@ -74,6 +74,12 @@ parameters:
    type: string
    in: path
    required: true
+  inserted_observations:
+    name: inserted_observations
+    description: "A value to increment the inserted_observations within an instance"
+    type: integer
+    in: path
+    required: true
 securityDefinitions:
   FlorenceAPIKey:
     description: "API key used to allow florence users to create and query the progress of importing a dataset"
@@ -319,6 +325,32 @@ paths:
           description: "InstanceId does not match any instances"
         500:
           $ref: '#/responses/InternalError'
+  /instances/{instance_id}/inserted_observations/{inserted_observations}:
+    put:
+      tags:
+      - "Internal Interface"
+      summary: "Increment the observation inserted count"
+      description: "This will add to the number already store in the api"
+      parameters:
+      - $ref: '#/parameters/instance_id'
+      - $ref: '#/parameters/inserted_observations'
+      security:
+      - InternalAPIKey: []
+      responses:
+        200:
+          description: "Added value to inserted observation"
+        400:
+          description: "Invalid value provided for inserted_observations"
+        401:
+          $ref: '#/responses/UnauthorisedError'
+        403:
+          $ref: '#/responses/ForbiddenError'
+        404:
+          description: "InstanceId does not match any instances"
+        500:
+          $ref: '#/responses/InternalError'
+
+
   /instances/{instance_id}/dimensions/{dimension_id}/options/{value}:
     put:
       tags:
