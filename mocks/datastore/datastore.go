@@ -155,3 +155,13 @@ func (ds *DataStore) PrepareImportJob(jobID string) (*models.ImportData, error) 
 	return &models.ImportData{Recipe: "test", InstanceIDs: []string{"1", "2", "3"},
 		UploadedFiles: []models.UploadedFile{models.UploadedFile{URL: "s3//aws/bucket/file.xls", AliasName: "test"}}}, nil
 }
+
+func (ds *DataStore) UpdateObservationCount(instanceID string, count int) error {
+	if ds.NotFound {
+		return api_errors.JobNotFoundError
+	}
+	if ds.InternalError {
+		return internalError
+	}
+	return nil
+}

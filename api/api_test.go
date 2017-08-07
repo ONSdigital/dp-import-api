@@ -329,6 +329,18 @@ func TestUpdateJobStateToSubmitted(t *testing.T) {
 	})
 }
 
+func TestUpdateObservationInserted(t *testing.T) {
+	t.Parallel()
+	Convey("When a updating inserted observation count, a OK status code is returned", t, func() {
+		r, err := createRequestWithAuth("PUT", "http://localhost:21800/instances/12345/inserted_observations/5", nil)
+		So(err, ShouldBeNil)
+		w := httptest.NewRecorder()
+		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{}, &mock_jobqueue.JobImporter{}, secretKey)
+		api.router.ServeHTTP(w, r)
+		So(w.Code, ShouldEqual, http.StatusOK)
+	})
+}
+
 func createRequestWithAuth(method, URL string, body io.Reader) (*http.Request, error) {
 	r, err := http.NewRequest(method, URL, body)
 	r.Header.Set("internal-token", secretKey)

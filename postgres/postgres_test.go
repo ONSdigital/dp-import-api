@@ -25,6 +25,7 @@ const (
 	getDimensionValuesSQL  = "SELECT dimensions.value FROM dimensions"
 	updateDimensionSQL     = "UPDATE Dimensions SET nodeId"
 	buildPublishDatasetSQL = "SELECT job->>'recipe', job->'files', STRING_AGG"
+	incrementObservationCountSQL = "UPDATE Instances SET instance = instance"
 )
 
 func TestNewPostgresDatastore(t *testing.T) {
@@ -256,6 +257,20 @@ func TestBuildPublishDatasetMessage(t *testing.T) {
 	})
 }
 
+func TestUpdateObservationCount(t *testing.T) {
+	t.Parallel()
+	Convey("When updating the observation count, it returns no error", t, func() {
+		mock, db := NewSQLMockWithSQLStatements()
+		ds, err := NewDatastore(db)
+		So(err, ShouldBeNil)
+		mock.ExpectExec(incrementObservationCountSQL).WillReturnResult(sqlmock.NewResult(1,1))
+		err = ds.UpdateObservationCount("123", 50)
+		So(err, ShouldBeNil)
+
+		So(mock.ExpectationsWereMet(), ShouldBeNil)
+	})
+}
+
 func NewSQLMockWithSQLStatements() (sqlmock.Sqlmock, *sql.DB) {
 	db, mock, err := sqlmock.New()
 	So(err, ShouldBeNil)
@@ -277,6 +292,7 @@ func NewSQLMockWithSQLStatements() (sqlmock.Sqlmock, *sql.DB) {
 	mock.ExpectPrepare(getDimensionValuesSQL)
 	mock.ExpectPrepare(updateDimensionSQL)
 	mock.ExpectPrepare(buildPublishDatasetSQL)
+	mock.ExpectPrepare(incrementObservationCountSQL)
 	_, dbError := db.Begin()
 	So(dbError, ShouldBeNil)
 	return mock, db

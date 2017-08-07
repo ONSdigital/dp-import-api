@@ -11,6 +11,7 @@ import (
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/gorilla/mux"
 	"strings"
+	"strconv"
 )
 
 const internalError = "Internal server error"
@@ -44,6 +45,7 @@ func CreateImportAPI(host string, router *mux.Router, dataStore DataStore, jobQu
 		Methods("PUT").HandlerFunc(auth.Check(api.addDimension))
 	api.router.Path("/instances/{instance_id}/dimensions/{dimension_name}/nodeid/{value}").Methods("PUT").
 		HandlerFunc(auth.Check(api.addNodeID))
+	api.router.Path("/instances/{instance_id}/inserted_observations/{inserted_observations}").Methods("PUT").HandlerFunc(auth.Check(api.addInsertedObservations))
 
 	return &api
 }
@@ -373,6 +375,21 @@ func (api *ImportAPI) addNodeID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Info("added node id", log.Data{"instance_id": instanceID, "name": dimensionName, "nodeValue": nodeValue})
+}
+
+func (api *ImportAPI) addInsertedObservations(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	instanceID := vars["instance_id"]
+	insertedObservations, err := strconv.Atoi(vars["inserted_observations"])
+	if insertedObservations == 0 || err != nil {
+		log.Error(errors.New("Missing / invalid parameters"), log.Data{"instance_id": instanceID, "inserted_observations": insertedObservations})
+		http.Error(w, "Bad client request received", http.StatusBadRequest)
+		return
+	}
+	err = api.dataStore.UpdateObservationCount(instanceID, insertedObservations)
+	if err != nil {
+		setErrorCode(w, err)
+	}
 }
 
 func setErrorCode(w http.ResponseWriter, err error) {

@@ -8,9 +8,9 @@ import (
 
 	"github.com/ONSdigital/dp-import-api/api-errors"
 	"github.com/ONSdigital/dp-import-api/models"
+	"github.com/ONSdigital/go-ns/log"
 	pg "github.com/lib/pq"
 	"github.com/satori/go.uuid"
-	"github.com/ONSdigital/go-ns/log"
 )
 
 var allFilterStates = []string{"created", "submitted", "completed", "error"}
@@ -33,7 +33,8 @@ type Datastore struct {
 	getDimensions             *sql.Stmt
 	getDimensionValues        *sql.Stmt
 	addNodeID                 *sql.Stmt
-	createPublishMessage      *sql.Stmt
+	prepareImportJob          *sql.Stmt
+	incrementObservationCount *sql.Stmt
 }
 
 func prepare(sql string, db *sql.DB) *sql.Stmt {
@@ -61,12 +62,13 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 	getDimensions := prepare("SELECT dimensionName, value, nodeId FROM Dimensions WHERE instanceId = $1", db)
 	getDimensionValues := prepare("SELECT dimensions.value FROM dimensions WHERE instanceid = $1 AND dimensionname = $2", db)
 	addNodeID := prepare("UPDATE Dimensions SET nodeId = $1 WHERE instanceId = $2 AND dimensionName = $3 RETURNING instanceId", db)
-	createPublishMessage := prepare("SELECT job->>'recipe', job->'files', STRING_AGG(instanceId::TEXT, ', ') FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE jobs.jobId = $1 GROUP BY jobs.job", db)
+	prepareImportJob := prepare("SELECT job->>'recipe', job->'files', STRING_AGG(instanceId::TEXT, ', ') FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE jobs.jobId = $1 GROUP BY jobs.job", db)
+	incrementObservationCount := prepare("UPDATE Instances SET instance = instance ||  jsonb(json_build_object('total_inserted_observations', (instance->>'total_inserted_observations')::int + $1)) WHERE instanceId = $2", db)
 
 	return Datastore{db: db, addJob: addJob, getJob: getJob, getJobs: getJobs, updateJobNoRestrictions: updateJobNoRestrictions, updateJobWithRestrictions: updateJobWithRestrictions,
 		addInstance: addInstance, updateInstance: updateInstance, findInstance: findInstance, getInstances: getInstances, addFileToJob: addFileToJob, addEvent: addEvent,
 		addDimension: addDimension, getDimensions: getDimensions, getDimensionValues: getDimensionValues, addNodeID: addNodeID,
-		createPublishMessage: createPublishMessage}, nil
+		prepareImportJob: prepareImportJob, incrementObservationCount: incrementObservationCount}, nil
 }
 
 // AddJob store a job in postgres
@@ -185,7 +187,7 @@ func (ds Datastore) UpdateJobState(jobID string, job *models.Job, withOutRestric
 	err = row.Scan(&jobIDReturned)
 	// If no rows where updated but the job exists the request didn't have the right to update job's state.
 	if err == sql.ErrNoRows {
-      return api_errors.ForbiddenOperation
+		return api_errors.ForbiddenOperation
 	}
 	return err
 }
@@ -342,11 +344,11 @@ func (ds Datastore) AddNodeID(instanceID, nodeID string, message *models.Dimensi
 
 // PrepareImportJob to send to data baker
 func (ds Datastore) PrepareImportJob(jobID string) (*models.ImportData, error) {
-	tx, err  := ds.db.Begin()
+	tx, err := ds.db.Begin()
 	if err != nil {
 		return nil, err
 	}
-	row := tx.Stmt(ds.createPublishMessage).QueryRow(jobID)
+	row := tx.Stmt(ds.prepareImportJob).QueryRow(jobID)
 	var recipe, filesAsJSON, instanceIds sql.NullString
 	err = row.Scan(&recipe, &filesAsJSON, &instanceIds)
 	if err != nil {
@@ -360,7 +362,7 @@ func (ds Datastore) PrepareImportJob(jobID string) (*models.ImportData, error) {
 	instances := strings.Split(instanceIds.String, ",")
 	for _, instance := range instances {
 		log.Info(instance, log.Data{})
-	    json, err := json.Marshal(models.Instance{State:"submitted"})
+		json, err := json.Marshal(models.Instance{State: "submitted"})
 		if err != nil {
 			return nil, tx.Rollback()
 		}
@@ -373,6 +375,21 @@ func (ds Datastore) PrepareImportJob(jobID string) (*models.ImportData, error) {
 		Recipe:        recipe.String,
 		UploadedFiles: files,
 		InstanceIDs:   strings.Split(instanceIds.String, ",")}, tx.Commit()
+}
+
+func (ds Datastore) UpdateObservationCount(instanceID string, count int) error {
+	results, err := ds.incrementObservationCount.Exec(count, instanceID)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := results.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return api_errors.JobNotFoundError
+	}
+	return nil
 }
 
 func convertError(err error) error {

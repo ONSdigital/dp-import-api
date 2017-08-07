@@ -36,7 +36,7 @@ func (a *Authenticator) Check(handle func(http.ResponseWriter, *http.Request)) h
 	})
 }
 
-// ManualCheck A boolean is set and passed to the HTP handler, its the handler responsibility to set the status code
+// ManualCheck a boolean is set and passed to the HTTP handler, its the handler responsibility to set the status code
 func (a *Authenticator) ManualCheck(handle func(http.ResponseWriter, *http.Request, bool)) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		isAuthenticated := false
