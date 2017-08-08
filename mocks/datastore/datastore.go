@@ -135,7 +135,7 @@ func (ds *DataStore) GetDimensionValues(instanceID, dimensionName string) (model
 	return models.UniqueDimensionValues{Name: dimensionName, Values: []string{"123", "321"}}, nil
 }
 
-func (ds *DataStore) AddNodeID(instanceID, nodeID string, message *models.Dimension) error {
+func (ds *DataStore) AddNodeID(instanceID string, dimension *models.Dimension) error {
 	if ds.NotFound {
 		return api_errors.JobNotFoundError
 	}

@@ -282,7 +282,7 @@ func TestAddNodeIdReturnsNotFound(t *testing.T) {
 func TestAddNodeIdReturnsOk(t *testing.T) {
 	t.Parallel()
 	Convey("When adding a node id for a dimension with a valid instanceId, it returns an OK code", t, func() {
-		r, err := createRequestWithAuth("PUT", "http://localhost:21800/instances/12345/dimensions/123/node_id/321", nil)
+		r, err := createRequestWithAuth("PUT", "http://localhost:21800/instances/12345/dimensions/123/options/1/node_id/321", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
 		api := CreateImportAPI(host, mux.NewRouter(), &mocks.DataStore{}, &mock_jobqueue.JobImporter{}, secretKey)

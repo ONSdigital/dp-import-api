@@ -74,6 +74,12 @@ parameters:
    type: string
    in: path
    required: true
+  node_id:
+   name: node_id
+   description: "An unique node id"
+   type: string
+   in: path
+   required: true
   inserted_observations:
     name: inserted_observations
     description: "A value to increment the inserted_observations within an instance"
@@ -377,7 +383,7 @@ paths:
           description: "InstanceId does not match any instances"
         500:
           $ref: '#/responses/InternalError'
-  /instances/{instance_id}/dimensions/{dimension_id}/node_id/{value}:
+  /instances/{instance_id}/dimensions/{dimension_id}/options/{value}/node_id/{node_id}:
     put:
       tags:
       - "Internal Interface"
@@ -388,6 +394,7 @@ paths:
       - $ref: '#/parameters/instance_id'
       - $ref: '#/parameters/dimension_id'
       - $ref: '#/parameters/value'
+      - $ref: '#/parameters/node_id'
       produces:
       - "application/json"
       security:

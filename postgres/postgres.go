@@ -61,7 +61,7 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 	addDimension := prepare("INSERT INTO Dimensions(instanceId, dimensionName, value) VALUES($1, $2, $3)", db)
 	getDimensions := prepare("SELECT dimensionName, value, nodeId FROM Dimensions WHERE instanceId = $1", db)
 	getDimensionValues := prepare("SELECT dimensions.value FROM dimensions WHERE instanceid = $1 AND dimensionname = $2", db)
-	addNodeID := prepare("UPDATE Dimensions SET nodeId = $1 WHERE instanceId = $2 AND dimensionName = $3 RETURNING instanceId", db)
+	addNodeID := prepare("UPDATE Dimensions SET nodeId = $1 WHERE value = $2 AND instanceId = $3 AND dimensionName = $4 RETURNING instanceId", db)
 	prepareImportJob := prepare("SELECT job->>'recipe', job->'files', STRING_AGG(instanceId::TEXT, ', ') FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE jobs.jobId = $1 GROUP BY jobs.job", db)
 	incrementObservationCount := prepare("UPDATE Instances SET instance = instance ||  jsonb(json_build_object('total_inserted_observations', (instance->>'total_inserted_observations')::int + $1)) WHERE instanceId = $2", db)
 
@@ -336,8 +336,8 @@ func (ds Datastore) GetDimensionValues(instanceID, dimensionName string) (models
 }
 
 // AddNodeID for a dimension
-func (ds Datastore) AddNodeID(instanceID, nodeID string, message *models.Dimension) error {
-	row := ds.addNodeID.QueryRow(message.NodeID, instanceID, nodeID)
+func (ds Datastore) AddNodeID(instanceID string, dimension *models.Dimension) error {
+	row := ds.addNodeID.QueryRow(dimension.NodeID, dimension.Value, instanceID, dimension.Name)
 	var returnedInstanceID sql.NullString
 	return convertError(row.Scan(&returnedInstanceID))
 }

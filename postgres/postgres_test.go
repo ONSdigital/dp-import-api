@@ -146,9 +146,9 @@ func TestAddNodeId(t *testing.T) {
 		ds, err := NewDatastore(db)
 		So(err, ShouldBeNil)
 		mock.ExpectQuery(updateDimensionSQL).
-			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
+			WithArgs(sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg(), sqlmock.AnyArg()).
 			WillReturnRows(sqlmock.NewRows([]string{"instanceId"}).AddRow("123"))
-		dataStoreErr := ds.AddNodeID("123", "node1", &models.Dimension{NodeID: "123"})
+		dataStoreErr := ds.AddNodeID("123", &models.Dimension{NodeID: "123", Name:"node1", Value:"5"})
 		So(dataStoreErr, ShouldBeNil)
 		So(mock.ExpectationsWereMet(), ShouldBeNil)
 	})

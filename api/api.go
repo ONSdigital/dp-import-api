@@ -42,7 +42,7 @@ func CreateImportAPI(host string, router *mux.Router, dataStore DataStore, jobQu
 	api.router.Path("/instances/{instance_id}/events").Methods("PUT").HandlerFunc(auth.Check(api.addEvent))
 	api.router.Path("/instances/{instance_id}/dimensions/{dimension_name}/options/{value}").
 		Methods("PUT").HandlerFunc(auth.Check(api.addDimension))
-	api.router.Path("/instances/{instance_id}/dimensions/{dimension_name}/node_id/{value}").Methods("PUT").
+	api.router.Path("/instances/{instance_id}/dimensions/{dimension_name}/options/{dimension_value}/node_id/{node_id}").Methods("PUT").
 		HandlerFunc(auth.Check(api.addNodeID))
 	api.router.Path("/instances/{instance_id}/inserted_observations/{inserted_observations}").Methods("PUT").HandlerFunc(auth.Check(api.addInsertedObservations))
 
@@ -64,13 +64,13 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 	}
 	jobInstance, err := api.dataStore.AddJob(api.host, newJob)
 	if err != nil {
-		log.Error(err, log.Data{"newJob": newJob})
+		log.Error(err, log.Data{"job": newJob})
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
 	bytes, err := json.Marshal(jobInstance)
 	if err != nil {
-		log.Error(err, log.Data{"Job": newJob})
+		log.Error(err, log.Data{"job": newJob})
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
@@ -78,7 +78,7 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write(bytes)
 	if err != nil {
-		log.Error(err, log.Data{"jobInstance": jobInstance})
+		log.Error(err, log.Data{"instance": jobInstance})
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
@@ -126,7 +126,7 @@ func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
 	}
 	bytes, err := json.Marshal(job)
 	if err != nil {
-		log.Error(err, log.Data{"Jobs": job})
+		log.Error(err, log.Data{"job": job})
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
@@ -165,7 +165,7 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request, isAuth b
 	job, err := models.CreateJob(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		log.Error(err, log.Data{"jobState": job, "job_id": jobID, "isAuth": isAuth})
+		log.Error(err, log.Data{"job": job, "job_id": jobID, "is_auth": isAuth})
 		http.Error(w, "bad client request received", http.StatusBadRequest)
 	}
 
@@ -175,7 +175,7 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request, isAuth b
 		setErrorCode(w, err)
 		return
 	}
-	log.Info("job updated", log.Data{"jobState": job, "job_id": jobID, "isAuth": isAuth})
+	log.Info("job updated", log.Data{"job": job, "job_id": jobID, "is_auth": isAuth})
 	if job.State == "submitted" {
 		task, err := api.dataStore.PrepareImportJob(jobID)
 		if err != nil {
@@ -189,7 +189,7 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request, isAuth b
 			setErrorCode(w, err)
 			return
 		}
-		log.Info("import job was queued", log.Data{"jobState": job, "job_id": jobID, "isAuth": isAuth})
+		log.Info("import job was queued", log.Data{"job": job, "job_id": jobID, "is_auth": isAuth})
 	}
 }
 
@@ -217,7 +217,7 @@ func (api *ImportAPI) getInstances(w http.ResponseWriter, r *http.Request) {
 	_, err = w.Write(bytes)
 	if err != nil {
 		log.Error(err, log.Data{})
-		log.Error(err, log.Data{"instanceState": instances})
+		log.Error(err, log.Data{"instance": instances})
 		return
 	}
 	log.Info("returning instances information", log.Data{})
@@ -342,14 +342,14 @@ func (api *ImportAPI) getDimensionValues(w http.ResponseWriter, r *http.Request)
 	}
 	bytes, err := json.Marshal(dimensionValues)
 	if err != nil {
-		log.Error(err, log.Data{"instance_id": instanceID, "dimensionValues": dimensionValues})
+		log.Error(err, log.Data{"instance_id": instanceID, "dimension_values": dimensionValues})
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
 	setJSONContentType(w)
 	_, err = w.Write(bytes)
 	if err != nil {
-		log.Error(err, log.Data{"instance_id": instanceID, "dimensionValues": dimensionValues})
+		log.Error(err, log.Data{"instance_id": instanceID, "dimension_values": dimensionValues})
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
@@ -359,21 +359,22 @@ func (api *ImportAPI) getDimensionValues(w http.ResponseWriter, r *http.Request)
 func (api *ImportAPI) addNodeID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	instanceID := vars["instance_id"]
+	dimensionValue := vars["dimension_value"]
 	dimensionName := vars["dimension_name"]
-	nodeValue := vars["value"]
-	if dimensionName == "" || nodeValue == "" {
-		log.Error(errors.New("Missing parameters"), log.Data{"instance_id": instanceID, "name": dimensionName, "nodeValue": nodeValue})
+	nodeValue := vars["node_id"]
+	if dimensionName == "" || nodeValue == "" || dimensionValue == "" {
+		log.Error(errors.New("Missing parameters"), log.Data{"instance_id": instanceID, "dimension_name": dimensionName, "dimension_value": nodeValue})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}
-	dimension := models.Dimension{NodeID: nodeValue}
-	err := api.dataStore.AddNodeID(instanceID, dimensionName, &dimension)
+	dimension := models.Dimension{Name:dimensionName, Value:dimensionValue, NodeID: nodeValue}
+	err := api.dataStore.AddNodeID(instanceID, &dimension)
 	if err != nil {
-		log.Error(err, log.Data{"instance_id": instanceID, "name": dimensionName, "nodeValue": nodeValue})
+		log.Error(err, log.Data{"instance_id": instanceID, "dimension": dimension})
 		setErrorCode(w, err)
 		return
 	}
-	log.Info("added node id", log.Data{"instance_id": instanceID, "name": dimensionName, "nodeValue": nodeValue})
+	log.Info("added node id", log.Data{"instance_id": instanceID, "dimension": dimension})
 }
 
 func (api *ImportAPI) addInsertedObservations(w http.ResponseWriter, r *http.Request) {
