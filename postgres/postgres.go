@@ -3,12 +3,13 @@ package postgres
 import (
 	"database/sql"
 	"encoding/json"
-	"github.com/ONSdigital/dp-import-api/api-errors"
-	"github.com/ONSdigital/dp-import-api/models"
 	"strings"
 	"time"
+
+	"github.com/ONSdigital/dp-import-api/api-errors"
+	"github.com/ONSdigital/dp-import-api/models"
+	pg "github.com/lib/pq"
 	"github.com/satori/go.uuid"
-    pg "github.com/lib/pq"
 )
 
 var allFilterStates = []string{"created", "submitted", "completed", "error"}
@@ -133,7 +134,7 @@ func (ds Datastore) GetJob(host string, jobID string) (models.Job, error) {
 	var instanceID, jobInfo sql.NullString
 	err := row.Scan(&instanceID, &jobInfo)
 	if err != nil {
-		return models.Job{},  convertError(err)
+		return models.Job{}, convertError(err)
 	}
 	var job models.Job
 	err = json.Unmarshal([]byte(jobInfo.String), &job)
@@ -199,7 +200,6 @@ func (ds Datastore) GetInstance(host, instanceID string) (models.Instance, error
 	instance.JobURL = buildJobURL(host, jobID.String)
 	return instance, nil
 }
-
 
 // UpdateInstance in postgres
 func (ds Datastore) UpdateInstance(instanceID string, instance *models.Instance) error {
