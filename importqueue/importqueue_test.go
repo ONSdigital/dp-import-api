@@ -12,7 +12,7 @@ func TestQueueV4File(t *testing.T) {
 		v4Queue := make(chan []byte, 1)
 		dataBakerQueue := make(chan []byte, 1)
 		importer := CreateImportQueue(dataBakerQueue, v4Queue)
-		job := models.ImportData{InstanceIDs: []string{"1"}, Recipe: "v4",
+		job := models.ImportData{InstanceIDs: []string{"1"}, Recipe: "b944be78-f56d-409b-9ebd-ab2b77ffe187",
 			UploadedFiles: []models.UploadedFile{models.UploadedFile{AliasName: "v4", URL: "s3//aws/000/v4.csv"}}}
 		importError := importer.Queue(&job)
 		So(importError, ShouldBeNil)
