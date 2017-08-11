@@ -8,6 +8,8 @@ import (
 
 	"github.com/ONSdigital/dp-import-api/api-errors"
 	"github.com/ONSdigital/dp-import-api/models"
+	"github.com/ONSdigital/go-ns/log"
+
 	pg "github.com/lib/pq"
 	"github.com/satori/go.uuid"
 )
@@ -16,21 +18,24 @@ var allFilterStates = []string{"created", "submitted", "completed", "error"}
 
 // Datastore to hold SQL statements to be used to gather information or to insert Jobs and instances
 type Datastore struct {
-	db                   *sql.DB
-	addJob               *sql.Stmt
-	getJob               *sql.Stmt
-	getJobs              *sql.Stmt
-	updateJob            *sql.Stmt
-	addInstance          *sql.Stmt
-	findInstance         *sql.Stmt
-	updateInstance       *sql.Stmt
-	addFileToJob         *sql.Stmt
-	addEvent             *sql.Stmt
-	addDimension         *sql.Stmt
-	getDimensions        *sql.Stmt
-	getDimensionValues   *sql.Stmt
-	addNodeID            *sql.Stmt
-	createPublishMessage *sql.Stmt
+	db                        *sql.DB
+	addJob                    *sql.Stmt
+	getJob                    *sql.Stmt
+	getJobs                   *sql.Stmt
+	updateJobNoRestrictions   *sql.Stmt
+	updateJobWithRestrictions *sql.Stmt
+	addInstance               *sql.Stmt
+	findInstance              *sql.Stmt
+	getInstances              *sql.Stmt
+	updateInstance            *sql.Stmt
+	addFileToJob              *sql.Stmt
+	addEvent                  *sql.Stmt
+	addDimension              *sql.Stmt
+	getDimensions             *sql.Stmt
+	getDimensionValues        *sql.Stmt
+	addNodeID                 *sql.Stmt
+	prepareImportJob          *sql.Stmt
+	incrementObservationCount *sql.Stmt
 }
 
 func prepare(sql string, db *sql.DB) *sql.Stmt {
@@ -41,27 +46,33 @@ func prepare(sql string, db *sql.DB) *sql.Stmt {
 	return statement
 }
 
+// TODO : For state types we need to force any of them to be lower cases
+// TODO : Improve test coverage around transation code
+
 // NewDatastore used to store jobs and instances in postgres
 func NewDatastore(db *sql.DB) (Datastore, error) {
 	addJob := prepare("INSERT INTO Jobs(jobid,job) VALUES($1, $2) RETURNING jobId", db)
 	getJob := prepare("SELECT instanceId, job FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE Jobs.jobId = $1 ", db)
 	getJobs := prepare("SELECT Jobs.jobId, instanceId, job FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE Jobs.job->>'state' = ANY ($1::TEXT[])", db)
-	updateJob := prepare("UPDATE Jobs set job = job || jsonb($1::TEXT) WHERE jobId = $2 RETURNING jobId", db)
-	addFileToJob := prepare("UPDATE Jobs SET job = jsonb_set(job, '{files}', (SELECT (job->'files')  || TO_JSONB(json_build_object('alias_name',$1::TEXT,'url',$2::TEXT)) FROM Jobs WHERE jobId = $3), true) WHERE jobId = $3 RETURNING jobId", db)
+	updateJobNoRestrictions := prepare("UPDATE Jobs set job = job || jsonb($1::TEXT) WHERE jobId = $2 RETURNING jobId", db)
+	updateJobWithRestrictions := prepare("UPDATE Jobs set job = job || jsonb($1::TEXT) WHERE jobId = $2 AND job->>'state' = 'created' RETURNING jobId", db)
+	addFileToJob := prepare("UPDATE Jobs SET job = jsonb_set(job, '{files}', (SELECT (job->'files')  || TO_JSONB(json_build_object('alaisName',$1::TEXT,'url',$2::TEXT)) FROM Jobs WHERE jobId = $3), true) WHERE jobId = $3 RETURNING jobId", db)
 	addInstance := prepare("INSERT INTO Instances(instanceId, jobId, instance) VALUES($1, $2, $3) RETURNING instanceId", db)
 	findInstance := prepare("SELECT instance, jobId FROM Instances WHERE instanceId = $1", db)
+	getInstances := prepare("SELECT instanceId, instance, jobID FROM Instances WHERE instance->>'state' = ANY ($1::TEXT[])", db)
 	updateInstance := prepare("UPDATE Instances set instance = instance || jsonb($1::TEXT) WHERE instanceId = $2 RETURNING instanceId", db)
 	addEvent := prepare("UPDATE Instances SET instance = jsonb_set(instance, '{events}', (SELECT (instance->'events')  || TO_JSONB(json_build_object('type', $1::TEXT, 'time', $2::TEXT, 'message', $3::TEXT, 'messageOffset', $4::TEXT)) FROM Instances WHERE instanceid = $5), true) WHERE instanceid = $5 RETURNING instanceId", db)
 	addDimension := prepare("INSERT INTO Dimensions(instanceId, dimensionName, value) VALUES($1, $2, $3)", db)
 	getDimensions := prepare("SELECT dimensionName, value, nodeId FROM Dimensions WHERE instanceId = $1", db)
 	getDimensionValues := prepare("SELECT dimensions.value FROM dimensions WHERE instanceid = $1 AND dimensionname = $2", db)
-	addNodeID := prepare("UPDATE Dimensions SET nodeId = $1 WHERE instanceId = $2 AND dimensionName = $3 RETURNING instanceId", db)
-	createPublishMessage := prepare("SELECT job->>'recipe', job->'files', STRING_AGG(instanceId::TEXT, ', ') FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE jobs.jobId = $1 GROUP BY jobs.job", db)
+	addNodeID := prepare("UPDATE Dimensions SET nodeId = $1 WHERE value = $2 AND instanceId = $3 AND dimensionName = $4 RETURNING instanceId", db)
+	prepareImportJob := prepare("SELECT job->>'recipe', job->'files', STRING_AGG(instanceId::TEXT, ', ') FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE jobs.jobId = $1 GROUP BY jobs.job", db)
+	incrementObservationCount := prepare("UPDATE Instances SET instance = instance ||  jsonb(json_build_object('total_inserted_observations', (instance->>'total_inserted_observations')::int + $1)) WHERE instanceId = $2", db)
 
-	return Datastore{db: db, addJob: addJob, getJob: getJob, getJobs: getJobs, updateJob: updateJob, addInstance: addInstance, updateInstance: updateInstance,
-		findInstance: findInstance, addFileToJob: addFileToJob, addEvent: addEvent, addDimension: addDimension,
-		getDimensions: getDimensions, getDimensionValues: getDimensionValues, addNodeID: addNodeID,
-		createPublishMessage: createPublishMessage}, nil
+	return Datastore{db: db, addJob: addJob, getJob: getJob, getJobs: getJobs, updateJobNoRestrictions: updateJobNoRestrictions, updateJobWithRestrictions: updateJobWithRestrictions,
+		addInstance: addInstance, updateInstance: updateInstance, findInstance: findInstance, getInstances: getInstances, addFileToJob: addFileToJob, addEvent: addEvent,
+		addDimension: addDimension, getDimensions: getDimensions, getDimensionValues: getDimensionValues, addNodeID: addNodeID,
+		prepareImportJob: prepareImportJob, incrementObservationCount: incrementObservationCount}, nil
 }
 
 // AddJob store a job in postgres
@@ -94,7 +105,8 @@ func (ds Datastore) AddJob(host string, newjob *models.Job) (models.Job, error) 
 	}
 	url := host + "/instances/" + id
 	newjob.JobID = jobID.String
-	newjob.Links.InstanceIDs = []string{url}
+
+	newjob.Instances = []models.IDLink{models.IDLink{ID: id, Link: url}}
 	return *newjob, nil
 }
 
@@ -121,7 +133,7 @@ func (ds Datastore) GetJobs(host string, filter []string) ([]models.Job, error) 
 			return []models.Job{}, err
 		}
 		job.JobID = jobID.String
-		job.Links.InstanceIDs = []string{buildInstanceURL(host, instanceID.String)}
+		job.Instances = []models.IDLink{models.IDLink{ID: instanceID.String, Link: buildInstanceURL(host, instanceID.String)}}
 		jobs = append(jobs, job)
 
 	}
@@ -142,7 +154,9 @@ func (ds Datastore) GetJob(host string, jobID string) (models.Job, error) {
 		return models.Job{}, err
 	}
 	job.JobID = jobID
-	job.Links.InstanceIDs = []string{buildInstanceURL(host, instanceID.String)}
+
+	job.Instances = []models.IDLink{models.IDLink{ID: instanceID.String, Link: buildInstanceURL(host, instanceID.String)}}
+
 	return job, nil
 }
 
@@ -155,20 +169,37 @@ func (ds Datastore) AddUploadedFile(instanceID string, message *models.UploadedF
 }
 
 // UpdateJobState configure the jobs state
-func (ds Datastore) UpdateJobState(jobID string, job *models.Job) error {
+func (ds Datastore) UpdateJobState(jobID string, job *models.Job, withOutRestrictions bool) error {
+	// Check that the job exists
+	_, err := ds.GetJob("", jobID)
+	if err != nil {
+		return err
+	}
 	json, err := json.Marshal(job)
 	if err != nil {
 		return err
 	}
-	row := ds.updateJob.QueryRow(string(json), jobID)
+	var updateStmt *sql.Stmt
+	if withOutRestrictions {
+		updateStmt = ds.updateJobNoRestrictions
+	} else {
+		updateStmt = ds.updateJobWithRestrictions
+	}
+
+	row := updateStmt.QueryRow(string(json), jobID)
 	var jobIDReturned sql.NullString
-	// Check that a instanceId is returned if not, no rows where update so return a job not found error
-	return convertError(row.Scan(&jobIDReturned))
+	err = row.Scan(&jobIDReturned)
+	// If no rows where updated but the job exists the request didn't have the right to update job's state.
+	if err == sql.ErrNoRows {
+		return api_errors.ForbiddenOperation
+	}
+	return err
 }
 
 // AddInstance which relates to a job
 func (ds Datastore) AddInstance(tx *sql.Tx, jobID string) (string, error) {
-	job := models.Instance{State: "created", LastUpdated: time.Now().UTC().String(), Events: &[]models.Event{}}
+	job := models.Instance{State: "created", LastUpdated: time.Now().UTC().String(),
+		Events: &[]models.Event{}, TotalObservations: new(int), InsertedObservations: new(int)}
 	bytes, err := json.Marshal(job)
 	if err != nil {
 		return "", err
@@ -197,8 +228,36 @@ func (ds Datastore) GetInstance(host, instanceID string) (models.Instance, error
 		return models.Instance{}, err
 	}
 	instance.InstanceID = instanceID
-	instance.JobURL = buildJobURL(host, jobID.String)
+	instance.Job = models.IDLink{ID: jobID.String, Link: buildJobURL(host, jobID.String)}
 	return instance, nil
+}
+
+// GetInstances from postgres
+func (ds Datastore) GetInstances(host string, filter []string) ([]models.Instance, error) {
+	if len(filter) == 0 {
+		filter = allFilterStates
+	}
+	var instances []models.Instance
+	rows, err := ds.getInstances.Query(pg.Array(filter))
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var instanceID, instanceJSON, jobID sql.NullString
+		err = rows.Scan(&instanceID, &instanceJSON, &jobID)
+		if err != nil {
+			return nil, err
+		}
+		var instance models.Instance
+		err = json.Unmarshal([]byte(instanceJSON.String), &instance)
+		if err != nil {
+			return nil, err
+		}
+		instance.InstanceID = instanceID.String
+		instance.Job = models.IDLink{ID: jobID.String, Link: buildJobURL(host, jobID.String)}
+		instances = append(instances, instance)
+	}
+	return instances, nil
 }
 
 // UpdateInstance in postgres
@@ -239,18 +298,18 @@ func (ds Datastore) AddDimension(instanceID string, dimension *models.Dimension)
 func (ds Datastore) GetDimensions(instanceID string) ([]models.Dimension, error) {
 	_, err := ds.GetInstance("", instanceID)
 	if err != nil {
-		return []models.Dimension{}, err
+		return nil, err
 	}
 	rows, err := ds.getDimensions.Query(instanceID)
 	if err != nil {
-		return []models.Dimension{}, convertError(err)
+		return nil, convertError(err)
 	}
 	dimensions := []models.Dimension{}
 	for rows.Next() {
 		var nodeName, value, nodeID sql.NullString
 		err := rows.Scan(&nodeName, &value, &nodeID)
 		if err != nil {
-			return []models.Dimension{}, err
+			return nil, err
 		}
 		dimensions = append(dimensions, models.Dimension{Name: nodeName.String, NodeID: nodeID.String, Value: value.String})
 	}
@@ -281,17 +340,21 @@ func (ds Datastore) GetDimensionValues(instanceID, dimensionName string) (models
 }
 
 // AddNodeID for a dimension
-func (ds Datastore) AddNodeID(instanceID, nodeID string, message *models.Dimension) error {
-	row := ds.addNodeID.QueryRow(message.NodeID, instanceID, nodeID)
+func (ds Datastore) AddNodeID(instanceID string, dimension *models.Dimension) error {
+	row := ds.addNodeID.QueryRow(dimension.NodeID, dimension.Value, instanceID, dimension.Name)
 	var returnedInstanceID sql.NullString
 	return convertError(row.Scan(&returnedInstanceID))
 }
 
-// BuildImportDataMessage to send to data baker
-func (ds Datastore) BuildImportDataMessage(jobID string) (*models.ImportData, error) {
-	row := ds.createPublishMessage.QueryRow(jobID)
-	var recipe, filesAsJSON, instancIds sql.NullString
-	err := row.Scan(&recipe, &filesAsJSON, &instancIds)
+// PrepareImportJob to send to data baker
+func (ds Datastore) PrepareImportJob(jobID string) (*models.ImportData, error) {
+	tx, err := ds.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	row := tx.Stmt(ds.prepareImportJob).QueryRow(jobID)
+	var recipe, filesAsJSON, instanceIds sql.NullString
+	err = row.Scan(&recipe, &filesAsJSON, &instanceIds)
 	if err != nil {
 		return nil, err
 	}
@@ -300,10 +363,37 @@ func (ds Datastore) BuildImportDataMessage(jobID string) (*models.ImportData, er
 	if err != nil {
 		return nil, err
 	}
+	instances := strings.Split(instanceIds.String, ",")
+	for _, instance := range instances {
+		log.Info(instance, log.Data{})
+		json, err := json.Marshal(models.Instance{State: "submitted"})
+		if err != nil {
+			return nil, tx.Rollback()
+		}
+		_, err = tx.Stmt(ds.updateInstance).Exec(string(json), instance)
+		if err != nil {
+			return nil, tx.Rollback()
+		}
+	}
 	return &models.ImportData{JobID: jobID,
 		Recipe:        recipe.String,
 		UploadedFiles: files,
-		InstanceIDs:   strings.Split(instancIds.String, ",")}, nil
+		InstanceIDs:   strings.Split(instanceIds.String, ",")}, tx.Commit()
+}
+
+func (ds Datastore) UpdateObservationCount(instanceID string, count int) error {
+	results, err := ds.incrementObservationCount.Exec(count, instanceID)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := results.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return api_errors.JobNotFoundError
+	}
+	return nil
 }
 
 func convertError(err error) error {

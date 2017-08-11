@@ -50,7 +50,7 @@ func main() {
 
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
 	router := mux.NewRouter()
-	_ = api.CreateImportAPI(config.Host,router, postgresDataStore, &jobQueue)
+	_ = api.CreateImportAPI(config.Host,router, postgresDataStore, &jobQueue, config.SecretKey)
 	err = http.ListenAndServe(config.BindAddr, router)
 
 	if err != nil {

@@ -74,6 +74,18 @@ parameters:
    type: string
    in: path
    required: true
+  node_id:
+   name: node_id
+   description: "An unique node id"
+   type: string
+   in: path
+   required: true
+  inserted_observations:
+    name: inserted_observations
+    description: "A value to increment the inserted_observations within an instance"
+    type: integer
+    in: path
+    required: true
 securityDefinitions:
   FlorenceAPIKey:
     description: "API key used to allow florence users to create and query the progress of importing a dataset"
@@ -284,6 +296,10 @@ paths:
           description: "The event was added to the instance"
         400:
           description: "Invalid json message sent"
+        401:
+          $ref: '#/responses/UnauthorisedError'
+        403:
+          $ref: '#/responses/ForbiddenError'
         404:
           description: "InstanceId does not match any instances"
         500:
@@ -307,10 +323,40 @@ paths:
           description: "The event was added to the instance"
         400:
           description: "Invalid json message sent"
+        401:
+          $ref: '#/responses/UnauthorisedError'
+        403:
+          $ref: '#/responses/ForbiddenError'
         404:
           description: "InstanceId does not match any instances"
         500:
           $ref: '#/responses/InternalError'
+  /instances/{instance_id}/inserted_observations/{inserted_observations}:
+    put:
+      tags:
+      - "Internal Interface"
+      summary: "Increment the observation inserted count"
+      description: "This will add to the number already store in the api"
+      parameters:
+      - $ref: '#/parameters/instance_id'
+      - $ref: '#/parameters/inserted_observations'
+      security:
+      - InternalAPIKey: []
+      responses:
+        200:
+          description: "Added value to inserted observation"
+        400:
+          description: "Invalid value provided for inserted_observations"
+        401:
+          $ref: '#/responses/UnauthorisedError'
+        403:
+          $ref: '#/responses/ForbiddenError'
+        404:
+          description: "InstanceId does not match any instances"
+        500:
+          $ref: '#/responses/InternalError'
+
+
   /instances/{instance_id}/dimensions/{dimension_id}/options/{value}:
     put:
       tags:
@@ -329,11 +375,15 @@ paths:
       responses:
         200:
           description: "The dimension was added"
+        401:
+          $ref: '#/responses/UnauthorisedError'
+        403:
+          $ref: '#/responses/ForbiddenError'
         404:
           description: "InstanceId does not match any instances"
         500:
           $ref: '#/responses/InternalError'
-  /instances/{instance_id}/dimensions/{dimension_id}/node_id/{value}:
+  /instances/{instance_id}/dimensions/{dimension_id}/options/{value}/node_id/{node_id}:
     put:
       tags:
       - "Internal Interface"
@@ -344,6 +394,7 @@ paths:
       - $ref: '#/parameters/instance_id'
       - $ref: '#/parameters/dimension_id'
       - $ref: '#/parameters/value'
+      - $ref: '#/parameters/node_id'
       produces:
       - "application/json"
       security:
@@ -351,6 +402,10 @@ paths:
       responses:
         200:
           description: "Updated the dimension with the nodeId"
+        401:
+          $ref: '#/responses/UnauthorisedError'
+        403:
+          $ref: '#/responses/ForbiddenError'
         404:
           description: "InstanceId does not match any instances"
         500:
@@ -358,6 +413,10 @@ paths:
 responses:
   InternalError:
     description: "Failed to process the request due to an internal error"
+  ForbiddenError:
+    description: "No header with a token key was provided"
+  UnauthorisedError:
+    description: "The token provided is unauthorised to carry out this operation"
 definitions:
   JobList:
     description: "A list of import jobs"

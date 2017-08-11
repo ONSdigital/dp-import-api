@@ -47,7 +47,7 @@ func (ds *DataStore) AddInstance(joID string) (string, error) {
 	return "123", nil
 }
 
-func (ds *DataStore) UpdateJobState(string, *models.Job) error {
+func (ds *DataStore) UpdateJobState(string, *models.Job, bool) error {
 	if ds.NotFound {
 		return api_errors.JobNotFoundError
 	}
@@ -65,6 +65,14 @@ func (ds *DataStore) GetInstance(host, instanceID string) (models.Instance, erro
 		return models.Instance{}, internalError
 	}
 	return models.Instance{InstanceID: "234234", State: "Created"}, nil
+}
+
+func (ds *DataStore) GetInstances(host string, filter []string) ([]models.Instance, error) {
+
+	if ds.InternalError {
+		return []models.Instance{}, internalError
+	}
+	return []models.Instance{models.Instance{InstanceID: "234234", State: "Created"}}, nil
 }
 
 func (ds *DataStore) UpdateInstance(instanceID string, instance *models.Instance) error {
@@ -127,7 +135,7 @@ func (ds *DataStore) GetDimensionValues(instanceID, dimensionName string) (model
 	return models.UniqueDimensionValues{Name: dimensionName, Values: []string{"123", "321"}}, nil
 }
 
-func (ds *DataStore) AddNodeID(instanceID, nodeID string, message *models.Dimension) error {
+func (ds *DataStore) AddNodeID(instanceID string, dimension *models.Dimension) error {
 	if ds.NotFound {
 		return api_errors.JobNotFoundError
 	}
@@ -137,7 +145,7 @@ func (ds *DataStore) AddNodeID(instanceID, nodeID string, message *models.Dimens
 	return nil
 }
 
-func (ds *DataStore) BuildImportDataMessage(jobID string) (*models.ImportData, error) {
+func (ds *DataStore) PrepareImportJob(jobID string) (*models.ImportData, error) {
 	if ds.NotFound {
 		return nil, api_errors.JobNotFoundError
 	}
@@ -146,4 +154,14 @@ func (ds *DataStore) BuildImportDataMessage(jobID string) (*models.ImportData, e
 	}
 	return &models.ImportData{Recipe: "test", InstanceIDs: []string{"1", "2", "3"},
 		UploadedFiles: []models.UploadedFile{models.UploadedFile{URL: "s3//aws/bucket/file.xls", AliasName: "test"}}}, nil
+}
+
+func (ds *DataStore) UpdateObservationCount(instanceID string, count int) error {
+	if ds.NotFound {
+		return api_errors.JobNotFoundError
+	}
+	if ds.InternalError {
+		return internalError
+	}
+	return nil
 }
