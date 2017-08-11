@@ -16,7 +16,7 @@ job "dp-import-api" {
       driver = "exec"
 
       artifact {
-        source = "s3::https://s3-eu-west-1.amazonaws.com/ons-dp-builds/dp-import-api/latest.tar.gz"
+        source = "s3::https://s3-eu-west-1.amazonaws.com/ons-dp-deployments/dp-import-api/latest.tar.gz"
       }
 
       config {
