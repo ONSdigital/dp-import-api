@@ -10,7 +10,7 @@ job "dp-import-api" {
   }
 
   group "publishing" {
-    count = 1
+    count = {{PUBLISHING_TASK_COUNT}}
 
     task "dp-import-api" {
       driver = "exec"
@@ -33,8 +33,8 @@ job "dp-import-api" {
       }
 
       resources {
-        cpu    = "{{WEB_RESOURCE_CPU}}"
-        memory = "{{WEB_RESOURCE_MEM}}"
+        cpu    = "{{PUBLISHING_RESOURCE_CPU}}"
+        memory = "{{PUBLISHING_RESOURCE_MEM}}"
 
         network {
           port "http" {}
