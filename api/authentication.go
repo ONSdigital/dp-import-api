@@ -6,7 +6,7 @@ import (
 	"errors"
 )
 
-// Authenticator A simple authentication method. This will be replaced in the future, after a thin-slices has been delivered
+// Authenticator structure which holds the secret key for validating clients. This will be replaced in the future, after the `thin-slices` has been delivered
 type Authenticator struct {
 	secretKey string
 	headerName string
@@ -23,12 +23,12 @@ func (a *Authenticator) Check(handle func(http.ResponseWriter, *http.Request)) h
 		key := r.Header.Get(a.headerName)
 		if key == "" {
 			http.Error(w, "No authentication header provided", http.StatusForbidden)
-			log.Error(errors.New("Client missing token"), log.Data{"header":a.headerName})
+			log.Error(errors.New("client missing token"), log.Data{"header":a.headerName})
 			return
 		}
 		if key != a.secretKey {
 			http.Error(w, "Unauthorised access to API", http.StatusUnauthorized)
-			log.Error(errors.New("Unauthorised access to API"), log.Data{"header":a.headerName})
+			log.Error(errors.New("unauthorised access to API"), log.Data{"header":a.headerName})
 			return
 		}
 		// The request has been authenticated, now run the clients request

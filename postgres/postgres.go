@@ -45,6 +45,9 @@ func prepare(sql string, db *sql.DB) *sql.Stmt {
 	return statement
 }
 
+// TODO : For state types we need to force any of them to be lower cases
+// TODO : Improve test coverage around transation code
+
 // NewDatastore used to store jobs and instances in postgres
 func NewDatastore(db *sql.DB) (Datastore, error) {
 	addJob := prepare("INSERT INTO Jobs(jobid,job) VALUES($1, $2) RETURNING jobId", db)
@@ -236,18 +239,18 @@ func (ds Datastore) GetInstances(host string, filter []string) ([]models.Instanc
 	var instances []models.Instance
 	rows, err := ds.getInstances.Query(pg.Array(filter))
 	if err != nil {
-		return []models.Instance{}, err
+		return nil, err
 	}
 	for rows.Next() {
 		var instanceID, instanceJSON, jobID sql.NullString
 		err = rows.Scan(&instanceID, &instanceJSON, &jobID)
 		if err != nil {
-			return []models.Instance{}, err
+			return nil, err
 		}
 		var instance models.Instance
 		err = json.Unmarshal([]byte(instanceJSON.String), &instance)
 		if err != nil {
-			return []models.Instance{}, err
+			return nil, err
 		}
 		instance.InstanceID = instanceID.String
 		instance.Job = models.IDLink{ID: jobID.String, Link: buildJobURL(host, jobID.String)}
@@ -294,18 +297,18 @@ func (ds Datastore) AddDimension(instanceID string, dimension *models.Dimension)
 func (ds Datastore) GetDimensions(instanceID string) ([]models.Dimension, error) {
 	_, err := ds.GetInstance("", instanceID)
 	if err != nil {
-		return []models.Dimension{}, err
+		return nil, err
 	}
 	rows, err := ds.getDimensions.Query(instanceID)
 	if err != nil {
-		return []models.Dimension{}, convertError(err)
+		return nil, convertError(err)
 	}
 	dimensions := []models.Dimension{}
 	for rows.Next() {
 		var nodeName, value, nodeID sql.NullString
 		err := rows.Scan(&nodeName, &value, &nodeID)
 		if err != nil {
-			return []models.Dimension{}, err
+			return nil, err
 		}
 		dimensions = append(dimensions, models.Dimension{Name: nodeName.String, NodeID: nodeID.String, Value: value.String})
 	}

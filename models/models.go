@@ -16,11 +16,6 @@ type Job struct {
 	Instances     []IDLink        `json:"instances,omitempty"`
 }
 
-// JobLinks to the number of instances within a job
-type JobLinks struct {
-	InstanceIDs []string `json:"instance_ids"`
-}
-
 // Validate the content of a job
 func (job *Job) Validate() error {
 	if job.Recipe == "" {

@@ -196,9 +196,7 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request, isAuth b
 func (api *ImportAPI) getInstances(w http.ResponseWriter, r *http.Request) {
 	filtersQuery := r.URL.Query().Get("instance_states")
 	var filterList []string
-	if filtersQuery == "" {
-		filterList = nil
-	} else {
+	if filtersQuery != "" {
 		filterList = strings.Split(filtersQuery, ",")
 	}
 	instances, err := api.dataStore.GetInstances(api.host, filterList)
@@ -317,7 +315,7 @@ func (api *ImportAPI) addDimension(w http.ResponseWriter, r *http.Request) {
 	dimensionName := vars["dimension_name"]
 	dimensionValue := vars["value"]
 	if dimensionName == "" || dimensionValue == "" {
-		log.Error(errors.New("Missing parameters"), log.Data{"instance_id": instanceID, "name": dimensionName, "value": dimensionValue})
+		log.Error(errors.New("missing parameters"), log.Data{"instance_id": instanceID, "name": dimensionName, "value": dimensionValue})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}
@@ -363,11 +361,11 @@ func (api *ImportAPI) addNodeID(w http.ResponseWriter, r *http.Request) {
 	dimensionName := vars["dimension_name"]
 	nodeValue := vars["node_id"]
 	if dimensionName == "" || nodeValue == "" || dimensionValue == "" {
-		log.Error(errors.New("Missing parameters"), log.Data{"instance_id": instanceID, "dimension_name": dimensionName, "dimension_value": nodeValue})
+		log.Error(errors.New("missing parameters"), log.Data{"instance_id": instanceID, "dimension_name": dimensionName, "dimension_value": nodeValue})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}
-	dimension := models.Dimension{Name:dimensionName, Value:dimensionValue, NodeID: nodeValue}
+	dimension := models.Dimension{Name: dimensionName, Value: dimensionValue, NodeID: nodeValue}
 	err := api.dataStore.AddNodeID(instanceID, &dimension)
 	if err != nil {
 		log.Error(err, log.Data{"instance_id": instanceID, "dimension": dimension})
@@ -382,7 +380,7 @@ func (api *ImportAPI) addInsertedObservations(w http.ResponseWriter, r *http.Req
 	instanceID := vars["instance_id"]
 	insertedObservations, err := strconv.Atoi(vars["inserted_observations"])
 	if insertedObservations == 0 || err != nil {
-		log.Error(errors.New("Missing / invalid parameters"), log.Data{"instance_id": instanceID, "inserted_observations": insertedObservations})
+		log.Error(errors.New("missing / invalid parameters"), log.Data{"instance_id": instanceID, "inserted_observations": insertedObservations})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}

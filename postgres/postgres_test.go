@@ -41,7 +41,7 @@ func TestNewPostgresDatastore(t *testing.T) {
 func TestGetInstance(t *testing.T) {
 	t.Parallel()
 	Convey("When an instanceId is provided, the instance state is returned", t, func() {
-		jsonContent := "{ \"state\":\"Created\"}"
+		jsonContent := "{ \"state\":\"created\"}"
 		mock, db := NewSQLMockWithSQLStatements()
 		ds, err := NewDatastore(db)
 		So(err, ShouldBeNil)
@@ -49,7 +49,7 @@ func TestGetInstance(t *testing.T) {
 			AddRow( jsonContent, "1"))
 		state, err := ds.GetInstance("http://localhost:80", "any")
 		So(err, ShouldBeNil)
-		So(state.State, ShouldEqual, "Created")
+		So(state.State, ShouldEqual, "created")
 		So(mock.ExpectationsWereMet(), ShouldBeNil)
 	})
 }
@@ -57,7 +57,7 @@ func TestGetInstance(t *testing.T) {
 func TestGetInstances(t *testing.T) {
 	t.Parallel()
 	Convey("When a request for all, a list of instances are returned", t, func() {
-		jsonContent := "{ \"state\":\"Created\"}"
+		jsonContent := "{ \"state\":\"created\"}"
 		mock, db := NewSQLMockWithSQLStatements()
 		ds, err := NewDatastore(db)
 		So(err, ShouldBeNil)
@@ -66,14 +66,14 @@ func TestGetInstances(t *testing.T) {
 			AddRow("1", jsonContent, "1"))
 		instances, err := ds.GetInstances("http://localhost:80", []string{})
 		So(err, ShouldBeNil)
-		So(instances[0].State, ShouldEqual, "Created")
+		So(instances[0].State, ShouldEqual, "created")
 	})
 }
 
 func TestGetJobs(t *testing.T) {
 	t.Parallel()
 	Convey("When get jobs is called, a list of jobs are returned", t, func() {
-		jsonContent := "{ \"state\":\"Created\"}"
+		jsonContent := "{ \"state\":\"created\"}"
 		mock, db := NewSQLMockWithSQLStatements()
 		ds, err := NewDatastore(db)
 		So(err, ShouldBeNil)
@@ -82,7 +82,7 @@ func TestGetJobs(t *testing.T) {
 			AddRow(1, 1, jsonContent))
 		jobs, err := ds.GetJobs("localhost", []string{})
 		So(err, ShouldBeNil)
-		So(jobs[0].State, ShouldEqual, "Created")
+		So(jobs[0].State, ShouldEqual, "created")
 		So(mock.ExpectationsWereMet(), ShouldBeNil)
 	})
 }
@@ -90,7 +90,7 @@ func TestGetJobs(t *testing.T) {
 func TestGetJob(t *testing.T) {
 	t.Parallel()
 	Convey("When get jobs is called, a list of jobs are returned", t, func() {
-		jsonContent := "{ \"state\":\"Created\"}"
+		jsonContent := "{ \"state\":\"created\"}"
 		mock, db := NewSQLMockWithSQLStatements()
 		ds, err := NewDatastore(db)
 		So(err, ShouldBeNil)
@@ -99,7 +99,7 @@ func TestGetJob(t *testing.T) {
 			AddRow( 1, jsonContent))
 		state, err := ds.GetJob("localhost", "123")
 		So(err, ShouldBeNil)
-		So(state.State, ShouldEqual, "Created")
+		So(state.State, ShouldEqual, "created")
 		So(mock.ExpectationsWereMet(), ShouldBeNil)
 	})
 }
@@ -208,7 +208,7 @@ func TestUpdateJobState(t *testing.T) {
 		mock, db := NewSQLMockWithSQLStatements()
 		ds, err := NewDatastore(db)
 		So(err, ShouldBeNil)
-		jsonContent := "{ \"state\":\"Created\"}"
+		jsonContent := "{ \"state\":\"created\"}"
 		mock.ExpectQuery(getJobSQL).
 			WithArgs(sqlmock.AnyArg()).WillReturnRows(sqlmock.NewRows([]string{"instanceid","json"}).
 			AddRow( 1, jsonContent))
