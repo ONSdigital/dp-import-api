@@ -4,15 +4,15 @@ import (
 	"github.com/ONSdigital/dp-import-api/api"
 	"github.com/ONSdigital/dp-import-api/postgres"
 	"github.com/ONSdigital/go-ns/log"
+	"github.com/ONSdigital/go-ns/server"
 
 	"database/sql"
-	"net/http"
 	"os"
 
-	"github.com/gorilla/mux"
 	"github.com/ONSdigital/dp-import-api/config"
 	"github.com/ONSdigital/dp-import-api/importqueue"
 	"github.com/ONSdigital/go-ns/kafka"
+	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
 
@@ -50,13 +50,18 @@ func main() {
 
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
 	router := mux.NewRouter()
-	_ = api.CreateImportAPI(config.Host,router, postgresDataStore, &jobQueue, config.SecretKey)
-	err = http.ListenAndServe(config.BindAddr, router)
 
-	if err != nil {
-		log.Error(err, log.Data{"bind_addr": config.BindAddr,
-			"topic": []string{config.DatabakerImportTopic, config.InputFileAvailableTopic}})
+	s := server.New(config.BindAddr, router)
+
+	log.Debug("listening...", log.Data{
+		"bind_address": config.BindAddr,
+	})
+
+	_ = api.CreateImportAPI(config.Host, router, postgresDataStore, &jobQueue, config.SecretKey)
+	if err = s.ListenAndServe(); err != nil {
+		log.Error(err, nil)
 	}
+
 	dataBakerProducer.Closer() <- true
 	directProducer.Closer() <- true
 }
