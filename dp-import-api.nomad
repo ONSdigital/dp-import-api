@@ -47,7 +47,7 @@ job "dp-import-api" {
       }
 
       vault {
-        policies = ["dp-import-api-publishing"]
+        policies = ["dp-import-api"]
       }
     }
   }
