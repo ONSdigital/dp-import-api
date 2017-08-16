@@ -29,6 +29,7 @@ job "dp-import-api" {
 
       service {
         name = "dp-import-api"
+        port = "http"
         tags = ["publishing"]
       }
 
