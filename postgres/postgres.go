@@ -119,6 +119,7 @@ func (ds Datastore) GetJobs(host string, filter []string) ([]models.Job, error) 
 	if err != nil {
 		return []models.Job{}, err
 	}
+	defer rows.Close()
 
 	jobs := []models.Job{}
 	for rows.Next() {
@@ -137,6 +138,11 @@ func (ds Datastore) GetJobs(host string, filter []string) ([]models.Job, error) 
 		jobs = append(jobs, job)
 
 	}
+
+	if err = rows.Err(); err != nil {
+		return jobs, convertError(err)
+	}
+
 	return jobs, nil
 }
 
@@ -242,6 +248,8 @@ func (ds Datastore) GetInstances(host string, filter []string) ([]models.Instanc
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
 	for rows.Next() {
 		var instanceID, instanceJSON, jobID sql.NullString
 		err = rows.Scan(&instanceID, &instanceJSON, &jobID)
@@ -257,6 +265,11 @@ func (ds Datastore) GetInstances(host string, filter []string) ([]models.Instanc
 		instance.Job = models.IDLink{ID: jobID.String, Link: buildJobURL(host, jobID.String)}
 		instances = append(instances, instance)
 	}
+
+	if err = rows.Err(); err != nil {
+		return instances, convertError(err)
+	}
+
 	return instances, nil
 }
 
@@ -304,6 +317,8 @@ func (ds Datastore) GetDimensions(instanceID string) ([]models.Dimension, error)
 	if err != nil {
 		return nil, convertError(err)
 	}
+	defer rows.Close()
+
 	dimensions := []models.Dimension{}
 	for rows.Next() {
 		var nodeName, value, nodeID sql.NullString
@@ -313,6 +328,11 @@ func (ds Datastore) GetDimensions(instanceID string) ([]models.Dimension, error)
 		}
 		dimensions = append(dimensions, models.Dimension{Name: nodeName.String, NodeID: nodeID.String, Value: value.String})
 	}
+
+	if err = rows.Err(); err != nil {
+		return dimensions, convertError(err)
+	}
+
 	return dimensions, nil
 }
 
@@ -323,6 +343,8 @@ func (ds Datastore) GetDimensionValues(instanceID, dimensionName string) (models
 	if err != nil {
 		return models.UniqueDimensionValues{}, err
 	}
+	defer rows.Close()
+
 	for rows.Next() {
 		var value sql.NullString
 		err := rows.Scan(&value)
@@ -334,6 +356,10 @@ func (ds Datastore) GetDimensionValues(instanceID, dimensionName string) (models
 
 	if len(values) == 0 {
 		return models.UniqueDimensionValues{}, api_errors.DimensionNameNotFoundError
+	}
+
+	if err = rows.Err(); err != nil {
+		return models.UniqueDimensionValues{}, convertError(err)
 	}
 
 	return models.UniqueDimensionValues{Name: dimensionName, Values: values}, nil
