@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"errors"
+
 	"github.com/ONSdigital/dp-import-api/api-errors"
 	"github.com/ONSdigital/dp-import-api/models"
 )
@@ -125,14 +126,14 @@ func (ds *DataStore) GetDimensions(instanceID string) ([]models.Dimension, error
 	return []models.Dimension{models.Dimension{Name: "1234-geography.newport", Value: "newport", NodeID: "234234234"}}, nil
 }
 
-func (ds *DataStore) GetDimensionValues(instanceID, dimensionName string) (models.UniqueDimensionValues, error) {
+func (ds *DataStore) GetDimensionValues(instanceID, dimensionName string) (*models.UniqueDimensionValues, error) {
 	if ds.NotFound {
-		return models.UniqueDimensionValues{}, api_errors.JobNotFoundError
+		return nil, api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
-		return models.UniqueDimensionValues{}, internalError
+		return nil, internalError
 	}
-	return models.UniqueDimensionValues{Name: dimensionName, Values: []string{"123", "321"}}, nil
+	return &models.UniqueDimensionValues{Name: dimensionName, Values: []string{"123", "321"}}, nil
 }
 
 func (ds *DataStore) AddNodeID(instanceID string, dimension *models.Dimension) error {

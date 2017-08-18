@@ -117,7 +117,7 @@ func (ds Datastore) GetJobs(host string, filter []string) ([]models.Job, error) 
 	}
 	rows, err := ds.getJobs.Query(pg.Array(filter))
 	if err != nil {
-		return []models.Job{}, err
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -126,12 +126,12 @@ func (ds Datastore) GetJobs(host string, filter []string) ([]models.Job, error) 
 		var jobID, instanceID, jobInfo sql.NullString
 		err = rows.Scan(&jobID, &instanceID, &jobInfo)
 		if err != nil {
-			return []models.Job{}, err
+			return nil, err
 		}
 		var job models.Job
 		err = json.Unmarshal([]byte(jobInfo.String), &job)
 		if err != nil {
-			return []models.Job{}, err
+			return nil, err
 		}
 		job.JobID = jobID.String
 		job.Instances = []models.IDLink{models.IDLink{ID: instanceID.String, Link: buildInstanceURL(host, instanceID.String)}}
@@ -140,7 +140,7 @@ func (ds Datastore) GetJobs(host string, filter []string) ([]models.Job, error) 
 	}
 
 	if err = rows.Err(); err != nil {
-		return jobs, convertError(err)
+		return nil, convertError(err)
 	}
 
 	return jobs, nil
@@ -267,7 +267,7 @@ func (ds Datastore) GetInstances(host string, filter []string) ([]models.Instanc
 	}
 
 	if err = rows.Err(); err != nil {
-		return instances, convertError(err)
+		return nil, convertError(err)
 	}
 
 	return instances, nil
@@ -330,18 +330,18 @@ func (ds Datastore) GetDimensions(instanceID string) ([]models.Dimension, error)
 	}
 
 	if err = rows.Err(); err != nil {
-		return dimensions, convertError(err)
+		return nil, convertError(err)
 	}
 
 	return dimensions, nil
 }
 
 // GetDimensionValues from a store dimension in postgres, each value returned is unique
-func (ds Datastore) GetDimensionValues(instanceID, dimensionName string) (models.UniqueDimensionValues, error) {
+func (ds Datastore) GetDimensionValues(instanceID, dimensionName string) (*models.UniqueDimensionValues, error) {
 	values := []string{}
 	rows, err := ds.getDimensionValues.Query(instanceID, dimensionName)
 	if err != nil {
-		return models.UniqueDimensionValues{}, err
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -349,20 +349,20 @@ func (ds Datastore) GetDimensionValues(instanceID, dimensionName string) (models
 		var value sql.NullString
 		err := rows.Scan(&value)
 		if err != nil {
-			return models.UniqueDimensionValues{}, err
+			return nil, err
 		}
 		values = append(values, value.String)
 	}
 
 	if len(values) == 0 {
-		return models.UniqueDimensionValues{}, api_errors.DimensionNameNotFoundError
+		return nil, api_errors.DimensionNameNotFoundError
 	}
 
 	if err = rows.Err(); err != nil {
-		return models.UniqueDimensionValues{}, convertError(err)
+		return nil, convertError(err)
 	}
 
-	return models.UniqueDimensionValues{Name: dimensionName, Values: values}, nil
+	return &models.UniqueDimensionValues{Name: dimensionName, Values: values}, nil
 }
 
 // AddNodeID for a dimension

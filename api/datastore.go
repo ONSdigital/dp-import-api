@@ -17,7 +17,7 @@ type DataStore interface {
 	AddEvent(instanceID string, event *models.Event) error
 	AddDimension(instanceID string, dimension *models.Dimension) error
 	GetDimensions(instanceID string) ([]models.Dimension, error)
-	GetDimensionValues(instanceID, dimensionName string) (models.UniqueDimensionValues, error)
+	GetDimensionValues(instanceID, dimensionName string) (*models.UniqueDimensionValues, error)
 	AddNodeID(instanceID string, dimension *models.Dimension) error
 	UpdateObservationCount(instanceID string, count int) error
 	PrepareImportJob(jobID string) (*models.ImportData, error)
