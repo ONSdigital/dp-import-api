@@ -29,6 +29,7 @@ job "dp-import-api" {
 
       service {
         name = "dp-import-api"
+        port = "http"
         tags = ["publishing"]
       }
 
@@ -47,7 +48,7 @@ job "dp-import-api" {
       }
 
       vault {
-        policies = ["dp-import-api-publishing"]
+        policies = ["dp-import-api"]
       }
     }
   }
