@@ -10,13 +10,17 @@ job "dp-import-api" {
   }
 
   group "publishing" {
-    count = {{PUBLISHING_TASK_COUNT}}
+    count = "{{PUBLISHING_TASK_COUNT}}"
 
     task "dp-import-api" {
       driver = "exec"
 
       artifact {
-        source = "s3::https://s3-eu-west-1.amazonaws.com/{{BUILD_BUCKET}}/dp-import-api/{{REVISION}}.tar.gz
+        source = "s3::https://s3-eu-west-1.amazonaws.com/{{BUILD_BUCKET}}/dp-import-api/{{REVISION}}.tar.gz"
+      }
+
+      artifact {
+        source = "s3::https://s3-eu-west-1.amazonaws.com/{{DEPLOYMENT_BUCKET}}/dp-import-api/{{REVISION}}.tar.gz"
       }
 
       config {
