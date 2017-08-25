@@ -25,10 +25,7 @@ job "dp-import-api" {
 
       config {
         command = "${NOMAD_TASK_DIR}/start-task"
-
-         args = [
-                  "${NOMAD_TASK_DIR}/dp-import-api",
-                ]
+        args    = ["${NOMAD_TASK_DIR}/dp-import-api"]
       }
 
       service {
