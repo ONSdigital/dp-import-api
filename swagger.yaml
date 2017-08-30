@@ -472,9 +472,11 @@ definitions:
         properties:
           id:
             type: string
+            description: "The ID of the job containing this instance"
             example: 042e216a-7822-4fa0-a3d6-e3f5248ffc35
           link:
             type: string
+            description: "The URL for the job containing this instance"
             example: 'http://localhost:21800/jobs/042e216a-7822-4fa0-a3d6-e3f5248ffc35'
       state:
         type: string
