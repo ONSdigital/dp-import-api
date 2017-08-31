@@ -11,7 +11,6 @@ export GOARCH?=$(shell go env GOARCH)
 build:
 	@mkdir -p $(BUILD_ARCH)/$(BIN_DIR)
 	go build -o $(BUILD_ARCH)/$(BIN_DIR)/$(MAIN) cmd/$(MAIN)/main.go
-	cp $(MAIN).nomad $(BUILD_ARCH)/
 debug:
 	HUMAN_LOG=1 go run cmd/$(MAIN)/main.go
 
