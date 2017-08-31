@@ -56,7 +56,7 @@ func NewDatastore(db *sql.DB) (Datastore, error) {
 	getJobs := prepare("SELECT Jobs.jobId, instanceId, job FROM Jobs INNER JOIN  Instances ON (Jobs.jobId = Instances.jobId) WHERE Jobs.job->>'state' = ANY ($1::TEXT[])", db)
 	updateJobNoRestrictions := prepare("UPDATE Jobs set job = job || jsonb($1::TEXT) WHERE jobId = $2 RETURNING jobId", db)
 	updateJobWithRestrictions := prepare("UPDATE Jobs set job = job || jsonb($1::TEXT) WHERE jobId = $2 AND job->>'state' = 'created' RETURNING jobId", db)
-	addFileToJob := prepare("UPDATE Jobs SET job = jsonb_set(job, '{files}', (SELECT (job->'files')  || TO_JSONB(json_build_object('alaisName',$1::TEXT,'url',$2::TEXT)) FROM Jobs WHERE jobId = $3), true) WHERE jobId = $3 RETURNING jobId", db)
+	addFileToJob := prepare("UPDATE Jobs SET job = jsonb_set(job, '{files}', (SELECT (job->'files')  || TO_JSONB(json_build_object('alias_name',$1::TEXT,'url',$2::TEXT)) FROM Jobs WHERE jobId = $3), true) WHERE jobId = $3 RETURNING jobId", db)
 	addInstance := prepare("INSERT INTO Instances(instanceId, jobId, instance) VALUES($1, $2, $3) RETURNING instanceId", db)
 	findInstance := prepare("SELECT instance, jobId FROM Instances WHERE instanceId = $1", db)
 	getInstances := prepare("SELECT instanceId, instance, jobID FROM Instances WHERE instance->>'state' = ANY ($1::TEXT[])", db)

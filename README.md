@@ -1,7 +1,6 @@
 DP Import API
 ==============
 
-
 ### Getting started
 
 #### Postgres
