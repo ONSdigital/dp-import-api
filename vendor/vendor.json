@@ -112,24 +112,6 @@
 			"revisionTime": "2017-06-21T21:27:26Z"
 		},
 		{
-			"checksumSHA1": "jOXIxsHHi2+Kq4evLnADdtynshs=",
-			"path": "github.com/ian-kent/envconf",
-			"revision": "c19809918c02ab33dc8635d68c77649313185275",
-			"revisionTime": "2014-10-26T12:11:21Z"
-		},
-		{
-			"checksumSHA1": "Ai1Jq30ypG7ElmWWLmnj39u2CSc=",
-			"path": "github.com/ian-kent/gofigure",
-			"revision": "c9dc3a1359affde410a8d90e28132a1126604270",
-			"revisionTime": "2017-05-02T19:22:41Z"
-		},
-		{
-			"checksumSHA1": "TTOVXrBTt7rBkKDInYkI4wHLxV8=",
-			"path": "github.com/ian-kent/gofigure/sources",
-			"revision": "c9dc3a1359affde410a8d90e28132a1126604270",
-			"revisionTime": "2017-05-02T19:22:41Z"
-		},
-		{
 			"checksumSHA1": "Js/yx9fZ3+wH1wZpHNIxSTMIaCg=",
 			"path": "github.com/jtolds/gls",
 			"revision": "77f18212c9c7edc9bd6a33d383a7b545ce62f064",
@@ -140,6 +122,12 @@
 			"path": "github.com/justinas/alice",
 			"revision": "1051eaf52fcafdd87ead59d28b065f1fcb8274ec",
 			"revisionTime": "2016-09-10T10:38:22Z"
+		},
+		{
+			"checksumSHA1": "gWlw0l2wMBLhmejJCTr/Zywqyk8=",
+			"path": "github.com/kelseyhightower/envconfig",
+			"revision": "70f0258d44cbaa3b6a2581d82f58da01a38e4de4",
+			"revisionTime": "2017-05-23T19:07:22Z"
 		},
 		{
 			"checksumSHA1": "Wh2YCiWY/VIAEEQGLS7sMB9isXk=",
