@@ -10,8 +10,12 @@ type Configuration struct {
 	DatabakerImportTopic    string   `env:"DATABAKER_IMPORT_TOPIC" flag:"databaker-import-topic" flagDesc:"The Kafka topic to import job via databaker"`
 	InputFileAvailableTopic string   `env:"INPUT_FILE_AVAILABLE_TOPIC" flag:"input-file-available-topic" flagDesc:"The Kafka topic to import job directly"`
 	KafkaMaxBytes           int      `env:"KAFKA_MAX_BYTES" flag:"kafka-max-bytes" flagDesc:"The maximum permitted size of a message. Should be set equal to or smaller than the broker's 'message.max.bytes'"`
-	PostgresURL             string   `env:"POSTGRES_URL" flag:"postgres-url" flagDesc:"The URL address to connect to a postgres instance'"`
-	SecretKey               string   `env:"SECRET_KEY" flag:"secret-key" flagDesc:"A secret key used authentication"`
+	MongoDBURL              string   `env:"MONGODB_IMPORTS_ADDR" flag:"mongodb-bind-addr" flagDesc:"MongoDB bind address"`
+	MongoDBCollection       string   `env:"MONGODB_IMPORTS_DATABASE" flag:"mongodb-database" flagDesc:"MongoDB import database"`
+	MongoDBDatabase         string   `env:"MONGODB_IMPORTS_COLLECTION" flag:"mongodb-collection" flagDesc:"MongoDB import collection"`
+	SecretKey               string   `env:"SECRET_KEY" flag:"secret-key" flagDesc:"A secret key used in client authentication"`
+	DatasetAPIURL           string   `env:"DATASET_API_URL" flag:"dataset-api" flagDesc:"The URL of the Dataset API"`
+	DatasetAPIAuthToken     string   `env:"DATASET_AUTH_TOKEN" flag:"dataset-auth-token" flagDesc:"Authentication token to access the Dataset API"`
 }
 
 var cfg *Configuration
@@ -31,8 +35,12 @@ func Get() (*Configuration, error) {
 		DatabakerImportTopic:    "data-bake-job-available",
 		InputFileAvailableTopic: "input-file-available",
 		KafkaMaxBytes:           2000000,
-		PostgresURL:             "user=dp dbname=ImportJobs sslmode=disable",
+		MongoDBURL:              "localhost:27017",
+		MongoDBDatabase:         "imports",
+		MongoDBCollection:       "imports",
 		SecretKey:               "FD0108EA-825D-411C-9B1D-41EF7727F465",
+		DatasetAPIURL:           "http://localhost:22000",
+		DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
 	}
 
 	return cfg, gofigure.Gofigure(cfg)

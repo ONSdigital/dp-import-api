@@ -194,10 +194,7 @@ definitions:
             type: array
             readOnly: true
             items:
-              type: string
-              example:
-              - "http://localhost:22200/instance/321"
-              - "http://localhost:22200/instance/321"
+              $ref: '#/definitions/IDLink'
       files:
         description: "A list of all files to be used in the job"
         type: array
@@ -211,4 +208,13 @@ definitions:
         type: string
       url:
         description: "The full S3 path including zone, and bucket"
+        type: string
+  IDLink:
+    type: object
+    properties:
+      id:
+        description: "ID for the object"
+        type: string
+      href:
+        description: "The full URL for the object"
         type: string

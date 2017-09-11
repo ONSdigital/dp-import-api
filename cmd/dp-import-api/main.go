@@ -1,16 +1,18 @@
 package main
 
 import (
+	"net/http"
+
 	"github.com/ONSdigital/dp-import-api/api"
-	"github.com/ONSdigital/dp-import-api/postgres"
+	"github.com/ONSdigital/dp-import-api/dataset"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/server"
 
-	"database/sql"
 	"os"
 
 	"github.com/ONSdigital/dp-import-api/config"
 	"github.com/ONSdigital/dp-import-api/importqueue"
+	"github.com/ONSdigital/dp-import-api/mongo"
 	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -23,18 +25,16 @@ func main() {
 		log.Error(err, nil)
 		os.Exit(1)
 	}
+	client := &http.Client{}
 
-	log.Info("Starting importqueue api", log.Data{"bind_addr": config.BindAddr,
-		"topics":  []string{config.DatabakerImportTopic, config.InputFileAvailableTopic},
-		"brokers": config.Brokers})
-	db, err := sql.Open("postgres", config.PostgresURL)
+	log.Info("Starting importqueue api", log.Data{
+		"bind_addr": config.BindAddr,
+		"topics":    []string{config.DatabakerImportTopic, config.InputFileAvailableTopic},
+		"brokers":   config.Brokers,
+	})
+	mongoDataStore, err := mongo.NewDatastore(config.MongoDBURL, config.MongoDBDatabase, config.MongoDBCollection)
 	if err != nil {
-		log.ErrorC("DB open error", err, nil)
-		os.Exit(1)
-	}
-	postgresDataStore, err := postgres.NewDatastore(db)
-	if err != nil {
-		log.ErrorC("postgres datastore error", err, nil)
+		log.ErrorC("mongodb datastore error", err, nil)
 		os.Exit(1)
 	}
 	dataBakerProducer, err := kafka.NewProducer(config.Brokers, config.DatabakerImportTopic, config.KafkaMaxBytes)
@@ -57,7 +57,8 @@ func main() {
 		"bind_address": config.BindAddr,
 	})
 
-	_ = api.CreateImportAPI(config.Host, router, postgresDataStore, &jobQueue, config.SecretKey)
+	datasetAPI := dataset.NewDatasetAPI(client, config.DatasetAPIURL, config.DatasetAPIAuthToken)
+	_ = api.CreateImportAPI(config.Host, router, mongoDataStore, &jobQueue, config.SecretKey, datasetAPI)
 	if err = s.ListenAndServe(); err != nil {
 		log.Error(err, nil)
 	}
