@@ -172,7 +172,7 @@ func (m *Mongo) PrepareJob(datasetAPI *dataset.DatasetAPI, jobID string) (*model
 		return nil, err
 	}
 
-	instanceIds := make([]string, 1)
+	instanceIds := make([]string, 0)
 	for _, instanceRef := range importJob.Links.Instances {
 		instanceIds = append(instanceIds, instanceRef.ID)
 
