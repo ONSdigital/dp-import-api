@@ -58,14 +58,14 @@ type Event struct {
 
 // Instance which presents a single dataset being imported
 type Instance struct {
-	InstanceID           string        `json:"id,omitempty"`
-	Links                InstanceLinks `json:"links,omitempty"`
-	State                string        `json:"state,omitempty"`
-	Events               []Event       `json:"events,omitempty"`
-	TotalObservations    int           `json:"total_observations,omitempty"`
-	InsertedObservations int           `json:"total_inserted_observations,omitempty"`
-	Headers              []string      `json:"headers,omitempty"`
-	LastUpdated          string        `json:"last_updated,omitempty"`
+	InstanceID           string         `json:"id,omitempty"`
+	Links                *InstanceLinks `json:"links,omitempty"`
+	State                string         `json:"state,omitempty"`
+	Events               []Event        `json:"events,omitempty"`
+	TotalObservations    int            `json:"total_observations,omitempty"`
+	InsertedObservations int            `json:"total_inserted_observations,omitempty"`
+	Headers              []string       `json:"headers,omitempty"`
+	LastUpdated          string         `json:"last_updated,omitempty"`
 }
 
 type InstanceLinks struct {
@@ -136,7 +136,7 @@ func CreateUploadedFile(reader io.Reader) (*UploadedFile, error) {
 // CreateInstance from a job ID
 func CreateInstance(jobID, jobURL string) *Instance {
 	return &Instance{
-		Links: InstanceLinks{
+		Links: &InstanceLinks{
 			Job: IDLink{ID: jobID, HRef: jobURL},
 		}}
 }

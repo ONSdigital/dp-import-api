@@ -40,10 +40,11 @@ func (api *DatasetAPI) GetURL() string {
 // CreateInstance tells the Dataset API to create a Dataset instance
 func (api *DatasetAPI) CreateInstance(jobID, jobURL string) (instance *models.Instance, err error) {
 	path := api.URL + "/instances"
-	logData := log.Data{"URL": path}
+	logData := log.Data{"URL": path, "job_id": jobID, "job_url": jobURL}
 
 	var jsonUpload []byte
 	if jsonUpload, err = json.Marshal(models.CreateInstance(jobID, jobURL)); err != nil {
+		log.ErrorC("CreateInstance marshal", err, logData)
 		return
 	}
 	logData["jsonUpload"] = jsonUpload
@@ -54,7 +55,7 @@ func (api *DatasetAPI) CreateInstance(jobID, jobURL string) (instance *models.In
 		err = errors.New("Bad response while creating instance")
 	}
 	if err != nil {
-		log.ErrorC("CreateInstance", err, logData)
+		log.ErrorC("CreateInstance post", err, logData)
 		return
 	}
 	instance = &models.Instance{}
@@ -68,9 +69,15 @@ func (api *DatasetAPI) CreateInstance(jobID, jobURL string) (instance *models.In
 // UpdateState tells the Dataset API that the state of a Dataset instance has changed
 func (api *DatasetAPI) UpdateInstanceState(instanceID string, newState string) error {
 	path := api.URL + "/instances/" + instanceID
-	logData := log.Data{"URL": path}
-	jsonUpload := []byte(`{"state":"` + newState + `"}`)
-	logData["jsonUpload"] = jsonUpload
+	logData := log.Data{"URL": path, "new_state": newState}
+
+	jsonUpload, err := json.Marshal(models.Instance{State: newState})
+	if err != nil {
+		log.ErrorC("UpdateInstanceState marshal", err, logData)
+		return err
+	}
+	logData["jsonUpload"] = string(jsonUpload)
+
 	jsonResult, httpCode, err := api.put(path, 0, jsonUpload)
 	logData["httpCode"] = httpCode
 	logData["jsonResult"] = jsonResult
@@ -78,7 +85,7 @@ func (api *DatasetAPI) UpdateInstanceState(instanceID string, newState string) e
 		err = errors.New("Bad response while updating instance state")
 	}
 	if err != nil {
-		log.ErrorC("UpdateState", err, logData)
+		log.ErrorC("UpdateInstanceState", err, logData)
 		return err
 	}
 	return nil
