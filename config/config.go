@@ -1,21 +1,25 @@
 package config
 
-import "github.com/ian-kent/gofigure"
+import (
+	"github.com/kelseyhightower/envconfig"
+)
 
 // Configuration structure which hold information for configuring the import API
 type Configuration struct {
-	BindAddr                string   `env:"BIND_ADDR" flag:"bind-addr" flagDesc:"The port to bind to"`
-	Host                    string   `env:"HOST" flag:"host" flagDesc:"The host name used to build URLs"`
-	Brokers                 []string `env:"KAFKA_ADDR" flag:"kafka-addr" flagDesc:"The kafka broker addresses"`
-	DatabakerImportTopic    string   `env:"DATABAKER_IMPORT_TOPIC" flag:"databaker-import-topic" flagDesc:"The Kafka topic to import job via databaker"`
-	InputFileAvailableTopic string   `env:"INPUT_FILE_AVAILABLE_TOPIC" flag:"input-file-available-topic" flagDesc:"The Kafka topic to import job directly"`
-	KafkaMaxBytes           int      `env:"KAFKA_MAX_BYTES" flag:"kafka-max-bytes" flagDesc:"The maximum permitted size of a message. Should be set equal to or smaller than the broker's 'message.max.bytes'"`
-	MongoDBURL              string   `env:"MONGODB_IMPORTS_ADDR" flag:"mongodb-bind-addr" flagDesc:"MongoDB bind address"`
-	MongoDBCollection       string   `env:"MONGODB_IMPORTS_DATABASE" flag:"mongodb-database" flagDesc:"MongoDB import database"`
-	MongoDBDatabase         string   `env:"MONGODB_IMPORTS_COLLECTION" flag:"mongodb-collection" flagDesc:"MongoDB import collection"`
-	SecretKey               string   `env:"SECRET_KEY" flag:"secret-key" flagDesc:"A secret key used in client authentication"`
-	DatasetAPIURL           string   `env:"DATASET_API_URL" flag:"dataset-api" flagDesc:"The URL of the Dataset API"`
-	DatasetAPIAuthToken     string   `env:"DATASET_AUTH_TOKEN" flag:"dataset-auth-token" flagDesc:"Authentication token to access the Dataset API"`
+	BindAddr                string   `envconfig:"BIND_ADDR"`
+	Host                    string   `envconfig:"HOST"`
+	Brokers                 []string `envconfig:"KAFKA_ADDR"`
+	DatabakerImportTopic    string   `envconfig:"DATABAKER_IMPORT_TOPIC"`
+	InputFileAvailableTopic string   `envconfig:"INPUT_FILE_AVAILABLE_TOPIC"`
+	KafkaMaxBytes           int      `envconfig:"KAFKA_MAX_BYTES"`
+	PostgresURL             string   `envconfig:"POSTGRES_URL"`
+	SecretKey               string   `envconfig:"SECRET_KEY"`
+	MongoDBURL              string   `envconfig:"MONGODB_IMPORTS_ADDR"`
+	MongoDBCollection       string   `envconfig:"MONGODB_IMPORTS_DATABASE"`
+	MongoDBDatabase         string   `envconfig:"MONGODB_IMPORTS_COLLECTION"`
+	SecretKey               string   `envconfig:"SECRET_KEY"`
+	DatasetAPIURL           string   `envconfig:"DATASET_API_URL"`
+	DatasetAPIAuthToken     string   `envconfig:"DATASET_AUTH_TOKEN"`
 }
 
 var cfg *Configuration
@@ -43,6 +47,5 @@ func Get() (*Configuration, error) {
 		DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
 	}
 
-	return cfg, gofigure.Gofigure(cfg)
-
+	return cfg, envconfig.Process("", cfg)
 }
