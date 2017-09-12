@@ -9,18 +9,6 @@
 			"revisionTime": "2017-06-02T08:59:07Z"
 		},
 		{
-			"checksumSHA1": "AbWrwIzgxG/a3C0lG7MQznMz5Z0=",
-			"path": "github.com/ONSdigital/dp-filter-api/mocks",
-			"revision": "6e9bb3efec6058deb5c53b97618805d44bad0264",
-			"revisionTime": "2017-08-31T13:01:57Z"
-		},
-		{
-			"checksumSHA1": "IeYWOnyslD71vMmyBTZ0kan3ofQ=",
-			"path": "github.com/ONSdigital/dp-filter-api/models",
-			"revision": "6e9bb3efec6058deb5c53b97618805d44bad0264",
-			"revisionTime": "2017-08-31T13:01:57Z"
-		},
-		{
 			"checksumSHA1": "dzh4fF9o6j+mJEbJn5utm8Q+Pyg=",
 			"path": "github.com/ONSdigital/go-ns/avro",
 			"revision": "c493b1568574c9720d7805f23ce6271ac445dc57",
