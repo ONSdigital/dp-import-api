@@ -6,7 +6,9 @@ import (
 	"strings"
 
 	"github.com/ONSdigital/dp-import-api/api-errors"
-	"github.com/ONSdigital/dp-import-api/dataset"
+	"github.com/ONSdigital/dp-import-api/dataset/interface"
+	"github.com/ONSdigital/dp-import-api/datastore"
+	"github.com/ONSdigital/dp-import-api/jobqueue"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/gorilla/mux"
@@ -17,14 +19,14 @@ const internalError = "Internal server error"
 // ImportAPI is a restful API used to manage importing datasets to be published
 type ImportAPI struct {
 	host       string
-	dataStore  DataStore
+	dataStore  datastore.DataStore
 	router     *mux.Router
-	jobQueue   JobQueue
-	datasetAPI *dataset.DatasetAPI
+	jobQueue   jobqueue.JobQueue
+	datasetAPI dataset.DatasetAPIer
 }
 
 // CreateImportAPI returns the api with all the routes configured
-func CreateImportAPI(host string, router *mux.Router, dataStore DataStore, jobQueue JobQueue, secretKey string, datasetAPI *dataset.DatasetAPI) *ImportAPI {
+func CreateImportAPI(host string, router *mux.Router, dataStore datastore.DataStore, jobQueue jobqueue.JobQueue, secretKey string, datasetAPI dataset.DatasetAPIer) *ImportAPI {
 	api := ImportAPI{host: host, dataStore: dataStore, router: router, jobQueue: jobQueue, datasetAPI: datasetAPI}
 	auth := NewAuthenticator(secretKey, "internal-token")
 	// External API for florence

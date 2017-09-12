@@ -15,10 +15,6 @@ import (
 
 var maxRetries = 5
 
-type DatasetAPIImpl interface {
-	CreateInstance(jobID, jobURL string)
-}
-
 // DatasetAPI aggreagates a client and URL and other common data for accessing the API
 type DatasetAPI struct {
 	Client     *http.Client
@@ -35,6 +31,10 @@ func NewDatasetAPI(client *http.Client, datasetAPIURL, datasetAPIAuthToken strin
 		MaxRetries: maxRetries,
 		AuthToken:  datasetAPIAuthToken,
 	}
+}
+
+func (api *DatasetAPI) GetURL() string {
+	return api.URL
 }
 
 // CreateInstance tells the Dataset API to create a Dataset instance

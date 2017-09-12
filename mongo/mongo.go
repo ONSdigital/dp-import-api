@@ -3,7 +3,7 @@ package mongo
 import (
 	"strings"
 
-	"github.com/ONSdigital/dp-import-api/dataset"
+	"github.com/ONSdigital/dp-import-api/dataset/interface"
 	"github.com/ONSdigital/dp-import-api/models"
 	uuid "github.com/satori/go.uuid"
 
@@ -73,7 +73,7 @@ func (m *Mongo) GetJob(id string) (*models.Job, error) {
 }
 
 // AddJob adds an ImportJob document
-func (m *Mongo) AddJob(importJob *models.Job, selfURL string, datasetAPI *dataset.DatasetAPI) (*models.Job, error) {
+func (m *Mongo) AddJob(importJob *models.Job, selfURL string, datasetAPI dataset.DatasetAPIer) (*models.Job, error) {
 	s := session.Copy()
 	defer s.Close()
 
@@ -90,7 +90,7 @@ func (m *Mongo) AddJob(importJob *models.Job, selfURL string, datasetAPI *datase
 		importJob.Links.Instances = append(importJob.Links.Instances,
 			models.IDLink{
 				ID:   instance.InstanceID,
-				HRef: datasetAPI.URL + "/instances/" + instance.InstanceID,
+				HRef: datasetAPI.GetURL() + "/instances/" + instance.InstanceID,
 			},
 		)
 	}
@@ -104,7 +104,7 @@ func (m *Mongo) AddJob(importJob *models.Job, selfURL string, datasetAPI *datase
 }
 
 // AddUploadedFile adds an UploadedFile to an import job
-func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile, datasetAPI *dataset.DatasetAPI, selfURL string) (instance *models.Instance, err error) {
+func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile, datasetAPI dataset.DatasetAPIer, selfURL string) (instance *models.Instance, err error) {
 	s := session.Copy()
 	defer s.Close()
 
@@ -122,7 +122,7 @@ func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile, datasetAPI
 			},
 			"links.instances": bson.M{
 				"id":   instance.InstanceID,
-				"href": datasetAPI.URL + "/instances/" + instance.InstanceID,
+				"href": datasetAPI.GetURL() + "/instances/" + instance.InstanceID,
 			},
 		},
 		"$currentDate": bson.M{"last_updated": true},
@@ -163,7 +163,7 @@ func (m *Mongo) UpdateJobState(id, newState string, withoutRestrictions bool) (e
 }
 
 // PrepareJob returns a format ready to send to downstream services via kafka
-func (m *Mongo) PrepareJob(datasetAPI *dataset.DatasetAPI, jobID string) (*models.ImportData, error) {
+func (m *Mongo) PrepareJob(datasetAPI dataset.DatasetAPIer, jobID string) (*models.ImportData, error) {
 	s := session.Copy()
 	defer s.Close()
 
