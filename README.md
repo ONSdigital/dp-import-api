@@ -3,12 +3,9 @@ DP Import API
 
 ### Getting started
 
-#### Postgres
-* Run ```brew install postgres```
-* Run ```brew services start postgres```
-* Run ```createuser dp -d -w```
-* Run ```createdb --owner dp ImportJobs```
-* Run ```psql -U dp ImportJobs -f scripts/InitDatabase.sql```
+#### MongoDB
+* Run ```brew install mongodb```
+* Run ```brew services start mongodb```
 
 #### kafka
 * Run ```brew install java```
