@@ -1,10 +1,11 @@
 package models
 
 import (
-	"github.com/ONSdigital/dp-import-api/mocks"
-	. "github.com/smartystreets/goconvey/convey"
 	"strings"
 	"testing"
+
+	"github.com/ONSdigital/dp-import-api/mocks"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestCreateJobWithNoBody(t *testing.T) {
@@ -67,15 +68,5 @@ func TestCreateUploadedFileWithValidJson(t *testing.T) {
 		So(uploadedFileError, ShouldBeNil)
 		So(file.AliasName, ShouldEqual, "n1")
 		So(file.URL, ShouldEqual, "https://aws.s3/ons/myfile.exel")
-	})
-}
-
-func TestCreateEventWithValidJson(t *testing.T) {
-	Convey("When an event message has valid json, an event struct is returned", t, func() {
-		reader := strings.NewReader("{ \"type\":\"info\",\"message\":\"123 123\",\"time\":\"7789789\",\"messageOffset\":\"321\"}")
-		event, eventError := CreateEvent(reader)
-		So(eventError, ShouldBeNil)
-		So(event.Validate(), ShouldBeNil)
-		So("info", ShouldEqual, event.Type)
 	})
 }
