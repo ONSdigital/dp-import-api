@@ -13,13 +13,13 @@ func TestQueueV4File(t *testing.T) {
 		dataBakerQueue := make(chan []byte, 1)
 		importer := CreateImportQueue(dataBakerQueue, v4Queue)
 		job := models.ImportData{InstanceIDs: []string{"1"}, Recipe: "b944be78-f56d-409b-9ebd-ab2b77ffe187",
-			UploadedFiles: []models.UploadedFile{models.UploadedFile{AliasName: "v4", URL: "s3//aws/000/v4.csv"}}}
+			UploadedFiles: &[]models.UploadedFile{models.UploadedFile{AliasName: "v4", URL: "s3//aws/000/v4.csv"}}}
 		importError := importer.Queue(&job)
 		So(importError, ShouldBeNil)
 		bytes := <-v4Queue
 		var file V4File
 		schema.ImportV4File.Unmarshal(bytes, &file)
-		So(file.URL, ShouldEqual, job.UploadedFiles[0].URL)
+		So(file.URL, ShouldEqual, (*job.UploadedFiles)[0].URL)
 		So(file.InstanceID, ShouldEqual, job.InstanceIDs[0])
 	})
 }
@@ -30,7 +30,7 @@ func TestQueueDataBakerRecipe(t *testing.T) {
 		dataBakerQueue := make(chan []byte, 1)
 		importer := CreateImportQueue(dataBakerQueue, v4Queue)
 		job := models.ImportData{InstanceIDs: []string{"1"}, Recipe: "CPI", JobID: "123",
-			UploadedFiles: []models.UploadedFile{models.UploadedFile{AliasName: "1", URL: "s3//aws/000/v4.csv"}}}
+			UploadedFiles: &[]models.UploadedFile{models.UploadedFile{AliasName: "1", URL: "s3//aws/000/v4.csv"}}}
 		importError := importer.Queue(&job)
 		So(importError, ShouldBeNil)
 		bytes := <-dataBakerQueue
