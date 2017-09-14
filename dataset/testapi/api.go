@@ -3,15 +3,15 @@ package dataset
 import "github.com/ONSdigital/dp-import-api/models"
 
 type DatasetAPI struct {
-	URL string
+	url string
 }
 
 func CreateDatasetAPI() *DatasetAPI {
-	return &DatasetAPI{URL: "http://..."}
+	return &DatasetAPI{url: "http://..."}
 }
 
 func (ds *DatasetAPI) GetURL() string {
-	return ds.URL
+	return ds.url
 }
 
 func (ds *DatasetAPI) CreateInstance(string, string) (*models.Instance, error) {

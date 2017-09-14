@@ -18,28 +18,28 @@ var maxRetries = 5
 // DatasetAPI aggreagates a client and URL and other common data for accessing the API
 type DatasetAPI struct {
 	Client     *rhttp.Client
-	URL        string
+	url        string
 	MaxRetries int
 	AuthToken  string
 }
 
-// New creates an DatasetAPI object
+// NewDatasetAPI creates an DatasetAPI object
 func NewDatasetAPI(client *rhttp.Client, datasetAPIURL, datasetAPIAuthToken string) *DatasetAPI {
 	return &DatasetAPI{
 		Client:     client,
-		URL:        datasetAPIURL,
+		url:        datasetAPIURL,
 		MaxRetries: maxRetries,
 		AuthToken:  datasetAPIAuthToken,
 	}
 }
 
 func (api *DatasetAPI) GetURL() string {
-	return api.URL
+	return api.url
 }
 
 // CreateInstance tells the Dataset API to create a Dataset instance
 func (api *DatasetAPI) CreateInstance(jobID, jobURL string) (instance *models.Instance, err error) {
-	path := api.URL + "/instances"
+	path := api.url + "/instances"
 	logData := log.Data{"URL": path, "job_id": jobID, "job_url": jobURL}
 
 	var jsonUpload []byte
@@ -68,7 +68,7 @@ func (api *DatasetAPI) CreateInstance(jobID, jobURL string) (instance *models.In
 
 // UpdateState tells the Dataset API that the state of a Dataset instance has changed
 func (api *DatasetAPI) UpdateInstanceState(instanceID string, newState string) error {
-	path := api.URL + "/instances/" + instanceID
+	path := api.url + "/instances/" + instanceID
 	logData := log.Data{"URL": path, "new_state": newState}
 
 	jsonUpload, err := json.Marshal(models.Instance{State: newState})
