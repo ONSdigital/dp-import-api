@@ -62,7 +62,7 @@ func (m *Mongo) GetJob(id string) (*models.Job, error) {
 	s := session.Copy()
 	defer s.Clone()
 	var job models.Job
-	err := s.DB(m.Database).C(m.Collection).Find(bson.M{"job_id": id}).One(&job)
+	err := s.DB(m.Database).C(m.Collection).Find(bson.M{"id": id}).One(&job)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, api_errors.JobNotFoundError
@@ -79,7 +79,7 @@ func (m *Mongo) AddJob(importJob *models.Job, selfURL string, datasetAPI dataset
 
 	// Create unique id
 	importJob.JobID = (uuid.NewV4()).String()
-	selfURL = strings.Replace(selfURL, "{job_id}", importJob.JobID, -1)
+	selfURL = strings.Replace(selfURL, "{id}", importJob.JobID, -1)
 
 	for _ = range *importJob.UploadedFiles {
 		// now create an instance for this file
@@ -128,7 +128,7 @@ func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile, datasetAPI
 		"$currentDate": bson.M{"last_updated": true},
 	}
 
-	if _, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"job_id": id}, update); err != nil {
+	if _, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update); err != nil {
 		return
 	}
 	return
@@ -144,7 +144,7 @@ func (m *Mongo) UpdateJob(id string, job *models.Job, withoutRestrictions bool) 
 		"$currentDate": bson.M{"last_updated": true},
 	}
 
-	_, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"job_id": id}, update)
+	_, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update)
 	return
 }
 
@@ -158,7 +158,7 @@ func (m *Mongo) UpdateJobState(id, newState string, withoutRestrictions bool) (e
 		"$currentDate": bson.M{"last_updated": true},
 	}
 
-	_, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"job_id": id}, update)
+	_, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update)
 	return
 }
 

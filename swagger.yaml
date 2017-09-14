@@ -13,8 +13,8 @@ tags:
 schemes:
 - "http"
 parameters:
-  job_id:
-    name: job_id
+  id:
+    name: id
     description: "A unique job id"
     type: string
     in: path
@@ -25,9 +25,9 @@ parameters:
     schema:
       $ref: '#/definitions/Job'
     required: true
-  job_states:
-    name: job_states
-    description: "A list of comma separated job states to filter on. Eg created,submitted"
+  state:
+    name: state
+    description: "A comma-separated list of job states to filter on. Eg created,submitted"
     type: array
     items:
       type: string
@@ -55,7 +55,7 @@ paths:
       produces:
        - "application/json"
       parameters:
-      - $ref: '#/parameters/job_states'
+      - $ref: '#/parameters/state'
       security:
       - FlorenceAPIKey: []
       responses:
@@ -86,14 +86,14 @@ paths:
           description: "Invalid json message was sent to the API"
         500:
           $ref: '#/responses/InternalError'
-  /jobs/{job_id}:
+  /jobs/{id}:
     get:
         tags:
         - "Import API"
         summary: "Get a job"
         description: "Get information about a single job"
         parameters:
-         - $ref: '#/parameters/job_id'
+         - $ref: '#/parameters/id'
         produces:
         - "application/json"
         security:
@@ -115,7 +115,7 @@ paths:
         Update the state of the job. If this is set to submitted, this shall trigger the
         import process.
       parameters:
-      - $ref: '#/parameters/job_id'
+      - $ref: '#/parameters/id'
       - $ref: '#/parameters/job'
       produces:
       - "application/json"
@@ -130,14 +130,14 @@ paths:
           description: "JobId does not match any import jobs"
         500:
           $ref: '#/responses/InternalError'
-  /jobs/{job_id}/files:
+  /jobs/{id}/files:
     put:
       tags:
       - "Import API"
       summary: "Add a file into a job"
       description: "Add a file into a job, for each file added an alias name needs to be given. This name needs to link to the recipe"
       parameters:
-      - $ref: '#/parameters/job_id'
+      - $ref: '#/parameters/id'
       - $ref: '#/parameters/file'
       produces:
       - "application/json"
@@ -170,7 +170,7 @@ definitions:
     type: object
     description: "An object returned when an import job is created"
     properties:
-      job_id:
+      id:
         type: string
         readOnly: true
         description: "A unique id for an import job"

@@ -15,12 +15,12 @@ type JobResults struct {
 
 // Job for importing datasets
 type Job struct {
-	JobID         string          `bson:"job_id,omitempty"           json:"job_id,omitempty"`
-	Recipe        string          `bson:"recipe,omitempty"           json:"recipe,omitempty"`
-	State         string          `bson:"state,omitempty"            json:"state,omitempty"`
-	UploadedFiles *[]UploadedFile `bson:"files,omitempty"            json:"files,omitempty"`
-	Links         LinksMap        `bson:"links,omitempty"            json:"links,omitempty"`
-	LastUpdated   time.Time       `bson:"last_updated,omitempty"     json:"last_updated,omitempty"`
+	JobID         string          `bson:"id,omitempty"             json:"id,omitempty"`
+	Recipe        string          `bson:"recipe,omitempty"         json:"recipe,omitempty"`
+	State         string          `bson:"state,omitempty"          json:"state,omitempty"`
+	UploadedFiles *[]UploadedFile `bson:"files,omitempty"          json:"files,omitempty"`
+	Links         LinksMap        `bson:"links,omitempty"          json:"links,omitempty"`
+	LastUpdated   time.Time       `bson:"last_updated,omitempty"   json:"last_updated,omitempty"`
 }
 
 type LinksMap struct {

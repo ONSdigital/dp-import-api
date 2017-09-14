@@ -109,7 +109,7 @@ func TestAddJob(t *testing.T) {
 		api := CreateImportAPI(host, mux.NewRouter(), &dstore, &jimporter, secretKey, dsetAPI)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusCreated)
-		So(w.Body.String(), ShouldContainSubstring, "\"job_id\":\"34534543543\"")
+		So(w.Body.String(), ShouldContainSubstring, "\"id\":\"34534543543\"")
 	})
 }
 

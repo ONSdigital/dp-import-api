@@ -32,9 +32,9 @@ func CreateImportAPI(host string, router *mux.Router, dataStore datastore.DataSt
 	// External API for florence
 	api.router.Path("/jobs").Methods("POST").HandlerFunc(api.addJob)
 	api.router.Path("/jobs").Methods("GET").HandlerFunc(api.getJobs).Queries()
-	api.router.Path("/jobs/{job_id}").Methods("GET").HandlerFunc(api.getJob)
-	api.router.Path("/jobs/{job_id}").Methods("PUT").HandlerFunc(auth.ManualCheck(api.updateJob))
-	api.router.Path("/jobs/{job_id}/files").Methods("PUT").HandlerFunc(api.addUploadedFile)
+	api.router.Path("/jobs/{id}").Methods("GET").HandlerFunc(api.getJob)
+	api.router.Path("/jobs/{id}").Methods("PUT").HandlerFunc(auth.ManualCheck(api.updateJob))
+	api.router.Path("/jobs/{id}/files").Methods("PUT").HandlerFunc(api.addUploadedFile)
 	return &api
 }
 
@@ -51,7 +51,7 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}
-	selfURL := api.host + "/jobs/{job_id}"
+	selfURL := api.host + "/jobs/{id}"
 	jobInstance, err := api.dataStore.AddJob(newJob, selfURL, api.datasetAPI)
 	if err != nil {
 		log.Error(err, log.Data{"job": newJob})
@@ -76,7 +76,7 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
-	filtersQuery := r.URL.Query().Get("job_states")
+	filtersQuery := r.URL.Query().Get("state")
 	var filterList []string
 	if filtersQuery == "" {
 		filterList = nil
@@ -107,7 +107,7 @@ func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
 
 func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	jobID := vars["job_id"]
+	jobID := vars["id"]
 	job, err := api.dataStore.GetJob(jobID)
 	if err != nil {
 		log.Error(err, log.Data{})
@@ -127,12 +127,12 @@ func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
-	log.Info("Returning a list of import jobs", log.Data{"job_id": jobID})
+	log.Info("Returning an import job", log.Data{"id": jobID})
 }
 
 func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	jobID := vars["job_id"]
+	jobID := vars["id"]
 	uploadedFile, err := models.CreateUploadedFile(r.Body)
 	defer r.Body.Close()
 	if err != nil {
@@ -151,7 +151,7 @@ func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
 
 func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request, isAuth bool) {
 	vars := mux.Vars(r)
-	jobID := vars["job_id"]
+	jobID := vars["id"]
 	job, err := models.CreateJob(r.Body)
 	defer r.Body.Close()
 	if err != nil {
