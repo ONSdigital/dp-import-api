@@ -1,11 +1,12 @@
 package config
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestGetRetrunsDefaultValues(t *testing.T) {
+func TestGetReturnsDefaultValues(t *testing.T) {
 	Convey("When a loading a configuration, default values are return", t, func() {
 		configuration, error := Get()
 		So(error, ShouldBeNil)

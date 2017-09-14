@@ -12,8 +12,12 @@ type Configuration struct {
 	DatabakerImportTopic    string   `envconfig:"DATABAKER_IMPORT_TOPIC"`
 	InputFileAvailableTopic string   `envconfig:"INPUT_FILE_AVAILABLE_TOPIC"`
 	KafkaMaxBytes           int      `envconfig:"KAFKA_MAX_BYTES"`
-	PostgresURL             string   `envconfig:"POSTGRES_URL"`
 	SecretKey               string   `envconfig:"SECRET_KEY"`
+	MongoDBURL              string   `envconfig:"MONGODB_IMPORTS_ADDR"`
+	MongoDBCollection       string   `envconfig:"MONGODB_IMPORTS_DATABASE"`
+	MongoDBDatabase         string   `envconfig:"MONGODB_IMPORTS_COLLECTION"`
+	DatasetAPIURL           string   `envconfig:"DATASET_API_URL"`
+	DatasetAPIAuthToken     string   `envconfig:"DATASET_AUTH_TOKEN"`
 }
 
 var cfg *Configuration
@@ -33,8 +37,12 @@ func Get() (*Configuration, error) {
 		DatabakerImportTopic:    "data-bake-job-available",
 		InputFileAvailableTopic: "input-file-available",
 		KafkaMaxBytes:           2000000,
-		PostgresURL:             "user=dp dbname=ImportJobs sslmode=disable",
+		MongoDBURL:              "localhost:27017",
+		MongoDBDatabase:         "imports",
+		MongoDBCollection:       "imports",
 		SecretKey:               "FD0108EA-825D-411C-9B1D-41EF7727F465",
+		DatasetAPIURL:           "http://localhost:22000",
+		DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
 	}
 
 	return cfg, envconfig.Process("", cfg)

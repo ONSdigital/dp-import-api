@@ -1,9 +1,14 @@
-package mock_jobqueue
+package mockapi
 
 import (
 	"fmt"
 	"github.com/ONSdigital/dp-import-api/models"
 )
+
+// JobQueue interface used to queue import jobs
+// type JobQueue interface {
+// Queue(job *models.ImportData) error
+// }
 
 type JobImporter struct {
 	returnError bool

@@ -1,4 +1,4 @@
-package api
+package jobqueue
 
 import "github.com/ONSdigital/dp-import-api/models"
 

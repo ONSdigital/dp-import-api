@@ -5,15 +5,26 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"time"
 )
+
+// JobResults for list of Job items
+type JobResults struct {
+	Items []Job `json:"items"`
+}
 
 // Job for importing datasets
 type Job struct {
-	JobID         string          `json:"job_id,omitempty"`
-	Recipe        string          `json:"recipe,omitempty"`
-	State         string          `json:"state,omitempty"`
-	UploadedFiles *[]UploadedFile `json:"files,omitempty"`
-	Instances     []IDLink        `json:"instances,omitempty"`
+	JobID         string          `bson:"id,omitempty"             json:"id,omitempty"`
+	Recipe        string          `bson:"recipe,omitempty"         json:"recipe,omitempty"`
+	State         string          `bson:"state,omitempty"          json:"state,omitempty"`
+	UploadedFiles *[]UploadedFile `bson:"files,omitempty"          json:"files,omitempty"`
+	Links         LinksMap        `bson:"links,omitempty"          json:"links,omitempty"`
+	LastUpdated   time.Time       `bson:"last_updated,omitempty"   json:"last_updated,omitempty"`
+}
+
+type LinksMap struct {
+	Instances []IDLink `bson:"instances,omitempty" json:"instances,omitempty"`
 }
 
 // Validate the content of a job
@@ -38,37 +49,26 @@ type Event struct {
 	MessageOffset string `json:"messageOffset"`
 }
 
-// Validate the content of the structure
-func (e Event) Validate() error {
-	if e.MessageOffset == "" || e.Time == "" || e.Type == "" || e.Message == "" {
-		return errors.New("Invalid event structure")
-	}
-	return nil
-}
-
-// Dimension which has been extracted from a dataset
-type Dimension struct {
-	Name   string `json:"dimension_id"`
-	Value  string `json:"value"`
-	NodeID string `json:"node_id"`
-}
-
 // Instance which presents a single dataset being imported
 type Instance struct {
-	InstanceID           string    `json:"instance_id,omitempty"`
-	Job                  IDLink    `json:"job,omitempty"`
-	State                string    `json:"state,omitempty"`
-	Events               *[]Event  `json:"events,omitempty"`
-	TotalObservations    *int      `json:"total_observations,omitempty"`
-	InsertedObservations *int      `json:"total_inserted_observations,omitempty"`
-	Headers              *[]string `json:"headers,omitempty"`
-	LastUpdated          string    `json:"last_updated,omitempty"`
+	InstanceID           string         `json:"id,omitempty"`
+	Links                *InstanceLinks `json:"links,omitempty"`
+	State                string         `json:"state,omitempty"`
+	Events               []Event        `json:"events,omitempty"`
+	TotalObservations    int            `json:"total_observations,omitempty"`
+	InsertedObservations int            `json:"total_inserted_observations,omitempty"`
+	Headers              []string       `json:"headers,omitempty"`
+	LastUpdated          string         `json:"last_updated,omitempty"`
+}
+
+type InstanceLinks struct {
+	Job IDLink `json:"job,omitempty"`
 }
 
 // UploadedFile used for a file which has been uploaded to a bucket
 type UploadedFile struct {
-	AliasName string `json:"alias_name" avro:"alias-name"`
-	URL       string `json:"url" avro:"url"`
+	AliasName string `bson:"alias_name" json:"alias_name" avro:"alias-name"`
+	URL       string `bson:"url"        json:"url"        avro:"url"`
 }
 
 // Validate the content of the structure
@@ -82,8 +82,8 @@ func (s UploadedFile) Validate() error {
 // ImportData used to create a message to data baker or direct to the dimension-extractor
 type ImportData struct {
 	JobID         string
-	Recipe        string         `json:"recipe,omitempty"`
-	UploadedFiles []UploadedFile `json:"files,omitempty"`
+	Recipe        string          `json:"recipe,omitempty"`
+	UploadedFiles *[]UploadedFile `json:"files,omitempty"`
 	InstanceIDs   []string
 }
 
@@ -92,16 +92,10 @@ type DataBakerEvent struct {
 	JobID string `avro:"job_id"`
 }
 
-// UniqueDimensionValues hold all the unique values from a dimension
-type UniqueDimensionValues struct {
-	Name   string   `json:"dimension_id"`
-	Values []string `json:"values"`
-}
-
 // IDLink holds the id and a link to the resource
 type IDLink struct {
 	ID   string `json:"id"`
-	Link string `json:"link"`
+	HRef string `json:"href"`
 }
 
 // CreateJob from a json message
@@ -132,30 +126,10 @@ func CreateUploadedFile(reader io.Reader) (*UploadedFile, error) {
 	return &message, message.Validate()
 }
 
-// CreateEvent from a json message
-func CreateEvent(reader io.Reader) (*Event, error) {
-	bytes, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return nil, errors.New("Failed to read message body")
-	}
-	var message Event
-	err = json.Unmarshal(bytes, &message)
-	if err != nil {
-		return nil, errors.New("Failed to parse json body")
-	}
-	return &message, message.Validate()
-}
-
-// CreateInstance from a json message
-func CreateInstance(reader io.Reader) (*Instance, error) {
-	bytes, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return nil, errors.New("Failed to read message body")
-	}
-	var instance Instance
-	err = json.Unmarshal(bytes, &instance)
-	if err != nil {
-		return nil, errors.New("Failed to parse json body")
-	}
-	return &instance, err
+// CreateInstance from a job ID
+func CreateInstance(jobID, jobURL string) *Instance {
+	return &Instance{
+		Links: &InstanceLinks{
+			Job: IDLink{ID: jobID, HRef: jobURL},
+		}}
 }
