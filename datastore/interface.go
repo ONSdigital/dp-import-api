@@ -5,8 +5,8 @@ import (
 	"github.com/ONSdigital/dp-import-api/models"
 )
 
-// DataStore is an interface used to store import jobs
-type DataStore interface {
+// DataStorer is an interface used to store import jobs
+type DataStorer interface {
 	AddJob(importJob *models.Job, selfURL string, datasetAPI dataset.DatasetAPIer) (*models.Job, error)
 	GetJob(jobID string) (*models.Job, error)
 	GetJobs(filters []string) ([]models.Job, error)

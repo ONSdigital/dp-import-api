@@ -41,13 +41,6 @@ func (job *Job) Validate() error {
 	return nil
 }
 
-// Dataset comes in results from the Dataset API
-type Dataset struct {
-	DatasetId string `json:"id"`
-	Job       IDLink `json:"job"`
-	State     string `json:"state"`
-}
-
 // Event which has happened to an instance
 type Event struct {
 	Type          string `json:"type"`

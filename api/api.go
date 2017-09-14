@@ -19,14 +19,14 @@ const internalError = "Internal server error"
 // ImportAPI is a restful API used to manage importing datasets to be published
 type ImportAPI struct {
 	host       string
-	dataStore  datastore.DataStore
+	dataStore  datastore.DataStorer
 	router     *mux.Router
 	jobQueue   jobqueue.JobQueue
 	datasetAPI dataset.DatasetAPIer
 }
 
 // CreateImportAPI returns the api with all the routes configured
-func CreateImportAPI(host string, router *mux.Router, dataStore datastore.DataStore, jobQueue jobqueue.JobQueue, secretKey string, datasetAPI dataset.DatasetAPIer) *ImportAPI {
+func CreateImportAPI(host string, router *mux.Router, dataStore datastore.DataStorer, jobQueue jobqueue.JobQueue, secretKey string, datasetAPI dataset.DatasetAPIer) *ImportAPI {
 	api := ImportAPI{host: host, dataStore: dataStore, router: router, jobQueue: jobQueue, datasetAPI: datasetAPI}
 	auth := NewAuthenticator(secretKey, "internal-token")
 	// External API for florence
