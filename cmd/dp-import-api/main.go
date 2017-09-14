@@ -1,8 +1,6 @@
 package main
 
 import (
-	"net/http"
-
 	"github.com/ONSdigital/dp-import-api/api"
 	"github.com/ONSdigital/dp-import-api/dataset"
 	"github.com/ONSdigital/go-ns/log"
@@ -14,6 +12,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/importqueue"
 	"github.com/ONSdigital/dp-import-api/mongo"
 	"github.com/ONSdigital/go-ns/kafka"
+	"github.com/ONSdigital/go-ns/rhttp"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
@@ -25,7 +24,7 @@ func main() {
 		log.Error(err, nil)
 		os.Exit(1)
 	}
-	client := &http.Client{}
+	client := rhttp.DefaultClient
 
 	log.Info("Starting importqueue api", log.Data{
 		"bind_addr": config.BindAddr,

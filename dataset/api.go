@@ -7,24 +7,24 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/log"
+	"github.com/ONSdigital/go-ns/rhttp"
 )
 
 var maxRetries = 5
 
 // DatasetAPI aggreagates a client and URL and other common data for accessing the API
 type DatasetAPI struct {
-	Client     *http.Client
+	Client     *rhttp.Client
 	URL        string
 	MaxRetries int
 	AuthToken  string
 }
 
 // New creates an DatasetAPI object
-func NewDatasetAPI(client *http.Client, datasetAPIURL, datasetAPIAuthToken string) *DatasetAPI {
+func NewDatasetAPI(client *rhttp.Client, datasetAPIURL, datasetAPIAuthToken string) *DatasetAPI {
 	return &DatasetAPI{
 		Client:     client,
 		URL:        datasetAPIURL,
@@ -48,7 +48,7 @@ func (api *DatasetAPI) CreateInstance(jobID, jobURL string) (instance *models.In
 		return
 	}
 	logData["jsonUpload"] = jsonUpload
-	jsonResult, httpCode, err := api.post(path, 0, jsonUpload)
+	jsonResult, httpCode, err := api.post(path, jsonUpload)
 	logData["httpCode"] = httpCode
 	logData["jsonResult"] = jsonResult
 	if err == nil && httpCode != http.StatusOK && httpCode != http.StatusCreated {
@@ -78,7 +78,7 @@ func (api *DatasetAPI) UpdateInstanceState(instanceID string, newState string) e
 	}
 	logData["jsonUpload"] = string(jsonUpload)
 
-	jsonResult, httpCode, err := api.put(path, 0, jsonUpload)
+	jsonResult, httpCode, err := api.put(path, jsonUpload)
 	logData["httpCode"] = httpCode
 	logData["jsonResult"] = jsonResult
 	if err == nil && httpCode != http.StatusOK {
@@ -91,36 +91,31 @@ func (api *DatasetAPI) UpdateInstanceState(instanceID string, newState string) e
 	return nil
 }
 
-func (api *DatasetAPI) get(path string, attempts int, vars url.Values) ([]byte, int, error) {
-	return api.callDatasetAPI("GET", path, attempts, vars)
+func (api *DatasetAPI) get(path string, vars url.Values) ([]byte, int, error) {
+	return api.callDatasetAPI("GET", path, vars)
 }
 
-func (api *DatasetAPI) put(path string, attempts int, payload []byte) ([]byte, int, error) {
-	return api.callDatasetAPI("PUT", path, attempts, payload)
+func (api *DatasetAPI) put(path string, payload []byte) ([]byte, int, error) {
+	return api.callDatasetAPI("PUT", path, payload)
 }
 
-func (api *DatasetAPI) post(path string, attempts int, payload []byte) ([]byte, int, error) {
-	return api.callDatasetAPI("POST", path, attempts, payload)
+func (api *DatasetAPI) post(path string, payload []byte) ([]byte, int, error) {
+	return api.callDatasetAPI("POST", path, payload)
 }
 
 // callDatasetAPI contacts the Dataset API returns the json body (action = PUT, GET, POST, ...)
-func (api *DatasetAPI) callDatasetAPI(method, path string, attempts int, payload interface{}) ([]byte, int, error) {
-	logData := log.Data{"URL": path, "method": method, "attempts": attempts}
+func (api *DatasetAPI) callDatasetAPI(method, path string, payload interface{}) ([]byte, int, error) {
+	logData := log.Data{"URL": path, "method": method}
 
-	if attempts == 0 {
-		URL, err := url.Parse(path)
-		if err != nil {
-			log.ErrorC("Failed to create URL for DatasetAPI call", err, logData)
-			return nil, 0, err
-		}
-		path = URL.String()
-		logData["URL"] = path
-	} else {
-		// TODO improve:  exponential backoff
-		time.Sleep(time.Duration(attempts) * 10 * time.Second)
+	URL, err := url.Parse(path)
+	if err != nil {
+		log.ErrorC("Failed to create URL for DatasetAPI call", err, logData)
+		return nil, 0, err
 	}
+	path = URL.String()
+	logData["URL"] = path
+
 	var req *http.Request
-	var err error
 
 	if payload != nil && method != "GET" {
 		req, err = http.NewRequest(method, path, bytes.NewReader(payload.([]byte)))
@@ -144,9 +139,6 @@ func (api *DatasetAPI) callDatasetAPI(method, path string, attempts int, payload
 	resp, err := api.Client.Do(req)
 	if err != nil {
 		log.ErrorC("Failed to action DatasetAPI", err, logData)
-		if attempts < api.MaxRetries {
-			return api.callDatasetAPI(method, path, attempts+1, payload)
-		}
 		return nil, 0, err
 	}
 
@@ -159,9 +151,6 @@ func (api *DatasetAPI) callDatasetAPI(method, path string, attempts int, payload
 	jsonBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.ErrorC("Failed to read body from DatasetAPI", err, logData)
-		if attempts < api.MaxRetries {
-			return api.callDatasetAPI(method, path, attempts+1, payload)
-		}
 		return nil, resp.StatusCode, err
 	}
 	return jsonBody, resp.StatusCode, nil
