@@ -144,8 +144,8 @@ func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad client request received", http.StatusBadRequest)
 		return
 	}
-	selfURL := api.host + "/jobs/" + jobID
-	if _, err = api.dataStore.AddUploadedFile(jobID, uploadedFile, api.datasetAPI, selfURL); err != nil {
+
+	if err = api.dataStore.AddUploadedFile(jobID, uploadedFile); err != nil {
 		log.Error(err, log.Data{"file": uploadedFile, "job_id": jobID})
 		setErrorCode(w, err)
 		return

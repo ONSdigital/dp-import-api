@@ -147,15 +147,9 @@ func (m *Mongo) AddJob(importJob *models.Job, selfURL string, datasetAPI dataset
 }
 
 // AddUploadedFile adds an UploadedFile to an import job
-func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile, datasetAPI dataset.DatasetAPIer, selfURL string) (instance *models.Instance, err error) {
+func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile) error {
 	s := session.Copy()
 	defer s.Close()
-
-	// create an instance for this import job
-	instance, err = datasetAPI.CreateInstance(id, selfURL)
-	if err != nil {
-		return nil, err
-	}
 
 	update := bson.M{
 		"$addToSet": bson.M{
@@ -163,18 +157,12 @@ func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile, datasetAPI
 				"alias_name": file.AliasName,
 				"url":        file.URL,
 			},
-			"links.instances": bson.M{
-				"id":   instance.InstanceID,
-				"href": datasetAPI.GetURL() + "/instances/" + instance.InstanceID,
-			},
 		},
 		"$currentDate": bson.M{"last_updated": true},
 	}
 
-	if _, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update); err != nil {
-		return
-	}
-	return
+	_, err := s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update)
+	return err
 }
 
 // UpdateJob adds or overides an existing import job

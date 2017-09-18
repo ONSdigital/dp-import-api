@@ -10,8 +10,8 @@ type DataStorer interface {
 	AddJob(importJob *models.Job, selfURL string, datasetAPI dataset.DatasetAPIer) (*models.Job, error)
 	GetJob(jobID string) (*models.Job, error)
 	GetJobs(filters []string) ([]models.Job, error)
-	UpdateJob(importID string, update *models.Job, withOutRestrictions bool) error
-	UpdateJobState(importID string, state string, withOutRestrictions bool) error
-	AddUploadedFile(instanceID string, message *models.UploadedFile, datasetAPI dataset.DatasetAPIer, selfURL string) (*models.Instance, error)
-	PrepareJob(datasetAPI dataset.DatasetAPIer, importID string) (*models.ImportData, error)
+	UpdateJob(jobID string, update *models.Job, withOutRestrictions bool) error
+	UpdateJobState(jobID string, state string, withOutRestrictions bool) error
+	AddUploadedFile(jobID string, message *models.UploadedFile) error
+	PrepareJob(datasetAPI dataset.DatasetAPIer, jobID string) (*models.ImportData, error)
 }
