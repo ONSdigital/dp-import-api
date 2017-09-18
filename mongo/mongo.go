@@ -1,10 +1,15 @@
 package mongo
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
 	"strings"
 
 	"github.com/ONSdigital/dp-import-api/dataset/interface"
 	"github.com/ONSdigital/dp-import-api/models"
+	"github.com/ONSdigital/go-ns/log"
+	"github.com/ONSdigital/go-ns/rhttp"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/ONSdigital/dp-import-api/api-errors"
@@ -72,6 +77,38 @@ func (m *Mongo) GetJob(id string) (*models.Job, error) {
 	return &job, nil
 }
 
+// callDatasetAPI contacts the Dataset API returns the json body (action = PUT, GET, POST, ...)
+func getRecipe(path string) (*models.Recipe, error) {
+
+	req, err := http.NewRequest("GET", path, nil)
+	if err != nil {
+		log.ErrorC("Failed to create request for RecipeAPI", err, nil)
+		return nil, err
+	}
+
+	var cli *rhttp.Client
+	resp, err := cli.Do(req)
+	if err != nil {
+		log.ErrorC("Failed to action RecipeAPI", err, nil)
+		return nil, err
+	}
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= 300 {
+		log.Debug("unexpected status code from API", nil)
+	}
+
+	defer resp.Body.Close()
+	jsonBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.ErrorC("Failed to read body from DatasetAPI", err, nil)
+		return nil, err
+	}
+
+	var recipe *models.Recipe
+	json.Unmarshal(jsonBody, &recipe)
+	return recipe, nil
+}
+
 // AddJob adds an ImportJob document
 func (m *Mongo) AddJob(importJob *models.Job, selfURL string, datasetAPI dataset.DatasetAPIer) (*models.Job, error) {
 	s := session.Copy()
@@ -81,9 +118,16 @@ func (m *Mongo) AddJob(importJob *models.Job, selfURL string, datasetAPI dataset
 	importJob.JobID = (uuid.NewV4()).String()
 	selfURL = strings.Replace(selfURL, "{id}", importJob.JobID, -1)
 
-	for _ = range *importJob.UploadedFiles {
+	//Get details needed for instances from Recipe API
+	recipe, err := getRecipe(importJob.RecipeURL)
+	if err != nil {
+		log.ErrorC("failed to get recipe details", err, nil)
+		return nil, err
+	}
+
+	for _, oi := range recipe.OutputInstances {
 		// now create an instance for this file
-		instance, err := datasetAPI.CreateInstance(importJob.JobID, selfURL)
+		instance, err := datasetAPI.CreateInstance(importJob.JobID, selfURL, &oi)
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +139,6 @@ func (m *Mongo) AddJob(importJob *models.Job, selfURL string, datasetAPI dataset
 		)
 	}
 
-	var err error
 	if err = s.DB(m.Database).C(m.Collection).Insert(importJob); err != nil {
 		return nil, err
 	}
@@ -183,7 +226,7 @@ func (m *Mongo) PrepareJob(datasetAPI dataset.DatasetAPIer, jobID string) (*mode
 
 	return &models.ImportData{
 		JobID:         jobID,
-		Recipe:        importJob.Recipe,
+		Recipe:        importJob.RecipeURL,
 		UploadedFiles: importJob.UploadedFiles,
 		InstanceIDs:   instanceIds,
 	}, nil

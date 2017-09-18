@@ -14,7 +14,7 @@ func (ds *DatasetAPI) GetURL() string {
 	return ds.url
 }
 
-func (ds *DatasetAPI) CreateInstance(string, string) (*models.Instance, error) {
+func (ds *DatasetAPI) CreateInstance(string, string, *models.RecipeInstance) (*models.Instance, error) {
 	return &models.Instance{}, nil
 }
 

@@ -46,11 +46,13 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}
+
 	if err = newJob.Validate(); err != nil {
 		log.Error(err, log.Data{})
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
 		return
 	}
+
 	selfURL := api.host + "/jobs/{id}"
 	jobInstance, err := api.dataStore.AddJob(newJob, selfURL, api.datasetAPI)
 	if err != nil {
@@ -58,20 +60,22 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
+
 	bytes, err := json.Marshal(jobInstance)
 	if err != nil {
 		log.Error(err, log.Data{"job": newJob})
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
+
 	setJSONContentType(w)
 	w.WriteHeader(http.StatusCreated)
-	_, err = w.Write(bytes)
-	if err != nil {
+	if _, err = w.Write(bytes); err != nil {
 		log.Error(err, log.Data{"instance": jobInstance})
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
+
 	log.Info("created new import job", log.Data{"job": jobInstance})
 }
 

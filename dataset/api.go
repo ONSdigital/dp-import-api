@@ -38,12 +38,13 @@ func (api *DatasetAPI) GetURL() string {
 }
 
 // CreateInstance tells the Dataset API to create a Dataset instance
-func (api *DatasetAPI) CreateInstance(jobID, jobURL string) (instance *models.Instance, err error) {
+func (api *DatasetAPI) CreateInstance(jobID string, jobURL string, recipeInst *models.RecipeInstance) (instance *models.Instance, err error) {
 	path := api.url + "/instances"
+	datasetPath := api.url + "/datasets/" + recipeInst.DatasetID
 	logData := log.Data{"URL": path, "job_id": jobID, "job_url": jobURL}
 
 	var jsonUpload []byte
-	if jsonUpload, err = json.Marshal(models.CreateInstance(jobID, jobURL)); err != nil {
+	if jsonUpload, err = json.Marshal(models.CreateInstance(jobID, jobURL, recipeInst.DatasetID, datasetPath, recipeInst.CodeLists)); err != nil {
 		log.ErrorC("CreateInstance marshal", err, logData)
 		return
 	}
