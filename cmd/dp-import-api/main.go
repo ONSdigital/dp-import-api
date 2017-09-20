@@ -1,20 +1,23 @@
 package main
 
 import (
-	"github.com/ONSdigital/dp-import-api/api"
-	"github.com/ONSdigital/dp-import-api/dataset"
-	"github.com/ONSdigital/go-ns/log"
-	"github.com/ONSdigital/go-ns/server"
-
+	"context"
+	"errors"
 	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/ONSdigital/dp-import-api/api"
 	"github.com/ONSdigital/dp-import-api/config"
+	"github.com/ONSdigital/dp-import-api/dataset"
 	"github.com/ONSdigital/dp-import-api/importqueue"
 	"github.com/ONSdigital/dp-import-api/mongo"
+	"github.com/ONSdigital/go-ns/handlers/healthcheck"
 	"github.com/ONSdigital/go-ns/kafka"
+	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/rhttp"
+	"github.com/ONSdigital/go-ns/server"
 	"github.com/gorilla/mux"
-	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -49,19 +52,73 @@ func main() {
 
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
 	router := mux.NewRouter()
+	router.Path("/healthcheck").HandlerFunc(healthcheck.Handler)
 
-	s := server.New(config.BindAddr, router)
+	httpServer := server.New(config.BindAddr, router)
+	httpServer.HandleOSSignals = false
 
-	log.Debug("listening...", log.Data{
-		"bind_address": config.BindAddr,
-	})
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, os.Kill, syscall.SIGPIPE)
 
 	datasetAPI := dataset.NewDatasetAPI(client, config.DatasetAPIURL, config.DatasetAPIAuthToken)
 	_ = api.CreateImportAPI(config.Host, router, mongoDataStore, &jobQueue, config.SecretKey, datasetAPI)
-	if err = s.ListenAndServe(); err != nil {
-		log.Error(err, nil)
+
+	// signals the web server shutdown, so a graceful exit is required
+	httpErrChannel := make(chan error)
+	// launch web server in background
+	go func() {
+		log.Debug("listening...", log.Data{"bind_address": config.BindAddr})
+		if err = httpServer.ListenAndServe(); err != nil {
+			log.Error(err, nil)
+			httpErrChannel <- err
+			return
+		}
+		httpErrChannel <- errors.New("http server completed - with no error")
+	}()
+
+	shutdownGracefully := func(httpDead bool) {
+		// gracefully retire resources
+		ctx, cancel := context.WithTimeout(context.Background(), config.GracefulShutdownTimeout)
+		defer cancel()
+
+		if !httpDead {
+			if err = httpServer.Shutdown(ctx); err != nil {
+				log.Error(err, nil)
+			}
+		}
+
+		if err = dataBakerProducer.Close(ctx); err != nil {
+			log.Error(err, nil)
+		}
+
+		if err = directProducer.Close(ctx); err != nil {
+			log.Error(err, nil)
+		}
+
+		// mongo.Close() may use all remaining time in the context - do this last!
+		if err = mongoDataStore.Close(ctx); err != nil {
+			log.Error(err, nil)
+		}
+
+		log.Debug("graceful shutdown has completed", nil)
+		os.Exit(1)
 	}
 
-	dataBakerProducer.Closer() <- true
-	directProducer.Closer() <- true
+	for {
+		select {
+		case err := <-dataBakerProducer.Errors():
+			log.ErrorC("kafka databaker producer", err, nil)
+			shutdownGracefully(false)
+		case err := <-directProducer.Errors():
+			log.ErrorC("kafka direct producer", err, nil)
+			shutdownGracefully(false)
+		case err := <-httpErrChannel:
+			log.ErrorC("error channel", err, nil)
+			shutdownGracefully(true)
+		case sig := <-signals:
+			log.Error(errors.New("os signal received"), log.Data{"signal": sig.String()})
+			shutdownGracefully(false)
+		}
+	}
+
 }
