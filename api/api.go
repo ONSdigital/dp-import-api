@@ -6,29 +6,36 @@ import (
 	"strings"
 
 	"github.com/ONSdigital/dp-import-api/api-errors"
-	"github.com/ONSdigital/dp-import-api/dataset/interface"
 	"github.com/ONSdigital/dp-import-api/datastore"
-	"github.com/ONSdigital/dp-import-api/jobqueue"
+	"github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/gorilla/mux"
 )
 
+//go:generate moq -out testapi/job_service.go -pkg testapi . JobService
+
 const internalError = "Internal server error"
 
 // ImportAPI is a restful API used to manage importing datasets to be published
 type ImportAPI struct {
-	host       string
 	dataStore  datastore.DataStorer
 	router     *mux.Router
-	jobQueue   jobqueue.JobQueue
-	datasetAPI dataset.DatasetAPIer
+	jobService JobService
+}
+
+// JobService provide business logic for job related operations.
+type JobService interface {
+	CreateJob(job *models.Job) (*models.Job, error)
+	UpdateJob(jobID string, job *models.Job) error
 }
 
 // CreateImportAPI returns the api with all the routes configured
-func CreateImportAPI(host string, router *mux.Router, dataStore datastore.DataStorer, jobQueue jobqueue.JobQueue, secretKey string, datasetAPI dataset.DatasetAPIer) *ImportAPI {
-	api := ImportAPI{host: host, dataStore: dataStore, router: router, jobQueue: jobQueue, datasetAPI: datasetAPI}
+func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, secretKey string, jobService JobService) *ImportAPI {
+
+	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService}
 	auth := NewAuthenticator(secretKey, "internal-token")
+
 	// External API for florence
 	api.router.Path("/jobs").Methods("POST").HandlerFunc(api.addJob)
 	api.router.Path("/jobs").Methods("GET").HandlerFunc(api.getJobs).Queries()
@@ -39,7 +46,7 @@ func CreateImportAPI(host string, router *mux.Router, dataStore datastore.DataSt
 }
 
 func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
-	newJob, err := models.CreateJob(r.Body)
+	job, err := models.CreateJob(r.Body)
 	defer r.Body.Close()
 	if err != nil {
 		log.Error(err, log.Data{})
@@ -47,23 +54,15 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = newJob.Validate(); err != nil {
-		log.Error(err, log.Data{})
-		http.Error(w, "Bad client request received", http.StatusBadRequest)
+	createdJob, err := api.jobService.CreateJob(job)
+	if err != nil {
+		setErrorCode(w, err)
 		return
 	}
 
-	selfURL := api.host + "/jobs/{id}"
-	jobInstance, err := api.dataStore.AddJob(newJob, selfURL, api.datasetAPI)
+	bytes, err := json.Marshal(createdJob)
 	if err != nil {
-		log.Error(err, log.Data{"job": newJob})
-		http.Error(w, internalError, http.StatusInternalServerError)
-		return
-	}
-
-	bytes, err := json.Marshal(jobInstance)
-	if err != nil {
-		log.Error(err, log.Data{"job": newJob})
+		log.Error(err, log.Data{"job": job})
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
@@ -71,15 +70,16 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 	setJSONContentType(w)
 	w.WriteHeader(http.StatusCreated)
 	if _, err = w.Write(bytes); err != nil {
-		log.Error(err, log.Data{"instance": jobInstance})
+		log.Error(err, log.Data{"instance": createdJob})
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
 
-	log.Info("created new import job", log.Data{"job": jobInstance})
+	log.Info("created new import job", log.Data{"job": createdJob})
 }
 
 func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
+
 	filtersQuery := r.URL.Query().Get("state")
 	var filterList []string
 	if filtersQuery == "" {
@@ -163,40 +163,36 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request, isAuth b
 		http.Error(w, "bad client request received", http.StatusBadRequest)
 	}
 
-	err = api.dataStore.UpdateJob(jobID, job, isAuth)
+	err = api.jobService.UpdateJob(jobID, job)
+
 	if err != nil {
-		log.Error(err, log.Data{"job": job, "job_id": jobID})
+		log.Error(err, log.Data{"job_id": jobID})
 		setErrorCode(w, err)
-		return
-	}
-	log.Info("job updated", log.Data{"job": job, "job_id": jobID, "is_auth": isAuth})
-	if job.State == "submitted" {
-		tasks, err := api.dataStore.PrepareJob(api.datasetAPI, jobID)
-		if err != nil {
-			log.Error(err, log.Data{"jobState": job, "job_id": jobID, "isAuth": isAuth})
-			setErrorCode(w, err)
-			return
-		}
-		err = api.jobQueue.Queue(tasks)
-		if err != nil {
-			log.Error(err, log.Data{"tasks": tasks})
-			setErrorCode(w, err)
-			return
-		}
-		log.Info("import job was queued", log.Data{"job": job, "job_id": jobID, "is_auth": isAuth})
 	}
 }
 
 func setErrorCode(w http.ResponseWriter, err error) {
 	switch {
 	case err == api_errors.JobNotFoundError:
-		http.Error(w, "Resource not found", http.StatusNotFound)
+		http.Error(w, "resource not found", http.StatusNotFound)
+		return
+	case err == job.ErrInvalidJob:
+		http.Error(w, "the given job model is not valid", http.StatusBadRequest)
+		return
+	case err == job.ErrGetRecipeFailed:
+		http.Error(w, "failed to get recipe data", http.StatusInternalServerError)
+		return
+	case err == job.ErrSaveJobFailed:
+		http.Error(w, "failed to get recipe data", http.StatusInternalServerError)
+		return
+	case err == job.ErrCreateInstanceFailed:
+		http.Error(w, "failed to get recipe data", http.StatusInternalServerError)
 		return
 	case err == api_errors.ForbiddenOperation:
-		http.Error(w, "Forbidden operation", http.StatusForbidden)
+		http.Error(w, "forbidden operation", http.StatusForbidden)
 		return
 	case err.Error() == "No dimension name found":
-		http.Error(w, "Resource not found", http.StatusNotFound)
+		http.Error(w, "resource not found", http.StatusNotFound)
 		return
 	case err != nil:
 		http.Error(w, internalError, http.StatusInternalServerError)

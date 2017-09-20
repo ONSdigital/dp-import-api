@@ -15,7 +15,7 @@ type JobResults struct {
 
 // Job for importing datasets
 type Job struct {
-	JobID         string          `bson:"id,omitempty"             json:"id,omitempty"`
+	ID            string          `bson:"id,omitempty"             json:"id,omitempty"`
 	RecipeURL     string          `bson:"recipe,omitempty"         json:"recipe,omitempty"`
 	State         string          `bson:"state,omitempty"          json:"state,omitempty"`
 	UploadedFiles *[]UploadedFile `bson:"files,omitempty"          json:"files,omitempty"`
@@ -25,12 +25,13 @@ type Job struct {
 
 type LinksMap struct {
 	Instances []IDLink `bson:"instances,omitempty" json:"instances,omitempty"`
+	Self      IDLink   `bson:"self,omitempty" json:"self,omitempty"`
 }
 
 // Validate the content of a job
 func (job *Job) Validate() error {
 	if job.RecipeURL == "" {
-		return errors.New("Missing properties to create importqueue job struct")
+		return errors.New("missing properties to create import queue job struct")
 	}
 	if job.State == "" {
 		job.State = "created"
@@ -117,7 +118,7 @@ type DataBakerEvent struct {
 	JobID string `avro:"job_id"`
 }
 
-// IDLink holds the id and a link to the resource
+// IDLink holds the ID and a link to the resource
 type IDLink struct {
 	ID   string `json:"id"`
 	HRef string `json:"href"`
@@ -152,11 +153,11 @@ func CreateUploadedFile(reader io.Reader) (*UploadedFile, error) {
 }
 
 // CreateInstance from a job ID
-func CreateInstance(jobID, jobURL, datasetID, datasetURL string, codelists []CodeList) *Instance {
+func CreateInstance(job *Job, datasetID, datasetURL string, codelists []CodeList) *Instance {
 	return &Instance{
 		Dimensions: codelists,
 		Links: &InstanceLinks{
-			Job:     IDLink{ID: jobID, HRef: jobURL},
+			Job:     IDLink{ID: job.ID, HRef: job.Links.Self.HRef},
 			Dataset: IDLink{ID: datasetID, HRef: datasetURL},
 		}}
 }
