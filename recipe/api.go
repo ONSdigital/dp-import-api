@@ -33,7 +33,7 @@ func (api *API) GetRecipe(url string) (*models.Recipe, error) {
 	logData["httpCode"] = httpCode
 	logData["jsonResult"] = jsonResult
 
-	if err == nil && httpCode != http.StatusOK && httpCode != http.StatusCreated {
+	if err == nil && httpCode != http.StatusOK {
 		return nil, errors.New("Bad response while creating instance")
 	}
 

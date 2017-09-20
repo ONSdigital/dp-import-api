@@ -45,17 +45,13 @@ func (job *Job) Validate() error {
 //this should probably be replaced with an import of
 //github.com/ONSdigital/dp-code-list-api/{pkg when unstubbed}
 type Recipe struct {
-	ID    string `json:"id"`
-	Alias string `json:"alias"`
-	//Format          string     `json:"format"`
-	//InputFiles      []file     `json:"files"`
+	ID              string           `json:"id"`
+	Alias           string           `json:"alias"`
 	OutputInstances []RecipeInstance `json:"output_instances"`
-	//Links           *links     `json:"links"`
 }
 
 type RecipeInstance struct {
-	DatasetID string `json:"dataset_id"`
-	//Editions  []string   `json:"editions"`
+	DatasetID string     `json:"dataset_id"`
 	CodeLists []CodeList `json:"code_lists"`
 }
 

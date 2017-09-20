@@ -18,6 +18,7 @@ var ErrGetRecipeFailed = errors.New("failed to get recipe")
 var ErrCreateInstanceFailed = errors.New("failed to create a new instance on the dataset api")
 var ErrSaveJobFailed = errors.New("failed to save job")
 
+// Service provides job related functionality.
 type Service struct {
 	dataStore  datastore.DataStorer
 	jobQueue   JobQueue
@@ -26,7 +27,7 @@ type Service struct {
 	urlBuilder *url.Builder
 }
 
-// JobQueue interface used to queue import jobs
+// JobQueue interface used to queue import jobs.
 type JobQueue interface {
 	Queue(job *models.ImportData) error
 }
@@ -53,6 +54,7 @@ func NewService(dataStore datastore.DataStorer, jobQueue JobQueue, datasetAPI Da
 	}
 }
 
+// CreateJob creates a new job using the given job instance.
 func (service Service) CreateJob(job *models.Job) (*models.Job, error) {
 
 	if err := job.Validate(); err != nil {
