@@ -26,7 +26,7 @@ func main() {
 	}
 	client := rhttp.DefaultClient
 
-	log.Info("Starting importqueue api", log.Data{
+	log.Info("Starting import api", log.Data{
 		"bind_addr": config.BindAddr,
 		"topics":    []string{config.DatabakerImportTopic, config.InputFileAvailableTopic},
 		"brokers":   config.Brokers,
