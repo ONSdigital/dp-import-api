@@ -203,12 +203,12 @@ func (m *Mongo) Close(ctx context.Context) error {
 	if deadline, ok := ctx.Deadline(); ok {
 		timeLeft = deadline.Sub(time.Now())
 	}
-	for {
-		select {
-		case <-time.After(timeLeft):
-			return errors.New("closing mongo timed out")
-		case <-closedChannel:
-			return nil
-		}
+	select {
+	case <-time.After(timeLeft):
+		return errors.New("closing mongo timed out")
+	case <-closedChannel:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
