@@ -70,35 +70,6 @@ func (ds *DataStorer) UpdateJobState(string, string, bool) error {
 	return nil
 }
 
-/*
-func (ds *DataStorer) GetInstance(host, instanceID string) (models.Instance, error) {
-	if ds.NotFound {
-		return models.Instance{}, api_errors.JobNotFoundError
-	}
-	if ds.InternalError {
-		return models.Instance{}, internalError
-	}
-	return models.Instance{InstanceID: "234234", State: "Created"}, nil
-}
-
-func (ds *DataStorer) GetInstances(host string, filter []string) ([]models.Instance, error) {
-
-	if ds.InternalError {
-		return []models.Instance{}, internalError
-	}
-	return []models.Instance{models.Instance{InstanceID: "234234", State: "Created"}}, nil
-}
-
-func (ds *DataStorer) UpdateInstance(instanceID string, instance *models.Instance) error {
-	if ds.NotFound {
-		return api_errors.JobNotFoundError
-	}
-	if ds.InternalError {
-		return internalError
-	}
-	return nil
-}
-*/
 func (ds *DataStorer) AddUploadedFile(ctx context.Context, instanceID string, message *models.UploadedFile, datasetAPI dataset.DatasetAPIer, selfURL string) (*models.Instance, error) {
 	if ds.NotFound {
 		return nil, api_errors.JobNotFoundError
@@ -109,57 +80,6 @@ func (ds *DataStorer) AddUploadedFile(ctx context.Context, instanceID string, me
 	return nil, nil
 }
 
-/*
-func (ds *DataStorer) AddEvent(instanceID string, event *models.Event) error {
-	if ds.NotFound {
-		return api_errors.JobNotFoundError
-	}
-	if ds.InternalError {
-		return internalError
-	}
-	return nil
-}
-
-func (ds *DataStorer) AddDimension(instanceID string, dimension *models.Dimension) error {
-	if ds.NotFound {
-		return api_errors.JobNotFoundError
-	}
-	if ds.InternalError {
-		return internalError
-	}
-	return nil
-}
-
-func (ds *DataStorer) GetDimensions(instanceID string) ([]models.Dimension, error) {
-	if ds.NotFound {
-		return []models.Dimension{}, api_errors.JobNotFoundError
-	}
-	if ds.InternalError {
-		return []models.Dimension{}, internalError
-	}
-	return []models.Dimension{models.Dimension{Name: "1234-geography.newport", Value: "newport", NodeID: "234234234"}}, nil
-}
-
-func (ds *DataStorer) GetDimensionValues(instanceID, dimensionName string) (*models.UniqueDimensionValues, error) {
-	if ds.NotFound {
-		return nil, api_errors.JobNotFoundError
-	}
-	if ds.InternalError {
-		return nil, internalError
-	}
-	return &models.UniqueDimensionValues{Name: dimensionName, Values: []string{"123", "321"}}, nil
-}
-
-func (ds *DataStorer) AddNodeID(instanceID string, dimension *models.Dimension) error {
-	if ds.NotFound {
-		return api_errors.JobNotFoundError
-	}
-	if ds.InternalError {
-		return internalError
-	}
-	return nil
-}
-*/
 func (ds *DataStorer) PrepareJob(ctx context.Context, dataset dataset.DatasetAPIer, jobID string) (*models.ImportData, error) {
 	if ds.NotFound {
 		return nil, api_errors.JobNotFoundError
