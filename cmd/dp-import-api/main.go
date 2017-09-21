@@ -58,7 +58,7 @@ func main() {
 	httpServer.HandleOSSignals = false
 
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, os.Kill, syscall.SIGPIPE)
+	signal.Notify(signals, os.Interrupt, os.Kill, syscall.SIGTERM)
 
 	datasetAPI := dataset.NewDatasetAPI(client, config.DatasetAPIURL, config.DatasetAPIAuthToken)
 	_ = api.CreateImportAPI(config.Host, router, mongoDataStore, &jobQueue, config.SecretKey, datasetAPI)
