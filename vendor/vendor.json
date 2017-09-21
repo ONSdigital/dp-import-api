@@ -3,12 +3,6 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "GxGxaJuZTpxXfCrzIAVHeDH6Nrs=",
-			"path": "github.com/DATA-DOG/go-sqlmock",
-			"revision": "d335ff60c18d1c61e0e3d4a65fe908b3c84556a3",
-			"revisionTime": "2017-06-02T08:59:07Z"
-		},
-		{
 			"checksumSHA1": "dzh4fF9o6j+mJEbJn5utm8Q+Pyg=",
 			"path": "github.com/ONSdigital/go-ns/avro",
 			"revision": "c493b1568574c9720d7805f23ce6271ac445dc57",
@@ -27,12 +21,6 @@
 			"revisionTime": "2017-08-30T09:15:21Z"
 		},
 		{
-			"checksumSHA1": "HgL/HLG5D1WNPb1lrb/hpywtm9o=",
-			"path": "github.com/ONSdigital/go-ns/handlers/timeout",
-			"revision": "9e8016d9f69d0acccee717a6263cecacea222b1c",
-			"revisionTime": "2017-08-30T09:15:21Z"
-		},
-		{
 			"checksumSHA1": "t8OvKt+uW9gS0KWejs0ANoI03JY=",
 			"path": "github.com/ONSdigital/go-ns/kafka",
 			"revision": "5c4e318aa10e56921c4e39fd5735c95868281d33",
@@ -45,10 +33,10 @@
 			"revisionTime": "2017-08-30T09:15:21Z"
 		},
 		{
-			"checksumSHA1": "Ohl8JaJRUL+/Y+NTL8y97PZlFfs=",
-			"path": "github.com/ONSdigital/go-ns/rhttp",
-			"revision": "5c4e318aa10e56921c4e39fd5735c95868281d33",
-			"revisionTime": "2017-09-07T12:17:38Z"
+			"checksumSHA1": "yDc9FMgs8F379i52A0wQgRhEyX4=",
+			"path": "github.com/ONSdigital/go-ns/rchttp",
+			"revision": "48e311b80e5efddd01347f9f398cf8963313b861",
+			"revisionTime": "2017-09-21T08:27:24Z"
 		},
 		{
 			"checksumSHA1": "Wc0l6IlAATaN3qFb2ECwcjcHH4I=",
@@ -142,18 +130,6 @@
 			"revisionTime": "2017-05-23T19:07:22Z"
 		},
 		{
-			"checksumSHA1": "Wh2YCiWY/VIAEEQGLS7sMB9isXk=",
-			"path": "github.com/lib/pq",
-			"revision": "8837942c3e09574accbc5f150e2c5e057189cace",
-			"revisionTime": "2017-06-03T22:54:54Z"
-		},
-		{
-			"checksumSHA1": "Gk3jTNQ5uGDUE0WMJFWcYz9PMps=",
-			"path": "github.com/lib/pq/oid",
-			"revision": "8837942c3e09574accbc5f150e2c5e057189cace",
-			"revisionTime": "2017-06-03T22:54:54Z"
-		},
-		{
 			"checksumSHA1": "hBgLmZ/4mCxmnH88mqFKBkpJFUY=",
 			"origin": "github.com/ONSdigital/go-ns/vendor/github.com/mgutz/ansi",
 			"path": "github.com/mgutz/ansi",
@@ -219,6 +195,18 @@
 			"path": "github.com/smartystreets/goconvey/convey/reporting",
 			"revision": "9e8dc3f972df6c8fcc0375ef492c24d0bb204857",
 			"revisionTime": "2017-06-02T16:46:21Z"
+		},
+		{
+			"checksumSHA1": "dr5+PfIRzXeN+l1VG+s0lea9qz8=",
+			"path": "golang.org/x/net/context",
+			"revision": "b60f3a92103dfd93dfcb900ec77c6d0643510868",
+			"revisionTime": "2017-09-18T06:10:02Z"
+		},
+		{
+			"checksumSHA1": "WHc3uByvGaMcnSoI21fhzYgbOgg=",
+			"path": "golang.org/x/net/context/ctxhttp",
+			"revision": "b60f3a92103dfd93dfcb900ec77c6d0643510868",
+			"revisionTime": "2017-09-18T06:10:02Z"
 		},
 		{
 			"checksumSHA1": "1D8GzeoFGUs5FZOoyC2DpQg8c5Y=",
