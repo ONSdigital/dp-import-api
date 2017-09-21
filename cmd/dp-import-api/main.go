@@ -15,7 +15,7 @@ import (
 	"github.com/ONSdigital/go-ns/handlers/healthcheck"
 	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/ONSdigital/go-ns/log"
-	"github.com/ONSdigital/go-ns/rhttp"
+	"github.com/ONSdigital/go-ns/rchttp"
 	"github.com/ONSdigital/go-ns/server"
 	"github.com/gorilla/mux"
 )
@@ -27,7 +27,7 @@ func main() {
 		log.Error(err, nil)
 		os.Exit(1)
 	}
-	client := rhttp.DefaultClient
+	client := rchttp.DefaultClient
 
 	log.Info("Starting import api", log.Data{
 		"bind_addr": config.BindAddr,

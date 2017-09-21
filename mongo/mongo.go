@@ -76,7 +76,7 @@ func (m *Mongo) GetJob(id string) (*models.Job, error) {
 }
 
 // AddJob adds an ImportJob document
-func (m *Mongo) AddJob(importJob *models.Job, selfURL string, datasetAPI dataset.DatasetAPIer) (*models.Job, error) {
+func (m *Mongo) AddJob(ctx context.Context, importJob *models.Job, selfURL string, datasetAPI dataset.DatasetAPIer) (*models.Job, error) {
 	s := session.Copy()
 	defer s.Close()
 
@@ -86,7 +86,7 @@ func (m *Mongo) AddJob(importJob *models.Job, selfURL string, datasetAPI dataset
 
 	for _ = range *importJob.UploadedFiles {
 		// now create an instance for this file
-		instance, err := datasetAPI.CreateInstance(importJob.JobID, selfURL)
+		instance, err := datasetAPI.CreateInstance(ctx, importJob.JobID, selfURL)
 		if err != nil {
 			return nil, err
 		}
@@ -107,12 +107,12 @@ func (m *Mongo) AddJob(importJob *models.Job, selfURL string, datasetAPI dataset
 }
 
 // AddUploadedFile adds an UploadedFile to an import job
-func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile, datasetAPI dataset.DatasetAPIer, selfURL string) (instance *models.Instance, err error) {
+func (m *Mongo) AddUploadedFile(ctx context.Context, id string, file *models.UploadedFile, datasetAPI dataset.DatasetAPIer, selfURL string) (instance *models.Instance, err error) {
 	s := session.Copy()
 	defer s.Close()
 
 	// create an instance for this import job
-	instance, err = datasetAPI.CreateInstance(id, selfURL)
+	instance, err = datasetAPI.CreateInstance(ctx, id, selfURL)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func (m *Mongo) UpdateJobState(id, newState string, withoutRestrictions bool) (e
 }
 
 // PrepareJob returns a format ready to send to downstream services via kafka
-func (m *Mongo) PrepareJob(datasetAPI dataset.DatasetAPIer, jobID string) (*models.ImportData, error) {
+func (m *Mongo) PrepareJob(ctx context.Context, datasetAPI dataset.DatasetAPIer, jobID string) (*models.ImportData, error) {
 	s := session.Copy()
 	defer s.Close()
 
@@ -179,7 +179,7 @@ func (m *Mongo) PrepareJob(datasetAPI dataset.DatasetAPIer, jobID string) (*mode
 	for _, instanceRef := range importJob.Links.Instances {
 		instanceIds = append(instanceIds, instanceRef.ID)
 
-		if err = datasetAPI.UpdateInstanceState(instanceRef.ID, "submitted"); err != nil {
+		if err = datasetAPI.UpdateInstanceState(ctx, instanceRef.ID, "submitted"); err != nil {
 			return nil, err
 		}
 	}

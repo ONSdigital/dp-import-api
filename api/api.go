@@ -52,7 +52,7 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	selfURL := api.host + "/jobs/{id}"
-	jobInstance, err := api.dataStore.AddJob(newJob, selfURL, api.datasetAPI)
+	jobInstance, err := api.dataStore.AddJob(r.Context(), newJob, selfURL, api.datasetAPI)
 	if err != nil {
 		log.Error(err, log.Data{"job": newJob})
 		http.Error(w, internalError, http.StatusInternalServerError)
@@ -141,7 +141,7 @@ func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	selfURL := api.host + "/jobs/" + jobID
-	if _, err = api.dataStore.AddUploadedFile(jobID, uploadedFile, api.datasetAPI, selfURL); err != nil {
+	if _, err = api.dataStore.AddUploadedFile(r.Context(), jobID, uploadedFile, api.datasetAPI, selfURL); err != nil {
 		log.Error(err, log.Data{"file": uploadedFile, "job_id": jobID})
 		setErrorCode(w, err)
 		return
@@ -167,7 +167,7 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request, isAuth b
 	}
 	log.Info("job updated", log.Data{"job": job, "job_id": jobID, "is_auth": isAuth})
 	if job.State == "submitted" {
-		tasks, err := api.dataStore.PrepareJob(api.datasetAPI, jobID)
+		tasks, err := api.dataStore.PrepareJob(r.Context(), api.datasetAPI, jobID)
 		if err != nil {
 			log.Error(err, log.Data{"jobState": job, "job_id": jobID, "isAuth": isAuth})
 			setErrorCode(w, err)

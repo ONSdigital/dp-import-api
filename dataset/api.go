@@ -2,6 +2,7 @@ package dataset
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -10,21 +11,21 @@ import (
 
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/log"
-	"github.com/ONSdigital/go-ns/rhttp"
+	"github.com/ONSdigital/go-ns/rchttp"
 )
 
 var maxRetries = 5
 
 // DatasetAPI aggreagates a client and URL and other common data for accessing the API
 type DatasetAPI struct {
-	Client     *rhttp.Client
+	Client     *rchttp.Client
 	url        string
 	MaxRetries int
 	AuthToken  string
 }
 
 // NewDatasetAPI creates an DatasetAPI object
-func NewDatasetAPI(client *rhttp.Client, datasetAPIURL, datasetAPIAuthToken string) *DatasetAPI {
+func NewDatasetAPI(client *rchttp.Client, datasetAPIURL, datasetAPIAuthToken string) *DatasetAPI {
 	return &DatasetAPI{
 		Client:     client,
 		url:        datasetAPIURL,
@@ -38,7 +39,7 @@ func (api *DatasetAPI) GetURL() string {
 }
 
 // CreateInstance tells the Dataset API to create a Dataset instance
-func (api *DatasetAPI) CreateInstance(jobID, jobURL string) (instance *models.Instance, err error) {
+func (api *DatasetAPI) CreateInstance(ctx context.Context, jobID, jobURL string) (instance *models.Instance, err error) {
 	path := api.url + "/instances"
 	logData := log.Data{"URL": path, "job_id": jobID, "job_url": jobURL}
 
@@ -48,7 +49,7 @@ func (api *DatasetAPI) CreateInstance(jobID, jobURL string) (instance *models.In
 		return
 	}
 	logData["jsonUpload"] = jsonUpload
-	jsonResult, httpCode, err := api.post(path, jsonUpload)
+	jsonResult, httpCode, err := api.post(ctx, path, jsonUpload)
 	logData["httpCode"] = httpCode
 	logData["jsonResult"] = jsonResult
 	if err == nil && httpCode != http.StatusOK && httpCode != http.StatusCreated {
@@ -67,7 +68,7 @@ func (api *DatasetAPI) CreateInstance(jobID, jobURL string) (instance *models.In
 }
 
 // UpdateState tells the Dataset API that the state of a Dataset instance has changed
-func (api *DatasetAPI) UpdateInstanceState(instanceID string, newState string) error {
+func (api *DatasetAPI) UpdateInstanceState(ctx context.Context, instanceID string, newState string) error {
 	path := api.url + "/instances/" + instanceID
 	logData := log.Data{"URL": path, "new_state": newState}
 
@@ -78,7 +79,7 @@ func (api *DatasetAPI) UpdateInstanceState(instanceID string, newState string) e
 	}
 	logData["jsonUpload"] = string(jsonUpload)
 
-	jsonResult, httpCode, err := api.put(path, jsonUpload)
+	jsonResult, httpCode, err := api.put(ctx, path, jsonUpload)
 	logData["httpCode"] = httpCode
 	logData["jsonResult"] = jsonResult
 	if err == nil && httpCode != http.StatusOK {
@@ -91,20 +92,20 @@ func (api *DatasetAPI) UpdateInstanceState(instanceID string, newState string) e
 	return nil
 }
 
-func (api *DatasetAPI) get(path string, vars url.Values) ([]byte, int, error) {
-	return api.callDatasetAPI("GET", path, vars)
+func (api *DatasetAPI) get(ctx context.Context, path string, vars url.Values) ([]byte, int, error) {
+	return api.callDatasetAPI(ctx, "GET", path, vars)
 }
 
-func (api *DatasetAPI) put(path string, payload []byte) ([]byte, int, error) {
-	return api.callDatasetAPI("PUT", path, payload)
+func (api *DatasetAPI) put(ctx context.Context, path string, payload []byte) ([]byte, int, error) {
+	return api.callDatasetAPI(ctx, "PUT", path, payload)
 }
 
-func (api *DatasetAPI) post(path string, payload []byte) ([]byte, int, error) {
-	return api.callDatasetAPI("POST", path, payload)
+func (api *DatasetAPI) post(ctx context.Context, path string, payload []byte) ([]byte, int, error) {
+	return api.callDatasetAPI(ctx, "POST", path, payload)
 }
 
 // callDatasetAPI contacts the Dataset API returns the json body (action = PUT, GET, POST, ...)
-func (api *DatasetAPI) callDatasetAPI(method, path string, payload interface{}) ([]byte, int, error) {
+func (api *DatasetAPI) callDatasetAPI(ctx context.Context, method, path string, payload interface{}) ([]byte, int, error) {
 	logData := log.Data{"URL": path, "method": method}
 
 	URL, err := url.Parse(path)
@@ -136,7 +137,7 @@ func (api *DatasetAPI) callDatasetAPI(method, path string, payload interface{}) 
 	}
 
 	req.Header.Set("Internal-token", api.AuthToken)
-	resp, err := api.Client.Do(req)
+	resp, err := api.Client.Do(ctx, req)
 	if err != nil {
 		log.ErrorC("Failed to action DatasetAPI", err, logData)
 		return nil, 0, err

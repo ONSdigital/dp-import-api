@@ -1,9 +1,13 @@
 package dataset
 
-import "github.com/ONSdigital/dp-import-api/models"
+import (
+	"context"
+
+	"github.com/ONSdigital/dp-import-api/models"
+)
 
 type DatasetAPIer interface {
-	CreateInstance(jobID, jobURL string) (*models.Instance, error)
+	CreateInstance(ctx context.Context, jobID, jobURL string) (*models.Instance, error)
 	GetURL() string
-	UpdateInstanceState(instanceID, newState string) error
+	UpdateInstanceState(ctx context.Context, instanceID, newState string) error
 }
