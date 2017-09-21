@@ -29,7 +29,7 @@ func TestCreateJobWithDataset(t *testing.T) {
 		job, jobError := CreateJob(reader)
 		So(jobError, ShouldBeNil)
 		So(job.Validate(), ShouldBeNil)
-		So(job.RecipeURL, ShouldEqual, "http://localhost:22300/recipes/test1234")
+		So(job.RecipeID, ShouldEqual, "http://localhost:22300/recipes/test1234")
 	})
 }
 

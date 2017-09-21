@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"fmt"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/rhttp"
@@ -16,20 +17,23 @@ import (
 // API provides a client for calling the Recipe API.
 type API struct {
 	Client *rhttp.Client
+	URL    string
 }
 
 // NewAPI returns a new API instance.
-func NewAPI(client *rhttp.Client) *API {
+func NewAPI(client *rhttp.Client, url string) *API {
 	return &API{
 		Client: client,
+		URL: url,
 	}
 }
 
-func (api *API) GetRecipe(url string) (*models.Recipe, error) {
+// GetRecipe from an ID
+func (api *API) GetRecipe(ID string) (*models.Recipe, error) {
 
-	logData := log.Data{"URL": url}
+	logData := log.Data{"ID": ID}
 
-	jsonResult, httpCode, err := api.get(url, nil)
+	jsonResult, httpCode, err := api.get(fmt.Sprintf("%s/recipes/%s", api.URL, ID), nil)
 	logData["httpCode"] = httpCode
 	logData["jsonResult"] = jsonResult
 

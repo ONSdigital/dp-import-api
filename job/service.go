@@ -5,7 +5,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/dp-import-api/url"
 	"github.com/ONSdigital/go-ns/log"
-	"github.com/pkg/errors"
+	"errors"
 	"github.com/satori/go.uuid"
 )
 
@@ -40,7 +40,7 @@ type DatasetAPI interface {
 
 // RecipeAPI interface to the recipe API.
 type RecipeAPI interface {
-	GetRecipe(url string) (*models.Recipe, error)
+	GetRecipe(ID string) (*models.Recipe, error)
 }
 
 // NewService returns a new instance of a job.Service using the given dependencies.
@@ -63,7 +63,7 @@ func (service Service) CreateJob(job *models.Job) (*models.Job, error) {
 	}
 
 	//Get details needed for instances from Recipe API
-	recipe, err := service.recipeAPI.GetRecipe(job.RecipeURL)
+	recipe, err := service.recipeAPI.GetRecipe(job.RecipeID)
 	if err != nil {
 		log.ErrorC("failed to get recipe details", err, log.Data{"job": job})
 		return nil, ErrGetRecipeFailed
@@ -143,7 +143,7 @@ func (service Service) prepareJob(jobID string) (*models.ImportData, error) {
 
 	return &models.ImportData{
 		JobID:         jobID,
-		Recipe:        importJob.RecipeURL,
+		Recipe:        importJob.RecipeID,
 		UploadedFiles: importJob.UploadedFiles,
 		InstanceIDs:   instanceIds,
 	}, nil
