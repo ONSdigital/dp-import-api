@@ -3,17 +3,17 @@ package mongo
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 
-	"github.com/ONSdigital/dp-import-api/dataset/interface"
-	"github.com/ONSdigital/dp-import-api/models"
-	uuid "github.com/satori/go.uuid"
-
 	"github.com/ONSdigital/dp-import-api/api-errors"
+	"github.com/ONSdigital/dp-import-api/datastore"
+	"github.com/ONSdigital/dp-import-api/models"
+
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
+
+var _ datastore.DataStorer = (*Mongo)(nil)
 
 var session *mgo.Session
 
@@ -76,46 +76,21 @@ func (m *Mongo) GetJob(id string) (*models.Job, error) {
 }
 
 // AddJob adds an ImportJob document
-func (m *Mongo) AddJob(ctx context.Context, importJob *models.Job, selfURL string, datasetAPI dataset.DatasetAPIer) (*models.Job, error) {
+func (m *Mongo) AddJob(job *models.Job) (*models.Job, error) {
 	s := session.Copy()
 	defer s.Close()
 
-	// Create unique id
-	importJob.JobID = (uuid.NewV4()).String()
-	selfURL = strings.Replace(selfURL, "{id}", importJob.JobID, -1)
-
-	for _ = range *importJob.UploadedFiles {
-		// now create an instance for this file
-		instance, err := datasetAPI.CreateInstance(ctx, importJob.JobID, selfURL)
-		if err != nil {
-			return nil, err
-		}
-		importJob.Links.Instances = append(importJob.Links.Instances,
-			models.IDLink{
-				ID:   instance.InstanceID,
-				HRef: datasetAPI.GetURL() + "/instances/" + instance.InstanceID,
-			},
-		)
-	}
-
-	var err error
-	if err = s.DB(m.Database).C(m.Collection).Insert(importJob); err != nil {
+	if err := s.DB(m.Database).C(m.Collection).Insert(job); err != nil {
 		return nil, err
 	}
 
-	return m.GetJob(importJob.JobID)
+	return m.GetJob(job.ID)
 }
 
 // AddUploadedFile adds an UploadedFile to an import job
-func (m *Mongo) AddUploadedFile(ctx context.Context, id string, file *models.UploadedFile, datasetAPI dataset.DatasetAPIer, selfURL string) (instance *models.Instance, err error) {
+func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile) error {
 	s := session.Copy()
 	defer s.Close()
-
-	// create an instance for this import job
-	instance, err = datasetAPI.CreateInstance(ctx, id, selfURL)
-	if err != nil {
-		return nil, err
-	}
 
 	update := bson.M{
 		"$addToSet": bson.M{
@@ -123,22 +98,16 @@ func (m *Mongo) AddUploadedFile(ctx context.Context, id string, file *models.Upl
 				"alias_name": file.AliasName,
 				"url":        file.URL,
 			},
-			"links.instances": bson.M{
-				"id":   instance.InstanceID,
-				"href": datasetAPI.GetURL() + "/instances/" + instance.InstanceID,
-			},
 		},
 		"$currentDate": bson.M{"last_updated": true},
 	}
 
-	if _, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update); err != nil {
-		return
-	}
-	return
+	_, err := s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update)
+	return err
 }
 
 // UpdateJob adds or overides an existing import job
-func (m *Mongo) UpdateJob(id string, job *models.Job, withoutRestrictions bool) (err error) {
+func (m *Mongo) UpdateJob(id string, job *models.Job) (err error) {
 	s := session.Copy()
 	defer s.Close()
 
@@ -148,11 +117,16 @@ func (m *Mongo) UpdateJob(id string, job *models.Job, withoutRestrictions bool) 
 	}
 
 	_, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update)
+
+	if err != nil && err == mgo.ErrNotFound {
+		return api_errors.JobNotFoundError
+	}
+
 	return
 }
 
 // UpdateJobState changes the state attribute of an import job
-func (m *Mongo) UpdateJobState(id, newState string, withoutRestrictions bool) (err error) {
+func (m *Mongo) UpdateJobState(id, newState string) (err error) {
 	s := session.Copy()
 	defer s.Close()
 
@@ -163,33 +137,6 @@ func (m *Mongo) UpdateJobState(id, newState string, withoutRestrictions bool) (e
 
 	_, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update)
 	return
-}
-
-// PrepareJob returns a format ready to send to downstream services via kafka
-func (m *Mongo) PrepareJob(ctx context.Context, datasetAPI dataset.DatasetAPIer, jobID string) (*models.ImportData, error) {
-	s := session.Copy()
-	defer s.Close()
-
-	importJob, err := m.GetJob(jobID)
-	if err != nil {
-		return nil, err
-	}
-
-	instanceIds := make([]string, 0)
-	for _, instanceRef := range importJob.Links.Instances {
-		instanceIds = append(instanceIds, instanceRef.ID)
-
-		if err = datasetAPI.UpdateInstanceState(ctx, instanceRef.ID, "submitted"); err != nil {
-			return nil, err
-		}
-	}
-
-	return &models.ImportData{
-		JobID:         jobID,
-		Recipe:        importJob.Recipe,
-		UploadedFiles: importJob.UploadedFiles,
-		InstanceIDs:   instanceIds,
-	}, nil
 }
 
 func (m *Mongo) Close(ctx context.Context) error {

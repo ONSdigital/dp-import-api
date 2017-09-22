@@ -21,8 +21,8 @@ type V4File struct {
 }
 
 // CreateImportQueue used to queue data baker evenets and v4 files
-func CreateImportQueue(databakerQueue, v4Queue chan []byte) ImportQueue {
-	return ImportQueue{databakerQueue: databakerQueue, v4Queue: v4Queue}
+func CreateImportQueue(databakerQueue, v4Queue chan []byte) *ImportQueue {
+	return &ImportQueue{databakerQueue: databakerQueue, v4Queue: v4Queue}
 }
 
 // Queue an import event
