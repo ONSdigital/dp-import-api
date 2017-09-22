@@ -77,7 +77,7 @@ func main() {
 	// launch web server in background
 	go func() {
 		log.Debug("listening...", log.Data{"bind_address": config.BindAddr})
-		if err = httpServer.ListenAndServe(); err != nil {
+		if err := httpServer.ListenAndServe(); err != nil {
 			log.Error(err, nil)
 			httpErrChannel <- err
 			return
