@@ -1,11 +1,11 @@
 package job
 
 import (
+	"errors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/dp-import-api/url"
 	"github.com/ONSdigital/go-ns/log"
-	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 )
 

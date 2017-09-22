@@ -1,12 +1,12 @@
 package job_test
 
 import (
+	"errors"
 	"github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/job/testjob"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/dp-import-api/mongo/testmongo"
 	"github.com/ONSdigital/dp-import-api/url"
-	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
 	"testing"
 )
