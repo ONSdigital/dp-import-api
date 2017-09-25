@@ -19,7 +19,7 @@ type Configuration struct {
 	MongoDBCollection       string        `envconfig:"MONGODB_IMPORTS_DATABASE"`
 	MongoDBDatabase         string        `envconfig:"MONGODB_IMPORTS_COLLECTION"`
 	DatasetAPIURL           string        `envconfig:"DATASET_API_URL"`
-	DatasetAPIAuthToken     string        `envconfig:"DATASET_AUTH_TOKEN"`
+	DatasetAPIAuthToken     string        `envconfig:"DATASET_API_AUTH_TOKEN"`
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 }
 
@@ -43,9 +43,7 @@ func Get() (*Configuration, error) {
 		MongoDBURL:              "localhost:27017",
 		MongoDBDatabase:         "imports",
 		MongoDBCollection:       "imports",
-		SecretKey:               "FD0108EA-825D-411C-9B1D-41EF7727F465",
 		DatasetAPIURL:           "http://localhost:22000",
-		DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
 		GracefulShutdownTimeout: time.Second * 5,
 	}
 
