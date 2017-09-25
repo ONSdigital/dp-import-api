@@ -20,6 +20,7 @@ type Configuration struct {
 	MongoDBDatabase         string        `envconfig:"MONGODB_IMPORTS_COLLECTION"`
 	DatasetAPIURL           string        `envconfig:"DATASET_API_URL"`
 	DatasetAPIAuthToken     string        `envconfig:"DATASET_API_AUTH_TOKEN"`
+	RecipeAPIURL            string        `envconfig:"RECIPE_API_URL"`
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 }
 
@@ -44,6 +45,7 @@ func Get() (*Configuration, error) {
 		MongoDBDatabase:         "imports",
 		MongoDBCollection:       "imports",
 		DatasetAPIURL:           "http://localhost:22000",
+		RecipeAPIURL:            "http://localhost:22300",
 		GracefulShutdownTimeout: time.Second * 5,
 	}
 

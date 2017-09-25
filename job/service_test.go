@@ -2,6 +2,7 @@ package job_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/ONSdigital/dp-import-api/job"
@@ -9,7 +10,6 @@ import (
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/dp-import-api/mongo/testmongo"
 	"github.com/ONSdigital/dp-import-api/url"
-	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -57,7 +57,7 @@ func TestService_CreateJob(t *testing.T) {
 		jobService := job.NewService(mockDataStore, mockedJobQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
 
 		job := &models.Job{
-			RecipeURL: "http://recipe-api/recipes/123",
+			RecipeID: "123-234-456",
 		}
 
 		Convey("When create job is called", func() {
@@ -99,7 +99,7 @@ func TestService_CreateJob_CreateInstanceFails(t *testing.T) {
 		jobService := job.NewService(mockDataStore, mockedJobQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
 
 		newJob := &models.Job{
-			RecipeURL: "http://recipe-api/recipes/123",
+			RecipeID: "123-234-456",
 		}
 
 		Convey("When create job is called", func() {
@@ -134,7 +134,7 @@ func TestService_CreateJob_SaveJobFails(t *testing.T) {
 		jobService := job.NewService(mockDataStore, mockedJobQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
 
 		newJob := &models.Job{
-			RecipeURL: "http://recipe-api/recipes/123",
+			RecipeID: "123-234-456",
 		}
 
 		Convey("When create job is called", func() {
@@ -190,7 +190,7 @@ func TestService_CreateJob_GetRecipeFails(t *testing.T) {
 		jobService := job.NewService(mockDataStore, mockedJobQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
 
 		newJob := &models.Job{
-			RecipeURL: "http://recipe-api/recipes/123",
+			RecipeID: "123-234-456",
 		}
 
 		Convey("When create job is called", func() {
@@ -226,8 +226,8 @@ func TestService_UpdateJob(t *testing.T) {
 
 		jobID := "123"
 		job := &models.Job{
-			RecipeURL: "http://recipe-api/recipes/123",
-			ID:        jobID,
+			RecipeID: "123-234-456",
+			ID:       jobID,
 		}
 
 		Convey("When update job is called", func() {
@@ -263,8 +263,8 @@ func TestService_UpdateJob_SaveFails(t *testing.T) {
 
 		jobID := "123"
 		updatedJob := &models.Job{
-			RecipeURL: "http://recipe-api/recipes/123",
-			ID:        jobID,
+			RecipeID: "123-234-456",
+			ID:       jobID,
 		}
 
 		Convey("When update job is called", func() {
@@ -300,9 +300,9 @@ func TestService_UpdateJob_QueuesWhenSubmitted(t *testing.T) {
 
 		jobID := "123"
 		job := &models.Job{
-			RecipeURL: "http://recipe-api/recipes/123",
-			ID:        jobID,
-			State:     "submitted",
+			RecipeID: "123-234-456",
+			ID:       jobID,
+			State:    "submitted",
 		}
 
 		Convey("When update job is called", func() {

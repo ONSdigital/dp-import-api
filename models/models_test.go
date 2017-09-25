@@ -25,11 +25,11 @@ func TestCreateJobWithEmptyJson(t *testing.T) {
 
 func TestCreateJobWithDataset(t *testing.T) {
 	Convey("When a job has a valid json body, a message is returned", t, func() {
-		reader := strings.NewReader("{ \"recipe\": \"http://localhost:22300/recipes/test1234\"}")
+		reader := strings.NewReader(`{ "recipe": "1234-sdfsdf"}`)
 		job, jobError := CreateJob(reader)
 		So(jobError, ShouldBeNil)
 		So(job.Validate(), ShouldBeNil)
-		So(job.RecipeURL, ShouldEqual, "http://localhost:22300/recipes/test1234")
+		So(job.RecipeID, ShouldEqual, "1234-sdfsdf")
 	})
 }
 
@@ -64,7 +64,7 @@ func TestCreateS3FileWithInvalidJson(t *testing.T) {
 
 func TestCreateUploadedFileWithValidJson(t *testing.T) {
 	Convey("When an uploaded file message has valid json, an uploaded file struct is returned", t, func() {
-		file, uploadedFileError := CreateUploadedFile(strings.NewReader("{ \"alias_name\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}"))
+		file, uploadedFileError := CreateUploadedFile(strings.NewReader(`{ "alias_name":"n1","url":"https://aws.s3/ons/myfile.exel"}`))
 		So(uploadedFileError, ShouldBeNil)
 		So(file.AliasName, ShouldEqual, "n1")
 		So(file.URL, ShouldEqual, "https://aws.s3/ons/myfile.exel")
