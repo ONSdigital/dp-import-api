@@ -16,7 +16,7 @@ type JobResults struct {
 // Job for importing datasets
 type Job struct {
 	ID            string          `bson:"id,omitempty"             json:"id,omitempty"`
-	RecipeURL     string          `bson:"recipe,omitempty"         json:"recipe,omitempty"`
+	RecipeID      string          `bson:"recipe,omitempty"         json:"recipe,omitempty"`
 	State         string          `bson:"state,omitempty"          json:"state,omitempty"`
 	UploadedFiles *[]UploadedFile `bson:"files,omitempty"          json:"files,omitempty"`
 	Links         LinksMap        `bson:"links,omitempty"          json:"links,omitempty"`
@@ -30,7 +30,7 @@ type LinksMap struct {
 
 // Validate the content of a job
 func (job *Job) Validate() error {
-	if job.RecipeURL == "" {
+	if job.RecipeID == "" {
 		return errors.New("missing properties to create import queue job struct")
 	}
 	if job.State == "" {

@@ -61,7 +61,7 @@ func main() {
 
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
 	datasetAPI := dataset.NewDatasetAPI(client, config.DatasetAPIURL, config.DatasetAPIAuthToken)
-	recipeAPI := recipe.NewAPI(client)
+	recipeAPI := recipe.NewAPI(client, config.RecipeAPIURL)
 	urlBuilder := url.NewBuilder(config.Host, config.DatasetAPIURL)
 
 	jobService := job.NewService(mongoDataStore, jobQueue, datasetAPI, recipeAPI, urlBuilder)

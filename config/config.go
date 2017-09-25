@@ -18,6 +18,7 @@ type Configuration struct {
 	MongoDBDatabase         string   `envconfig:"MONGODB_IMPORTS_COLLECTION"`
 	DatasetAPIURL           string   `envconfig:"DATASET_API_URL"`
 	DatasetAPIAuthToken     string   `envconfig:"DATASET_AUTH_TOKEN"`
+	RecipeAPIURL            string   `envconfig:"RECIPE_API_URL"`
 }
 
 var cfg *Configuration
@@ -43,6 +44,7 @@ func Get() (*Configuration, error) {
 		SecretKey:               "FD0108EA-825D-411C-9B1D-41EF7727F465",
 		DatasetAPIURL:           "http://localhost:22000",
 		DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
+		RecipeAPIURL:            "http://localhost:22300",
 	}
 
 	return cfg, envconfig.Process("", cfg)

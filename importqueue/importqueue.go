@@ -27,7 +27,7 @@ func CreateImportQueue(databakerQueue, v4Queue chan []byte) *ImportQueue {
 
 // Queue an import event
 func (q *ImportQueue) Queue(job *models.ImportData) error {
-	if strings.ToLower(job.Recipe) == "b944be78-f56d-409b-9ebd-ab2b77ffe187" {
+	if strings.Contains(strings.ToLower(job.Recipe), "b944be78-f56d-409b-9ebd-ab2b77ffe187") {
 		if len(job.InstanceIDs) != 1 && len(*job.UploadedFiles) != 1 {
 			return errors.New("InstanceIds and uploaded files must be 1")
 		}
