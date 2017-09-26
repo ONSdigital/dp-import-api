@@ -63,7 +63,7 @@ func main() {
 	httpServer.HandleOSSignals = false
 
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, os.Kill, syscall.SIGTERM)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
 	datasetAPI := dataset.NewDatasetAPI(client, config.DatasetAPIURL, config.DatasetAPIAuthToken)
