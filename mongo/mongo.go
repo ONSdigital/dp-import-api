@@ -2,12 +2,11 @@ package mongo
 
 import (
 	"context"
-	"errors"
-	"time"
 
 	"github.com/ONSdigital/dp-import-api/api-errors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
+	mongocloser "github.com/ONSdigital/go-ns/mongo"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -140,22 +139,5 @@ func (m *Mongo) UpdateJobState(id, newState string) (err error) {
 }
 
 func (m *Mongo) Close(ctx context.Context) error {
-	closedChannel := make(chan bool)
-	defer close(closedChannel)
-	go func() {
-		session.Close()
-		closedChannel <- true
-	}()
-	timeLeft := 1000 * time.Millisecond
-	if deadline, ok := ctx.Deadline(); ok {
-		timeLeft = deadline.Sub(time.Now())
-	}
-	select {
-	case <-time.After(timeLeft):
-		return errors.New("closing mongo timed out")
-	case <-closedChannel:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+	return mongocloser.Close(ctx, session)
 }
