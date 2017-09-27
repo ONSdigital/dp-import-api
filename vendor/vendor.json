@@ -33,6 +33,12 @@
 			"revisionTime": "2017-08-30T09:15:21Z"
 		},
 		{
+			"checksumSHA1": "4TZpshhXxRKFxKy3PIok84P5cvo=",
+			"path": "github.com/ONSdigital/go-ns/mongo",
+			"revision": "c64fcbc987935a21663c3f201b58a344de6c91e8",
+			"revisionTime": "2017-09-26T13:54:14Z"
+		},
+		{
 			"checksumSHA1": "yDc9FMgs8F379i52A0wQgRhEyX4=",
 			"path": "github.com/ONSdigital/go-ns/rchttp",
 			"revision": "48e311b80e5efddd01347f9f398cf8963313b861",
