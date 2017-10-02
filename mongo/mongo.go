@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"time"
 
 	"github.com/ONSdigital/dp-import-api/api-errors"
 	"github.com/ONSdigital/dp-import-api/datastore"
@@ -78,7 +79,7 @@ func (m *Mongo) GetJob(id string) (*models.Job, error) {
 func (m *Mongo) AddJob(job *models.Job) (*models.Job, error) {
 	s := session.Copy()
 	defer s.Close()
-
+	job.LastUpdated = time.Now().UTC()
 	if err := s.DB(m.Database).C(m.Collection).Insert(job); err != nil {
 		return nil, err
 	}
