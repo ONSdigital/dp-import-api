@@ -96,7 +96,7 @@ type UploadedFile struct {
 // Validate the content of the structure
 func (s UploadedFile) Validate() error {
 	if s.URL == "" || s.AliasName == "" {
-		return errors.New("Invalid s3 file structure")
+		return errors.New("invalid json object received, alias_name and url are required")
 	}
 	return nil
 }
