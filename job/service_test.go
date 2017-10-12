@@ -294,7 +294,11 @@ func TestService_UpdateJob_QueuesWhenSubmitted(t *testing.T) {
 				return nil
 			},
 		}
-		mockedRecipeAPI := &testjob.RecipeAPIMock{}
+		mockedRecipeAPI := &testjob.RecipeAPIMock{
+			GetRecipeFunc: func(ctx context.Context, ID string) (*models.Recipe, error) {
+				return dummyRecipe, nil
+			},
+		}
 
 		jobService := job.NewService(mockDataStore, mockedJobQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
 
@@ -311,6 +315,7 @@ func TestService_UpdateJob_QueuesWhenSubmitted(t *testing.T) {
 
 			Convey("The expected calls are made to dependencies", func() {
 				So(err, ShouldBeNil)
+				So(len(mockedRecipeAPI.GetRecipeCalls()), ShouldEqual, 1)
 				So(len(mockedJobQueue.QueueCalls()), ShouldEqual, 1)
 			})
 		})

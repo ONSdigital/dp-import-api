@@ -134,7 +134,12 @@ func (service Service) prepareJob(ctx context.Context, jobID string) (*models.Im
 		return nil, err
 	}
 
-	instanceIds := make([]string, 0)
+	recipe, err := service.recipeAPI.GetRecipe(ctx, importJob.RecipeID)
+	if err != nil {
+		return nil, err
+	}
+
+	var instanceIds []string
 	for _, instanceRef := range importJob.Links.Instances {
 		instanceIds = append(instanceIds, instanceRef.ID)
 
@@ -146,6 +151,7 @@ func (service Service) prepareJob(ctx context.Context, jobID string) (*models.Im
 	return &models.ImportData{
 		JobID:         jobID,
 		Recipe:        importJob.RecipeID,
+		Format:        recipe.Format,
 		UploadedFiles: importJob.UploadedFiles,
 		InstanceIDs:   instanceIds,
 	}, nil

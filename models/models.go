@@ -47,6 +47,7 @@ func (job *Job) Validate() error {
 type Recipe struct {
 	ID              string           `json:"id"`
 	Alias           string           `json:"alias"`
+	Format          string           `json:"format,omitempty"`
 	OutputInstances []RecipeInstance `json:"output_instances"`
 }
 
@@ -105,6 +106,7 @@ func (s UploadedFile) Validate() error {
 type ImportData struct {
 	JobID         string
 	Recipe        string          `json:"recipe,omitempty"`
+	Format        string          `json:"format,omitempty"`
 	UploadedFiles *[]UploadedFile `json:"files,omitempty"`
 	InstanceIDs   []string
 }

@@ -2,7 +2,6 @@ package importqueue
 
 import (
 	"errors"
-	"strings"
 
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/dp-import-api/schema"
@@ -27,7 +26,7 @@ func CreateImportQueue(databakerQueue, v4Queue chan []byte) *ImportQueue {
 
 // Queue an import event
 func (q *ImportQueue) Queue(job *models.ImportData) error {
-	if strings.Contains(strings.ToLower(job.Recipe), "b944be78-f56d-409b-9ebd-ab2b77ffe187") {
+	if job.Format == "v4" {
 		if len(job.InstanceIDs) != 1 && len(*job.UploadedFiles) != 1 {
 			return errors.New("InstanceIds and uploaded files must be 1")
 		}
@@ -37,14 +36,14 @@ func (q *ImportQueue) Queue(job *models.ImportData) error {
 			return avroError
 		}
 		q.v4Queue <- bytes
-
-	} else {
-
-		bytes, avroError := schema.DataBaker.Marshal(models.DataBakerEvent{JobID: job.JobID})
-		if avroError != nil {
-			return avroError
-		}
-		q.databakerQueue <- bytes
+		return nil
 	}
+
+	bytes, avroError := schema.DataBaker.Marshal(models.DataBakerEvent{JobID: job.JobID})
+	if avroError != nil {
+		return avroError
+	}
+	q.databakerQueue <- bytes
+
 	return nil
 }
