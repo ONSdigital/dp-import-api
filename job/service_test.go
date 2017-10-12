@@ -39,7 +39,7 @@ func TestService_CreateJob(t *testing.T) {
 	Convey("Given a job service with mocked dependencies", t, func() {
 
 		mockDataStore := &mongo.DataStorer{}
-		mockedJobQueue := &testjob.JobQueueMock{}
+		mockedQueue := &testjob.QueueMock{}
 		mockedDatasetAPI := &testjob.DatasetAPIMock{
 			CreateInstanceFunc: func(ctx context.Context, job *models.Job, recipeInst *models.RecipeInstance) (*models.Instance, error) {
 				return dummyInstance, nil
@@ -54,7 +54,7 @@ func TestService_CreateJob(t *testing.T) {
 			},
 		}
 
-		jobService := job.NewService(mockDataStore, mockedJobQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
+		jobService := job.NewService(mockDataStore, mockedQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
 
 		job := &models.Job{
 			RecipeID: "123-234-456",
@@ -84,7 +84,7 @@ func TestService_CreateJob_CreateInstanceFails(t *testing.T) {
 	Convey("Given a job service with a mock dataset API that returns a failure", t, func() {
 
 		mockDataStore := &mongo.DataStorer{}
-		mockedJobQueue := &testjob.JobQueueMock{}
+		mockedQueue := &testjob.QueueMock{}
 		mockedDatasetAPI := &testjob.DatasetAPIMock{
 			CreateInstanceFunc: func(ctx context.Context, job *models.Job, recipeInst *models.RecipeInstance) (*models.Instance, error) {
 				return nil, errors.New("Create instance failed.")
@@ -96,7 +96,7 @@ func TestService_CreateJob_CreateInstanceFails(t *testing.T) {
 			},
 		}
 
-		jobService := job.NewService(mockDataStore, mockedJobQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
+		jobService := job.NewService(mockDataStore, mockedQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
 
 		newJob := &models.Job{
 			RecipeID: "123-234-456",
@@ -119,7 +119,7 @@ func TestService_CreateJob_SaveJobFails(t *testing.T) {
 	Convey("Given a job service with mocked dependencies", t, func() {
 
 		mockDataStore := &mongo.DataStorer{InternalError: true}
-		mockedJobQueue := &testjob.JobQueueMock{}
+		mockedQueue := &testjob.QueueMock{}
 		mockedDatasetAPI := &testjob.DatasetAPIMock{
 			CreateInstanceFunc: func(ctx context.Context, job *models.Job, recipeInst *models.RecipeInstance) (*models.Instance, error) {
 				return dummyInstance, nil
@@ -131,7 +131,7 @@ func TestService_CreateJob_SaveJobFails(t *testing.T) {
 			},
 		}
 
-		jobService := job.NewService(mockDataStore, mockedJobQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
+		jobService := job.NewService(mockDataStore, mockedQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
 
 		newJob := &models.Job{
 			RecipeID: "123-234-456",
@@ -154,11 +154,11 @@ func TestService_CreateJob_InvalidJob(t *testing.T) {
 	Convey("Given a job service with mocked dependencies", t, func() {
 
 		mockDataStore := &mongo.DataStorer{}
-		mockedJobQueue := &testjob.JobQueueMock{}
+		mockedQueue := &testjob.QueueMock{}
 		mockedDatasetAPI := &testjob.DatasetAPIMock{}
 		mockedRecipeAPI := &testjob.RecipeAPIMock{}
 
-		jobService := job.NewService(mockDataStore, mockedJobQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
+		jobService := job.NewService(mockDataStore, mockedQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
 
 		Convey("When a job with no recipe URL is passed to create job", func() {
 
@@ -179,7 +179,7 @@ func TestService_CreateJob_GetRecipeFails(t *testing.T) {
 	Convey("Given a job service with a mock recipe API that returns an error", t, func() {
 
 		mockDataStore := &mongo.DataStorer{}
-		mockedJobQueue := &testjob.JobQueueMock{}
+		mockedQueue := &testjob.QueueMock{}
 		mockedDatasetAPI := &testjob.DatasetAPIMock{}
 		mockedRecipeAPI := &testjob.RecipeAPIMock{
 			GetRecipeFunc: func(ctx context.Context, url string) (*models.Recipe, error) {
@@ -187,7 +187,7 @@ func TestService_CreateJob_GetRecipeFails(t *testing.T) {
 			},
 		}
 
-		jobService := job.NewService(mockDataStore, mockedJobQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
+		jobService := job.NewService(mockDataStore, mockedQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
 
 		newJob := &models.Job{
 			RecipeID: "123-234-456",
@@ -210,7 +210,7 @@ func TestService_UpdateJob(t *testing.T) {
 	Convey("Given a job service with mocked dependencies", t, func() {
 
 		mockDataStore := &mongo.DataStorer{}
-		mockedJobQueue := &testjob.JobQueueMock{
+		mockedQueue := &testjob.QueueMock{
 			QueueFunc: func(job *models.ImportData) error {
 				return nil
 			},
@@ -222,7 +222,7 @@ func TestService_UpdateJob(t *testing.T) {
 		}
 		mockedRecipeAPI := &testjob.RecipeAPIMock{}
 
-		jobService := job.NewService(mockDataStore, mockedJobQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
+		jobService := job.NewService(mockDataStore, mockedQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
 
 		jobID := "123"
 		job := &models.Job{
@@ -236,7 +236,7 @@ func TestService_UpdateJob(t *testing.T) {
 
 			Convey("The expected calls are made to dependencies", func() {
 				So(err, ShouldBeNil)
-				So(len(mockedJobQueue.QueueCalls()), ShouldEqual, 0)
+				So(len(mockedQueue.QueueCalls()), ShouldEqual, 0)
 			})
 		})
 	})
@@ -247,7 +247,7 @@ func TestService_UpdateJob_SaveFails(t *testing.T) {
 	Convey("Given a job service with mocked dependencies", t, func() {
 
 		mockDataStore := &mongo.DataStorer{InternalError: true}
-		mockedJobQueue := &testjob.JobQueueMock{
+		mockedQueue := &testjob.QueueMock{
 			QueueFunc: func(job *models.ImportData) error {
 				return nil
 			},
@@ -259,7 +259,7 @@ func TestService_UpdateJob_SaveFails(t *testing.T) {
 		}
 		mockedRecipeAPI := &testjob.RecipeAPIMock{}
 
-		jobService := job.NewService(mockDataStore, mockedJobQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
+		jobService := job.NewService(mockDataStore, mockedQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
 
 		jobID := "123"
 		updatedJob := &models.Job{
@@ -273,7 +273,7 @@ func TestService_UpdateJob_SaveFails(t *testing.T) {
 
 			Convey("The expected calls are made to dependencies", func() {
 				So(err, ShouldEqual, job.ErrSaveJobFailed)
-				So(len(mockedJobQueue.QueueCalls()), ShouldEqual, 0)
+				So(len(mockedQueue.QueueCalls()), ShouldEqual, 0)
 			})
 		})
 	})
@@ -284,7 +284,7 @@ func TestService_UpdateJob_QueuesWhenSubmitted(t *testing.T) {
 	Convey("Given a job service with mocked dependencies", t, func() {
 
 		mockDataStore := &mongo.DataStorer{}
-		mockedJobQueue := &testjob.JobQueueMock{
+		mockedQueue := &testjob.QueueMock{
 			QueueFunc: func(job *models.ImportData) error {
 				return nil
 			},
@@ -300,7 +300,7 @@ func TestService_UpdateJob_QueuesWhenSubmitted(t *testing.T) {
 			},
 		}
 
-		jobService := job.NewService(mockDataStore, mockedJobQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
+		jobService := job.NewService(mockDataStore, mockedQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
 
 		jobID := "123"
 		job := &models.Job{
@@ -316,7 +316,7 @@ func TestService_UpdateJob_QueuesWhenSubmitted(t *testing.T) {
 			Convey("The expected calls are made to dependencies", func() {
 				So(err, ShouldBeNil)
 				So(len(mockedRecipeAPI.GetRecipeCalls()), ShouldEqual, 1)
-				So(len(mockedJobQueue.QueueCalls()), ShouldEqual, 1)
+				So(len(mockedQueue.QueueCalls()), ShouldEqual, 1)
 			})
 		})
 	})

@@ -19,7 +19,7 @@ var (
 //
 //         // make and configure a mocked RecipeAPI
 //         mockedRecipeAPI := &RecipeAPIMock{
-//             GetRecipeFunc: func(ctx context.Context, url string) (*models.Recipe, error) {
+//             GetRecipeFunc: func(ctx context.Context, ID string) (*models.Recipe, error) {
 // 	               panic("TODO: mock out the GetRecipe method")
 //             },
 //         }
@@ -30,7 +30,7 @@ var (
 //     }
 type RecipeAPIMock struct {
 	// GetRecipeFunc mocks the GetRecipe method.
-	GetRecipeFunc func(ctx context.Context, url string) (*models.Recipe, error)
+	GetRecipeFunc func(ctx context.Context, ID string) (*models.Recipe, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -38,28 +38,28 @@ type RecipeAPIMock struct {
 		GetRecipe []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
-			// Url is the url argument value.
-			Url string
+			// ID is the ID argument value.
+			ID string
 		}
 	}
 }
 
 // GetRecipe calls GetRecipeFunc.
-func (mock *RecipeAPIMock) GetRecipe(ctx context.Context, url string) (*models.Recipe, error) {
+func (mock *RecipeAPIMock) GetRecipe(ctx context.Context, ID string) (*models.Recipe, error) {
 	if mock.GetRecipeFunc == nil {
 		panic("moq: RecipeAPIMock.GetRecipeFunc is nil but RecipeAPI.GetRecipe was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
-		Url string
+		ID  string
 	}{
 		Ctx: ctx,
-		Url: url,
+		ID:  ID,
 	}
 	lockRecipeAPIMockGetRecipe.Lock()
 	mock.calls.GetRecipe = append(mock.calls.GetRecipe, callInfo)
 	lockRecipeAPIMockGetRecipe.Unlock()
-	return mock.GetRecipeFunc(ctx, url)
+	return mock.GetRecipeFunc(ctx, ID)
 }
 
 // GetRecipeCalls gets all the calls that were made to GetRecipe.
@@ -67,11 +67,11 @@ func (mock *RecipeAPIMock) GetRecipe(ctx context.Context, url string) (*models.R
 //     len(mockedRecipeAPI.GetRecipeCalls())
 func (mock *RecipeAPIMock) GetRecipeCalls() []struct {
 	Ctx context.Context
-	Url string
+	ID  string
 } {
 	var calls []struct {
 		Ctx context.Context
-		Url string
+		ID  string
 	}
 	lockRecipeAPIMockGetRecipe.RLock()
 	calls = mock.calls.GetRecipe

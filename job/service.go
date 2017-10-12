@@ -11,7 +11,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-//go:generate moq -out testjob/job_queue.go -pkg testjob . JobQueue
+//go:generate moq -out testjob/job_queue.go -pkg testjob . Queue
 //go:generate moq -out testjob/dataset_api.go -pkg testjob . DatasetAPI
 //go:generate moq -out testjob/recipe_api.go -pkg testjob . RecipeAPI
 
@@ -23,14 +23,14 @@ var ErrSaveJobFailed = errors.New("failed to save job")
 // Service provides job related functionality.
 type Service struct {
 	dataStore  datastore.DataStorer
-	jobQueue   JobQueue
+	queue      Queue
 	datasetAPI DatasetAPI
 	recipeAPI  RecipeAPI
 	urlBuilder *url.Builder
 }
 
-// JobQueue interface used to queue import jobs.
-type JobQueue interface {
+// Queue interface used to queue import jobs.
+type Queue interface {
 	Queue(job *models.ImportData) error
 }
 
@@ -46,10 +46,10 @@ type RecipeAPI interface {
 }
 
 // NewService returns a new instance of a job.Service using the given dependencies.
-func NewService(dataStore datastore.DataStorer, jobQueue JobQueue, datasetAPI DatasetAPI, recipeAPI RecipeAPI, urlBuilder *url.Builder) *Service {
+func NewService(dataStore datastore.DataStorer, queue Queue, datasetAPI DatasetAPI, recipeAPI RecipeAPI, urlBuilder *url.Builder) *Service {
 	return &Service{
 		dataStore:  dataStore,
-		jobQueue:   jobQueue,
+		queue:      queue,
 		datasetAPI: datasetAPI,
 		recipeAPI:  recipeAPI,
 		urlBuilder: urlBuilder,
@@ -114,7 +114,7 @@ func (service Service) UpdateJob(ctx context.Context, jobID string, job *models.
 			return err
 		}
 
-		err = service.jobQueue.Queue(tasks)
+		err = service.queue.Queue(tasks)
 		if err != nil {
 			log.Error(err, log.Data{"tasks": tasks})
 			return err
