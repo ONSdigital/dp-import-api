@@ -15,12 +15,9 @@ import (
 	"github.com/ONSdigital/dp-import-api/mongo"
 	"github.com/ONSdigital/dp-import-api/recipe"
 	"github.com/ONSdigital/dp-import-api/url"
-	"github.com/ONSdigital/go-ns/handlers/healthcheck"
 	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/rchttp"
-	"github.com/ONSdigital/go-ns/server"
-	"github.com/gorilla/mux"
 )
 
 func main() {
@@ -56,12 +53,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	router := mux.NewRouter()
-	router.Path("/healthcheck").HandlerFunc(healthcheck.Handler)
-
-	httpServer := server.New(config.BindAddr, router)
-	httpServer.HandleOSSignals = false
-
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
@@ -70,7 +61,8 @@ func main() {
 	recipeAPI := recipe.NewAPI(client, config.RecipeAPIURL)
 	urlBuilder := url.NewBuilder(config.Host, config.DatasetAPIURL)
 	jobService := job.NewService(mongoDataStore, jobQueue, datasetAPI, recipeAPI, urlBuilder)
-	_ = api.CreateImportAPI(router, mongoDataStore, config.SecretKey, jobService)
+
+	api.CreateImportAPI(config.BindAddr, mongoDataStore, config.SecretKey, jobService)
 
 	// signals the web server shutdown, so a graceful exit is required
 	httpErrChannel := make(chan error)

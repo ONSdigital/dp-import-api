@@ -10,7 +10,9 @@ import (
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/models"
+	"github.com/ONSdigital/go-ns/handlers/healthcheck"
 	"github.com/ONSdigital/go-ns/log"
+	"github.com/ONSdigital/go-ns/server"
 	"github.com/gorilla/mux"
 )
 
@@ -32,9 +34,15 @@ type JobService interface {
 }
 
 // CreateImportAPI returns the api with all the routes configured
-func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, secretKey string, jobService JobService) *ImportAPI {
-
+func CreateImportAPI(bindAddr string, dataStore datastore.DataStorer, secretKey string, jobService JobService) *ImportAPI {
+	router := mux.NewRouter()
 	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService}
+
+	api.router.Path("/healthcheck").HandlerFunc(healthcheck.Handler)
+
+	httpServer := server.New(bindAddr, api.router)
+	httpServer.HandleOSSignals = false
+
 	auth := NewAuthenticator(secretKey, "internal-token")
 
 	// External API for florence
@@ -43,6 +51,7 @@ func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, secretK
 	api.router.Path("/jobs/{id}").Methods("GET").HandlerFunc(api.getJob)
 	api.router.Path("/jobs/{id}").Methods("PUT").HandlerFunc(auth.ManualCheck(api.updateJob))
 	api.router.Path("/jobs/{id}/files").Methods("PUT").HandlerFunc(api.addUploadedFile)
+
 	return &api
 }
 
