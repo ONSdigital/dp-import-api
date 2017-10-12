@@ -71,7 +71,7 @@ func main() {
 	datasetAPI := dataset.API{client, config.DatasetAPIURL, config.DatasetAPIAuthToken}
 	recipeAPI := recipe.API{client, config.RecipeAPIURL}
 
-	jobService := job.NewService(mongoDataStore, jobQueue, datasetAPI, recipeAPI, urlBuilder)
+	jobService := job.NewService(mongoDataStore, jobQueue, &datasetAPI, &recipeAPI, urlBuilder)
 	_ = api.CreateImportAPI(router, mongoDataStore, config.SecretKey, jobService)
 
 	// signals the web server shutdown, so a graceful exit is required
