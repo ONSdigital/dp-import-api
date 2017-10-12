@@ -13,6 +13,7 @@ import (
 	job "github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/models"
 	mockdatastore "github.com/ONSdigital/dp-import-api/mongo/testmongo"
+	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -22,7 +23,6 @@ var (
 	dstoreInternalError = mockdatastore.DataStorer{InternalError: true}
 	mockJobService      = &testapi.JobServiceMock{}
 	dummyJob            = &models.Job{ID: "34534543543"}
-	bindAddr            = ":21800"
 )
 
 const secretKey = "123"
@@ -41,7 +41,7 @@ func TestAddJobReturnsInternalError(t *testing.T) {
 			},
 		}
 
-		api := CreateImportAPI(bindAddr, &dstoreInternalError, secretKey, mockJobService)
+		api := CreateImportAPI(mux.NewRouter(), &dstoreInternalError, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusInternalServerError)
 	})
@@ -53,7 +53,7 @@ func TestGetJobsReturnsInternalError(t *testing.T) {
 		r, err := createRequestWithAuth("GET", "http://localhost:21800/jobs", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(bindAddr, &dstoreInternalError, secretKey, mockJobService)
+		api := CreateImportAPI(mux.NewRouter(), &dstoreInternalError, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusInternalServerError)
 	})
@@ -65,7 +65,7 @@ func TestGetJobs(t *testing.T) {
 		r, err := createRequestWithAuth("GET", "http://localhost:21800/jobs", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(bindAddr, &dstore, secretKey, mockJobService)
+		api := CreateImportAPI(mux.NewRouter(), &dstore, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusOK)
 	})
@@ -77,7 +77,7 @@ func TestGetJobReturnsNotFound(t *testing.T) {
 		r, err := createRequestWithAuth("GET", "http://localhost:21800/jobs/000000", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(bindAddr, &dstoreNotFound, secretKey, mockJobService)
+		api := CreateImportAPI(mux.NewRouter(), &dstoreNotFound, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusNotFound)
 	})
@@ -89,7 +89,7 @@ func TestGetJob(t *testing.T) {
 		r, err := createRequestWithAuth("GET", "http://localhost:21800/jobs/123", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(bindAddr, &dstore, secretKey, mockJobService)
+		api := CreateImportAPI(mux.NewRouter(), &dstore, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusOK)
 	})
@@ -109,7 +109,7 @@ func TestAddJobReturnsBadClientRequest(t *testing.T) {
 			},
 		}
 
-		api := CreateImportAPI(bindAddr, &dstoreNotFound, secretKey, mockJobService)
+		api := CreateImportAPI(mux.NewRouter(), &dstoreNotFound, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusBadRequest)
 	})
@@ -129,7 +129,7 @@ func TestAddJob(t *testing.T) {
 			},
 		}
 
-		api := CreateImportAPI(bindAddr, &dstore, secretKey, mockJobService)
+		api := CreateImportAPI(mux.NewRouter(), &dstore, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusCreated)
 		So(w.Body.String(), ShouldContainSubstring, "\"id\":\"34534543543\"")
@@ -143,7 +143,7 @@ func TestAddS3FileReturnsNotFound(t *testing.T) {
 		r, err := createRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		api := CreateImportAPI(bindAddr, &dstoreNotFound, secretKey, mockJobService)
+		api := CreateImportAPI(mux.NewRouter(), &dstoreNotFound, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusNotFound)
 	})
@@ -163,7 +163,7 @@ func TestUpdateJobState(t *testing.T) {
 			},
 		}
 
-		api := CreateImportAPI(bindAddr, &dstore, secretKey, mockJobService)
+		api := CreateImportAPI(mux.NewRouter(), &dstore, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusOK)
 	})
@@ -183,7 +183,7 @@ func TestUpdateJobStateReturnsNotFound(t *testing.T) {
 			},
 		}
 
-		api := CreateImportAPI(bindAddr, &dstoreNotFound, secretKey, mockJobService)
+		api := CreateImportAPI(mux.NewRouter(), &dstoreNotFound, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusNotFound)
 	})
@@ -203,7 +203,7 @@ func TestUpdateJobStateToSubmitted(t *testing.T) {
 			},
 		}
 
-		api := CreateImportAPI(bindAddr, &dstore, secretKey, mockJobService)
+		api := CreateImportAPI(mux.NewRouter(), &dstore, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusOK)
 	})
