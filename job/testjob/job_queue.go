@@ -9,25 +9,25 @@ import (
 )
 
 var (
-	lockJobQueueMockQueue sync.RWMutex
+	lockQueueMockQueue sync.RWMutex
 )
 
-// JobQueueMock is a mock implementation of JobQueue.
+// QueueMock is a mock implementation of Queue.
 //
-//     func TestSomethingThatUsesJobQueue(t *testing.T) {
+//     func TestSomethingThatUsesQueue(t *testing.T) {
 //
-//         // make and configure a mocked JobQueue
-//         mockedJobQueue := &JobQueueMock{
+//         // make and configure a mocked Queue
+//         mockedQueue := &QueueMock{
 //             QueueFunc: func(job *models.ImportData) error {
 // 	               panic("TODO: mock out the Queue method")
 //             },
 //         }
 //
-//         // TODO: use mockedJobQueue in code that requires JobQueue
+//         // TODO: use mockedQueue in code that requires Queue
 //         //       and then make assertions.
 //
 //     }
-type JobQueueMock struct {
+type QueueMock struct {
 	// QueueFunc mocks the Queue method.
 	QueueFunc func(job *models.ImportData) error
 
@@ -42,32 +42,32 @@ type JobQueueMock struct {
 }
 
 // Queue calls QueueFunc.
-func (mock *JobQueueMock) Queue(job *models.ImportData) error {
+func (mock *QueueMock) Queue(job *models.ImportData) error {
 	if mock.QueueFunc == nil {
-		panic("moq: JobQueueMock.QueueFunc is nil but JobQueue.Queue was just called")
+		panic("moq: QueueMock.QueueFunc is nil but Queue.Queue was just called")
 	}
 	callInfo := struct {
 		Job *models.ImportData
 	}{
 		Job: job,
 	}
-	lockJobQueueMockQueue.Lock()
+	lockQueueMockQueue.Lock()
 	mock.calls.Queue = append(mock.calls.Queue, callInfo)
-	lockJobQueueMockQueue.Unlock()
+	lockQueueMockQueue.Unlock()
 	return mock.QueueFunc(job)
 }
 
 // QueueCalls gets all the calls that were made to Queue.
 // Check the length with:
-//     len(mockedJobQueue.QueueCalls())
-func (mock *JobQueueMock) QueueCalls() []struct {
+//     len(mockedQueue.QueueCalls())
+func (mock *QueueMock) QueueCalls() []struct {
 	Job *models.ImportData
 } {
 	var calls []struct {
 		Job *models.ImportData
 	}
-	lockJobQueueMockQueue.RLock()
+	lockQueueMockQueue.RLock()
 	calls = mock.calls.Queue
-	lockJobQueueMockQueue.RUnlock()
+	lockQueueMockQueue.RUnlock()
 	return calls
 }

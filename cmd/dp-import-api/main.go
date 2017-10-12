@@ -65,11 +65,13 @@ func main() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
-	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
-	datasetAPI := dataset.NewDatasetAPI(client, config.DatasetAPIURL, config.DatasetAPIAuthToken)
-	recipeAPI := recipe.NewAPI(client, config.RecipeAPIURL)
 	urlBuilder := url.NewBuilder(config.Host, config.DatasetAPIURL)
-	jobService := job.NewService(mongoDataStore, jobQueue, datasetAPI, recipeAPI, urlBuilder)
+	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
+
+	datasetAPI := dataset.API{client, config.DatasetAPIURL, config.DatasetAPIAuthToken}
+	recipeAPI := recipe.API{client, config.RecipeAPIURL}
+
+	jobService := job.NewService(mongoDataStore, jobQueue, &datasetAPI, &recipeAPI, urlBuilder)
 	_ = api.CreateImportAPI(router, mongoDataStore, config.SecretKey, jobService)
 
 	// signals the web server shutdown, so a graceful exit is required
