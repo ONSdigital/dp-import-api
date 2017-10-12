@@ -10,6 +10,7 @@ import (
 	"net/url"
 
 	"fmt"
+
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/rchttp"
@@ -19,14 +20,6 @@ import (
 type API struct {
 	Client *rchttp.Client
 	URL    string
-}
-
-// NewAPI returns a new API instance.
-func NewAPI(client *rchttp.Client, url string) *API {
-	return &API{
-		Client: client,
-		URL:    url,
-	}
 }
 
 // GetRecipe from an ID

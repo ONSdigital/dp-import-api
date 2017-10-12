@@ -56,10 +56,12 @@ func main() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
-	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
-	datasetAPI := dataset.NewDatasetAPI(client, config.DatasetAPIURL, config.DatasetAPIAuthToken)
-	recipeAPI := recipe.NewAPI(client, config.RecipeAPIURL)
 	urlBuilder := url.NewBuilder(config.Host, config.DatasetAPIURL)
+	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
+
+	datasetAPI := dataset.API{client, config.DatasetAPIURL, config.DatasetAPIAuthToken}
+	recipeAPI := recipe.API{client, config.RecipeAPIURL}
+
 	jobService := job.NewService(mongoDataStore, jobQueue, datasetAPI, recipeAPI, urlBuilder)
 
 	api.CreateImportAPI(config.BindAddr, mongoDataStore, config.SecretKey, jobService)
