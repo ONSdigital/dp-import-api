@@ -24,12 +24,12 @@ DP Import API
 | DATABAKER_IMPORT_TOPIC | data-bake-job-available                 | The topic to place messages to data-baker
 | INPUT_FILE_AVAILABLE_TOPIC  | input-file-available               | The topic to place V4 files
 | HOST                 |  "http://localhost:21800"                 | The host name used to build URLs
-| SECRET_KEY           | _no default_                              | A key used by the API
+| SECRET_KEY           | "FD0108EA-825D-411C-9B1D-41EF7727F465"    | A key used by the API
 | MONGODB_IMPORTS_ADDR       | "localhost:27017"                       | Address of MongoDB
 | MONGODB_IMPORTS_DATABASE   | "imports"                               | The mongodb database to store imports
 | MONGODB_IMPORTS_COLLECTION | "imports"                               | The mongodb collection to store imports
 | DATASET_API_URL            | "http://localhost:22000"                | The URL for the DatasetAPI
-| DATASET_API_AUTH_TOKEN     | _no default_                            | The Auth Token for the DatasetAPI
+| DATASET_API_AUTH_TOKEN     | "FD0108EA-825D-411C-9B1D-41EF7727F465"  | The Auth Token for the DatasetAPI
 
 ### Contributing
 

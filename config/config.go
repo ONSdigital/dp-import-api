@@ -39,6 +39,7 @@ func Get() (*Configuration, error) {
 		Host:                    "http://localhost:21800",
 		Brokers:                 brokers,
 		DatabakerImportTopic:    "data-bake-job-available",
+		DatasetAPIAuthToken:     "FD0108EA-825D-411C-9B1D-41EF7727F465",
 		InputFileAvailableTopic: "input-file-available",
 		KafkaMaxBytes:           2000000,
 		MongoDBURL:              "localhost:27017",
