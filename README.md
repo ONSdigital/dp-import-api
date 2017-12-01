@@ -30,6 +30,7 @@ DP Import API
 | MONGODB_IMPORTS_COLLECTION | "imports"                               | The mongodb collection to store imports
 | DATASET_API_URL            | "http://localhost:22000"                | The URL for the DatasetAPI
 | DATASET_API_AUTH_TOKEN     | "FD0108EA-825D-411C-9B1D-41EF7727F465"  | The Auth Token for the DatasetAPI
+| RECIPE_API_URL             | "http://localhost:22300"                | The URL for the RecipeAPI
 
 ### Contributing
 
