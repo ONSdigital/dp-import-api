@@ -15,6 +15,17 @@ import (
 //go:generate moq -out testjob/dataset_api.go -pkg testjob . DatasetAPI
 //go:generate moq -out testjob/recipe_api.go -pkg testjob . RecipeAPI
 
+const (
+	InstanceImportStateInProgress = "in-progress"
+	InstanceImportStateComplete   = "complete"
+
+	ImportTaskStateInProgress = "in-progress"
+	ImportTaskStateComplete   = "complete"
+
+	ImportTaskIDImportObservations = "import-observations"
+	ImportTaskIDBuildHierarchies   = "build-hierarchies"
+)
+
 var ErrInvalidJob = errors.New("the provided Job is not valid")
 var ErrGetRecipeFailed = errors.New("failed to get recipe")
 var ErrCreateInstanceFailed = errors.New("failed to create a new instance on the dataset api")
@@ -87,6 +98,20 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 				HRef: service.urlBuilder.GetInstanceURL(instance.InstanceID),
 			},
 		)
+
+		job.Instances = append(job.Instances,
+			&models.InstanceImport{
+				ID:    instance.InstanceID,
+				State: InstanceImportStateInProgress,
+				ImportTasks: map[string]*models.InstanceImportTask{
+					ImportTaskIDImportObservations: {
+						State: InstanceImportStateInProgress,
+					},
+					ImportTaskIDBuildHierarchies: {
+						State: InstanceImportStateInProgress,
+					},
+				},
+			})
 	}
 
 	createdJob, err := service.dataStore.AddJob(job)
@@ -107,6 +132,7 @@ func (service Service) UpdateJob(ctx context.Context, jobID string, job *models.
 	}
 
 	log.Info("job updated", log.Data{"job": job, "job_id": jobID})
+
 	if job.State == "submitted" {
 		tasks, err := service.prepareJob(ctx, jobID)
 		if err != nil {
@@ -125,6 +151,42 @@ func (service Service) UpdateJob(ctx context.Context, jobID string, job *models.
 
 	return nil
 }
+
+// CheckImportJobCompletionState checks all instances for given import job - if all completed, mark import as completed
+//func CheckImportJobCompletionState(ctx context.Context, importAPI *api.ImportAPI, datasetAPI *api.DatasetAPI, jobID, completedInstanceID string) (bool, error) {
+//	importJobFromAPI, isFatal, err := importAPI.GetImportJob(ctx, jobID)
+//	if err != nil {
+//		return isFatal, err
+//	}
+//	// check for 404 not found (empty importJobFromAPI)
+//	if importJobFromAPI.JobID == "" {
+//		return false, errors.New("CheckImportJobCompletionState ImportAPI did not recognise jobID")
+//	}
+//
+//	targetState := "completed"
+//	log.Debug("checking", log.Data{"API insts": importJobFromAPI.Links.Instances})
+//	for _, instanceRef := range importJobFromAPI.Links.Instances {
+//		if instanceRef.ID == completedInstanceID {
+//			continue
+//		}
+//		// XXX TODO code below largely untested, and possibly subject to race conditions
+//		instanceFromAPI, isFatal, err := datasetAPI.GetInstance(ctx, instanceRef.ID)
+//		if err != nil {
+//			return isFatal, err
+//		}
+//		if instanceFromAPI.State != "completed" && instanceFromAPI.State != "error" {
+//			return false, nil
+//		}
+//		if instanceFromAPI.State == "error" {
+//			targetState = instanceFromAPI.State
+//		}
+//	}
+//	// assert: all instances for jobID are marked "completed"/"error", so update import as same
+//	if err := importAPI.UpdateImportJobState(ctx, jobID, targetState); err != nil {
+//		log.ErrorC("CheckImportJobCompletionState update", err, log.Data{"jobID": jobID, "last completed instanceID": completedInstanceID})
+//	}
+//	return false, nil
+//}
 
 // PrepareJob returns a format ready to send to downstream services via kafka
 func (service Service) prepareJob(ctx context.Context, jobID string) (*models.ImportData, error) {

@@ -56,24 +56,37 @@ func TestService_CreateJob(t *testing.T) {
 
 		jobService := job.NewService(mockDataStore, mockedQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
 
-		job := &models.Job{
+		jobInput := &models.Job{
 			RecipeID: "123-234-456",
 		}
 
 		Convey("When create job is called", func() {
 
-			createdJob, err := jobService.CreateJob(ctx, job)
+			createdJob, err := jobService.CreateJob(ctx, jobInput)
 
 			Convey("The expected calls are made to dependencies and the job is updated", func() {
 				So(err, ShouldBeNil)
 				So(createdJob, ShouldNotBeNil)
 
-				So(job.ID, ShouldNotBeBlank)
-				So(job.Links.Self.HRef, ShouldNotBeBlank)
+				So(jobInput.ID, ShouldNotBeBlank)
+				So(jobInput.Links.Self.HRef, ShouldNotBeBlank)
 
 				// an instance is created for each output instance specified in the recipe.
 				So(len(mockedDatasetAPI.CreateInstanceCalls()), ShouldEqual, len(dummyRecipe.OutputInstances))
-				So(len(job.Links.Instances), ShouldEqual, len(dummyRecipe.OutputInstances))
+				So(len(jobInput.Links.Instances), ShouldEqual, len(dummyRecipe.OutputInstances))
+			})
+
+			Convey("Then the created job contains expected import tasks with their state set to in progress", func() {
+
+				So(jobInput.Instances, ShouldNotBeNil)
+				So(len(jobInput.Instances), ShouldEqual, len(dummyRecipe.OutputInstances))
+
+				instanceImport := jobInput.Instances[0]
+				So(instanceImport.State, ShouldEqual, job.InstanceImportStateInProgress)
+
+				So(len(instanceImport.ImportTasks), ShouldEqual, 2)
+				So(instanceImport.ImportTasks[job.ImportTaskIDBuildHierarchies].State, ShouldEqual, job.ImportTaskStateInProgress)
+				So(instanceImport.ImportTasks[job.ImportTaskIDImportObservations].State, ShouldEqual, job.ImportTaskStateInProgress)
 			})
 		})
 	})

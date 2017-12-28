@@ -15,12 +15,25 @@ type JobResults struct {
 
 // Job for importing datasets
 type Job struct {
-	ID            string          `bson:"id,omitempty"             json:"id,omitempty"`
-	RecipeID      string          `bson:"recipe,omitempty"         json:"recipe,omitempty"`
-	State         string          `bson:"state,omitempty"          json:"state,omitempty"`
-	UploadedFiles *[]UploadedFile `bson:"files,omitempty"          json:"files,omitempty"`
-	Links         LinksMap        `bson:"links,omitempty"          json:"links,omitempty"`
-	LastUpdated   time.Time       `bson:"last_updated,omitempty"   json:"last_updated,omitempty"`
+	ID            string            `bson:"id,omitempty"             json:"id,omitempty"`
+	RecipeID      string            `bson:"recipe,omitempty"         json:"recipe,omitempty"`
+	State         string            `bson:"state,omitempty"          json:"state,omitempty"`
+	UploadedFiles *[]UploadedFile   `bson:"files,omitempty"          json:"files,omitempty"`
+	Instances     []*InstanceImport `bson:"instances,omitempty"      json:"instances,omitempty"`
+	Links         LinksMap          `bson:"links,omitempty"          json:"links,omitempty"`
+	LastUpdated   time.Time         `bson:"last_updated,omitempty"   json:"last_updated,omitempty"`
+}
+
+// InstanceImport represents the state of a single instance import job.
+type InstanceImport struct {
+	ID          string                         `bson:"id,omitempty" json:"id"`
+	State       string                         `bson:"state,omitempty" json:"state,omitempty"`
+	ImportTasks map[string]*InstanceImportTask `bson:"import_tasks,omitempty" json:"import_tasks"`
+}
+
+// InstanceImportTask represents an individual task that needs doing as part of an instance import.
+type InstanceImportTask struct {
+	State string `bson:"state,omitempty" json:"state,omitempty"`
 }
 
 type LinksMap struct {
