@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/ONSdigital/dp-import-api/models"
-	"github.com/ONSdigital/dp-import-api/schema"
 	"github.com/ONSdigital/dp-import/event"
 )
 
@@ -38,14 +37,7 @@ func (q *ImportQueue) Queue(job *models.ImportData) error {
 		}
 
 		q.v4Queue <- bytes
-		return nil
 	}
-
-	bytes, avroError := schema.DataBaker.Marshal(models.DataBakerEvent{JobID: job.JobID})
-	if avroError != nil {
-		return avroError
-	}
-	q.databakerQueue <- bytes
 
 	return nil
 }
