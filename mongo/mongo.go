@@ -139,6 +139,44 @@ func (m *Mongo) UpdateJobState(id, newState string) (err error) {
 	return
 }
 
+// UpdateInstanceState update the state of an instances import.
+func (m *Mongo) UpdateInstanceState(jobID, instanceID, taskID, newState string) (err error) {
+	s := session.Copy()
+	defer s.Close()
+
+	selector := bson.M{
+		"id":           jobID,
+		"instances.id": instanceID,
+	}
+
+	update := bson.M{
+		"$set":         bson.M{"instances.$.state": newState},
+		"$currentDate": bson.M{"last_updated": true},
+	}
+
+	err = s.DB(m.Database).C(m.Collection).Update(selector, update)
+	return
+}
+
+// UpdateInstanceTaskState update the state of a single task for an instance.
+func (m *Mongo) UpdateInstanceTaskState(jobID, instanceID, taskID, newState string) (err error) {
+	s := session.Copy()
+	defer s.Close()
+
+	selector := bson.M{
+		"id":           jobID,
+		"instances.id": instanceID,
+	}
+
+	update := bson.M{
+		"$set":         bson.M{"instances.$.import_tasks.import-observations.state": newState},
+		"$currentDate": bson.M{"last_updated": true},
+	}
+
+	err = s.DB(m.Database).C(m.Collection).Update(selector, update)
+	return
+}
+
 func (m *Mongo) Close(ctx context.Context) error {
 	return mongocloser.Close(ctx, session)
 }

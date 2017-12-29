@@ -77,3 +77,23 @@ func (ds *DataStorer) AddUploadedFile(jobID string, message *models.UploadedFile
 	}
 	return nil
 }
+
+func (ds *DataStorer) UpdateInstanceState(jobID, instanceID, taskID, newState string) (err error) {
+	if ds.NotFound {
+		return api_errors.JobNotFoundError
+	}
+	if ds.InternalError {
+		return internalError
+	}
+	return nil
+}
+
+func (ds *DataStorer) UpdateInstanceTaskState(jobID, instanceID, taskID, newState string) (err error) {
+	if ds.NotFound {
+		return api_errors.JobNotFoundError
+	}
+	if ds.InternalError {
+		return internalError
+	}
+	return nil
+}
