@@ -4,7 +4,8 @@ import (
 	"errors"
 
 	"github.com/ONSdigital/dp-import-api/models"
-	"github.com/ONSdigital/dp-import/event"
+	"github.com/ONSdigital/dp-import/events"
+	"github.com/ONSdigital/go-ns/log"
 )
 
 // ImportQueue used to send import jobs via kafka topic
@@ -26,12 +27,14 @@ func (q *ImportQueue) Queue(job *models.ImportData) error {
 			return errors.New("InstanceIds and uploaded files must be 1")
 		}
 
-		inputFileAvailableEvent := event.InputFileAvailable{
-			JobID:job.JobID,
+		inputFileAvailableEvent := events.InputFileAvailable{
+			JobID:      job.JobID,
 			InstanceID: job.InstanceIDs[0],
-			URL: (*job.UploadedFiles)[0].URL}
+			URL:        (*job.UploadedFiles)[0].URL}
 
-		bytes, avroError := event.InputFileAvailableSchema.Marshal(inputFileAvailableEvent)
+		log.Debug("producing new input file available event.", log.Data{"event": inputFileAvailableEvent})
+
+		bytes, avroError := events.InputFileAvailableSchema.Marshal(inputFileAvailableEvent)
 		if avroError != nil {
 			return avroError
 		}

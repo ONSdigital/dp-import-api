@@ -10,6 +10,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/api"
 	"github.com/ONSdigital/dp-import-api/config"
 	"github.com/ONSdigital/dp-import-api/dataset"
+	"github.com/ONSdigital/dp-import-api/event"
 	"github.com/ONSdigital/dp-import-api/importqueue"
 	"github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/mongo"
@@ -20,6 +21,7 @@ import (
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/rchttp"
 	"github.com/ONSdigital/go-ns/server"
+	"github.com/Shopify/sarama"
 	"github.com/gorilla/mux"
 )
 
@@ -87,6 +89,15 @@ func main() {
 		httpErrChannel <- errors.New("http server completed - with no error")
 	}()
 
+	observationsImportedConsumer, err := kafka.NewConsumerGroup(config.Brokers, config.ObservationsImportedTopic, log.Namespace, sarama.OffsetOldest)
+	if err != nil {
+		log.ErrorC("error creating kafka consumer", err, nil)
+		os.Exit(1)
+	}
+
+	observationsImportedHandler := event.NewObservationsImportedConsumer()
+	observationsImportedHandler.Consume(observationsImportedConsumer, jobService)
+
 	shutdownGracefully := func(httpDead bool) {
 		// gracefully retire resources
 		ctx, cancel := context.WithTimeout(context.Background(), config.GracefulShutdownTimeout)
@@ -103,6 +114,14 @@ func main() {
 		}
 
 		if err = directProducer.Close(ctx); err != nil {
+			log.Error(err, nil)
+		}
+
+		if err = observationsImportedHandler.Close(ctx); err != nil {
+			log.Error(err, nil)
+		}
+
+		if err = observationsImportedConsumer.Close(ctx); err != nil {
 			log.Error(err, nil)
 		}
 
@@ -129,5 +148,4 @@ func main() {
 		log.Error(errors.New("os signal received"), log.Data{"signal": sig.String()})
 		shutdownGracefully(false)
 	}
-
 }

@@ -152,6 +152,24 @@ func (service Service) UpdateJob(ctx context.Context, jobID string, job *models.
 	return nil
 }
 
+func (service Service) UpdateInstanceTaskState(jobID, instanceID, taskID, newState string) error {
+
+	err := service.dataStore.UpdateInstanceTaskState(jobID, instanceID, taskID, newState)
+	if err != nil {
+		return ErrSaveJobFailed
+	}
+
+	log.Info("instance task state updated", log.Data{
+		"jobID":      jobID,
+		"instanceID": instanceID,
+		"taskID":     taskID,
+		"newState":   newState})
+
+	// check if all tasks are complete - update instance status
+
+	return nil
+}
+
 // CheckImportJobCompletionState checks all instances for given import job - if all completed, mark import as completed
 //func CheckImportJobCompletionState(ctx context.Context, importAPI *api.ImportAPI, datasetAPI *api.DatasetAPI, jobID, completedInstanceID string) (bool, error) {
 //	importJobFromAPI, isFatal, err := importAPI.GetImportJob(ctx, jobID)

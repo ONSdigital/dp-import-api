@@ -1,10 +1,9 @@
 package kafka
 
 import (
-	"github.com/ONSdigital/go-ns/kafka"
-	"github.com/ONSdigital/go-ns/log"
 	"context"
 	"errors"
+	"github.com/ONSdigital/go-ns/log"
 )
 
 // AsyncConsumer provides a higher level of abstraction over a kafka consumer.
@@ -17,11 +16,6 @@ type AsyncConsumer struct {
 	closed  chan bool
 }
 
-// MessageConsumer provides a generic interface for consuming []byte messages
-type MessageConsumer interface {
-	Incoming() chan kafka.Message
-}
-
 // NewAsyncConsumer returns a new consumer instance.
 func NewAsyncConsumer() *AsyncConsumer {
 	return &AsyncConsumer{
@@ -31,9 +25,10 @@ func NewAsyncConsumer() *AsyncConsumer {
 }
 
 // Consume converts messages to event instances, and pass the event to the provided handler.
-func (consumer *AsyncConsumer) Consume(messageConsumer MessageConsumer, handlerFunc func(message kafka.Message)) {
+func (consumer *AsyncConsumer) Consume(messageConsumer MessageConsumer, handlerFunc func(message Message)) {
 
 	go func() {
+
 		defer close(consumer.closed)
 
 		for {
@@ -60,12 +55,13 @@ func (consumer *AsyncConsumer) Close(ctx context.Context) (err error) {
 	close(consumer.closing)
 
 	select {
+
 	case <-consumer.closed:
 		log.Info("successfully closed event consumer", nil)
 		return nil
+
 	case <-ctx.Done():
 		log.Info("shutdown context time exceeded, skipping graceful shutdown of kafka consumer", nil)
 		return errors.New("shutdown context timed out")
 	}
-
 }

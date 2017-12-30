@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/ONSdigital/dp-import-api/datastore/testdatastore"
 	"github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/job/testjob"
 	"github.com/ONSdigital/dp-import-api/models"
@@ -330,6 +331,38 @@ func TestService_UpdateJob_QueuesWhenSubmitted(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(len(mockedRecipeAPI.GetRecipeCalls()), ShouldEqual, 1)
 				So(len(mockedQueue.QueueCalls()), ShouldEqual, 1)
+			})
+		})
+	})
+}
+
+func TestService_UpdateInstanceTaskState(t *testing.T) {
+
+	Convey("Given a job service with a mock data store", t, func() {
+
+		mockedDataStore := &testdatastore.DataStorerMock{
+			UpdateInstanceTaskStateFunc: func(jobID string, instanceID string, taskID string, newState string) error {
+				return nil
+			},
+		}
+		mockedQueue := &testjob.QueueMock{}
+		mockedDatasetAPI := &testjob.DatasetAPIMock{}
+		mockedRecipeAPI := &testjob.RecipeAPIMock{}
+
+		jobService := job.NewService(mockedDataStore, mockedQueue, mockedDatasetAPI, mockedRecipeAPI, urlBuilder)
+
+		jobID := "123"
+		instanceID := "234"
+		taskID := "345"
+		newState := "completed"
+
+		Convey("When UpdateInstanceTaskState is called", func() {
+
+			err := jobService.UpdateInstanceTaskState(jobID, instanceID, taskID, newState)
+
+			Convey("Then the data store UpdateInstanceTaskStateCalls method is called", func() {
+				So(err, ShouldBeNil)
+				So(len(mockedDataStore.UpdateInstanceTaskStateCalls()), ShouldEqual, 1)
 			})
 		})
 	})
