@@ -3,6 +3,7 @@ package config
 import (
 	"time"
 
+	"encoding/json"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -14,12 +15,12 @@ type Configuration struct {
 	DatabakerImportTopic      string        `envconfig:"DATABAKER_IMPORT_TOPIC"`
 	InputFileAvailableTopic   string        `envconfig:"INPUT_FILE_AVAILABLE_TOPIC"`
 	KafkaMaxBytes             int           `envconfig:"KAFKA_MAX_BYTES"`
-	SecretKey                 string        `envconfig:"SECRET_KEY"`
-	MongoDBURL                string        `envconfig:"MONGODB_IMPORTS_ADDR"`
+	SecretKey                 string        `envconfig:"SECRET_KEY" json:"-"`
+	MongoDBURL                string        `envconfig:"MONGODB_IMPORTS_ADDR" json:"-"`
 	MongoDBCollection         string        `envconfig:"MONGODB_IMPORTS_DATABASE"`
 	MongoDBDatabase           string        `envconfig:"MONGODB_IMPORTS_COLLECTION"`
 	DatasetAPIURL             string        `envconfig:"DATASET_API_URL"`
-	DatasetAPIAuthToken       string        `envconfig:"DATASET_API_AUTH_TOKEN"`
+	DatasetAPIAuthToken       string        `envconfig:"DATASET_API_AUTH_TOKEN" json:"-"`
 	RecipeAPIURL              string        `envconfig:"RECIPE_API_URL"`
 	GracefulShutdownTimeout   time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	ObservationsImportedTopic string        `envconfig:"OBSERVATION_IMPORT_COMPLETE_TOPIC"`
@@ -53,4 +54,11 @@ func Get() (*Configuration, error) {
 	}
 
 	return cfg, envconfig.Process("", cfg)
+}
+
+// String is implemented to prevent sensitive fields being logged.
+// The config is returned as JSON with sensitive fields omitted.
+func (config Configuration) String() string {
+	json, _ := json.Marshal(config)
+	return string(json)
 }
