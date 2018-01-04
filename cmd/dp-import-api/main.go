@@ -21,7 +21,6 @@ import (
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/rchttp"
 	"github.com/ONSdigital/go-ns/server"
-	"github.com/Shopify/sarama"
 	"github.com/gorilla/mux"
 )
 
@@ -88,7 +87,7 @@ func main() {
 		httpErrChannel <- errors.New("http server completed - with no error")
 	}()
 
-	observationsImportedConsumer, err := kafka.NewSyncConsumer(config.Brokers, config.ObservationsImportedTopic, log.Namespace, sarama.OffsetOldest)
+	observationsImportedConsumer, err := kafka.NewSyncConsumer(config.Brokers, config.ObservationsImportedTopic, log.Namespace, kafka.OffsetOldest)
 	if err != nil {
 		log.ErrorC("error creating kafka consumer", err, log.Data{"topic": config.ObservationsImportedTopic})
 		os.Exit(1)
