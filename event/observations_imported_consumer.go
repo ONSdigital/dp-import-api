@@ -7,50 +7,58 @@ import (
 	"github.com/ONSdigital/go-ns/log"
 )
 
-// Consumer consumes event messages.
-type ObservationsImportedConsumer struct {
-	*kafka.AsyncConsumer
-}
-
-func NewObservationsImportedConsumer() *ObservationsImportedConsumer {
-	return &ObservationsImportedConsumer{
-		AsyncConsumer: kafka.NewAsyncConsumer(),
-	}
-}
-
 // JobService provide business logic for job related operations.
 type JobService interface {
 	UpdateInstanceTaskState(jobID, instanceID, taskID, newState string) error
 }
 
-func (consumer *ObservationsImportedConsumer) Consume(messageConsumer kafka.MessageConsumer, jobService JobService) {
-
-	handlerFunc := func(message kafka.Message) {
-
-		var event events.ObservationImportComplete
-		err := events.ObservationImportCompleteSchema.Unmarshal(message.GetData(), &event)
-		if err != nil {
-			log.Error(err, log.Data{"message": "failed to unmarshal event"})
-			return
+func StartConsumer(observationsImportedConsumer *kafka.ConsumerGroup, jobService JobService) chan bool {
+	stopHandlingConsumerChan := make(chan bool)
+	go func() {
+		for {
+			select {
+			case observationsImportedMessage := <-observationsImportedConsumer.Incoming():
+				logData := log.Data{"kafka_offset": observationsImportedMessage.Offset()}
+				if err := Consume(observationsImportedMessage, jobService); err != nil {
+					observationsImportedConsumer.Release()
+					log.ErrorC("event processed - not committing message", err, logData)
+				} else {
+					observationsImportedConsumer.CommitAndRelease(observationsImportedMessage)
+					log.Debug("event processed - message committed", logData)
+				}
+			case <-stopHandlingConsumerChan:
+				// channel closed, so stop processing
+				return
+			}
 		}
+	}()
+	return stopHandlingConsumerChan
+}
 
-		log.Debug("event received", log.Data{"event": event})
-
-		err = jobService.UpdateInstanceTaskState(
-			event.JobID,
-			event.InstanceID,
-			job.ImportTaskIDImportObservations,
-			job.ImportTaskStateComplete)
-
-		if err != nil {
-			// todo - set task / job state to failed?
-			log.Error(err, log.Data{"message": "failed to handle event"})
-		}
-
-		log.Debug("event processed - committing message", log.Data{"event": event})
-		message.Commit()
-		log.Debug("message committed", log.Data{"event": event})
+// Consume takes a message, unmarshalls and sends it to the jobService
+func Consume(message kafka.Message, jobService JobService) error {
+	var event events.ObservationImportComplete
+	logData := log.Data{"kafka_offset": message.Offset()}
+	err := events.ObservationImportCompleteSchema.Unmarshal(message.GetData(), &event)
+	if err != nil {
+		log.ErrorC("Consume failed to unmarshal event", err, logData)
+		return err
 	}
 
-	consumer.AsyncConsumer.Consume(messageConsumer, handlerFunc)
+	logData["event"] = event
+	log.Debug("event received", logData)
+
+	err = jobService.UpdateInstanceTaskState(
+		event.JobID,
+		event.InstanceID,
+		job.ImportTaskIDImportObservations,
+		job.ImportTaskStateComplete)
+
+	if err != nil {
+		// TODO - set task / job state to failed?
+		log.ErrorC("Consume failed to handle event", err, logData)
+		return err
+	}
+
+	return nil
 }

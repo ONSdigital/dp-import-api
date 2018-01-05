@@ -21,7 +21,6 @@ import (
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/rchttp"
 	"github.com/ONSdigital/go-ns/server"
-	"github.com/Shopify/sarama"
 	"github.com/gorilla/mux"
 )
 
@@ -88,63 +87,68 @@ func main() {
 		httpErrChannel <- errors.New("http server completed - with no error")
 	}()
 
-	observationsImportedConsumer, err := kafka.NewConsumerGroup(config.Brokers, config.ObservationsImportedTopic, log.Namespace, sarama.OffsetOldest)
+	observationsImportedConsumer, err := kafka.NewSyncConsumer(config.Brokers, config.ObservationsImportedTopic, log.Namespace, kafka.OffsetOldest)
 	if err != nil {
-		log.ErrorC("error creating kafka consumer", err, nil)
+		log.ErrorC("error creating kafka consumer", err, log.Data{"topic": config.ObservationsImportedTopic})
 		os.Exit(1)
 	}
 
-	observationsImportedHandler := event.NewObservationsImportedConsumer()
-	observationsImportedHandler.Consume(observationsImportedConsumer, jobService)
+	// kick off a goroutine to handle (consumed) observations
+	observationsImportedHandlerStopChan := event.StartConsumer(observationsImportedConsumer, jobService)
 
-	shutdownGracefully := func(httpDead bool) {
-		// gracefully retire resources
-		ctx, cancel := context.WithTimeout(context.Background(), config.GracefulShutdownTimeout)
-		defer cancel()
-
-		if !httpDead {
-			if err = httpServer.Shutdown(ctx); err != nil {
-				log.Error(err, nil)
-			}
-		}
-
-		if err = dataBakerProducer.Close(ctx); err != nil {
-			log.Error(err, nil)
-		}
-
-		if err = directProducer.Close(ctx); err != nil {
-			log.Error(err, nil)
-		}
-
-		if err = observationsImportedHandler.Close(ctx); err != nil {
-			log.Error(err, nil)
-		}
-
-		if err = observationsImportedConsumer.Close(ctx); err != nil {
-			log.Error(err, nil)
-		}
-
-		// mongo.Close() may use all remaining time in the context - do this last!
-		if err = mongoDataStore.Close(ctx); err != nil {
-			log.Error(err, nil)
-		}
-
-		log.Debug("graceful shutdown has completed", nil)
-		os.Exit(1)
-	}
-
+	// wait forever for fatal event
+	httpDead := false
 	select {
 	case err := <-dataBakerProducer.Errors():
 		log.ErrorC("kafka databaker producer", err, nil)
-		shutdownGracefully(false)
 	case err := <-directProducer.Errors():
 		log.ErrorC("kafka direct producer", err, nil)
-		shutdownGracefully(false)
 	case err := <-httpErrChannel:
 		log.ErrorC("error channel", err, nil)
-		shutdownGracefully(true)
+		httpDead = true
 	case sig := <-signals:
 		log.Error(errors.New("os signal received"), log.Data{"signal": sig.String()})
-		shutdownGracefully(false)
 	}
+
+	// gracefully retire resources
+	ctx, cancel := context.WithTimeout(context.Background(), config.GracefulShutdownTimeout)
+	defer cancel()
+
+	if !httpDead {
+		if err = httpServer.Shutdown(ctx); err != nil {
+			log.Error(err, nil)
+		}
+	}
+
+	// stop the kafka consumer listener, allowing in-flight messages to complete
+	if err := observationsImportedConsumer.StopListeningToConsumer(ctx); err != nil {
+		log.Error(err, nil)
+	}
+	// stop the goroutine handling those kafka-consumer messages
+	close(observationsImportedHandlerStopChan)
+
+	if err = dataBakerProducer.Close(ctx); err != nil {
+		log.Error(err, nil)
+	}
+
+	if err = directProducer.Close(ctx); err != nil {
+		log.Error(err, nil)
+	}
+
+	if err = observationsImportedConsumer.Close(ctx); err != nil {
+		log.Error(err, nil)
+	}
+
+	if err = observationsImportedConsumer.Close(ctx); err != nil {
+		log.Error(err, nil)
+	}
+
+	// mongo.Close() may use all remaining time in the context - do this last!
+	if err = mongoDataStore.Close(ctx); err != nil {
+		log.Error(err, nil)
+	}
+
+	log.Debug("graceful shutdown has completed", nil)
+	os.Exit(1)
+
 }
