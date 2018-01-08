@@ -32,10 +32,9 @@ func main() {
 	}
 	client := rchttp.DefaultClient
 
-	log.Info("Starting import api", log.Data{
-		"bind_addr": config.BindAddr,
-		"topics":    []string{config.DatabakerImportTopic, config.InputFileAvailableTopic},
-		"brokers":   config.Brokers,
+	// sensitive fields are omitted from config.String().
+	log.Info("loaded config", log.Data{
+		"config": config,
 	})
 
 	mongoDataStore, err := mongo.NewDatastore(config.MongoDBURL, config.MongoDBDatabase, config.MongoDBCollection)
