@@ -70,3 +70,37 @@ func TestCreateUploadedFileWithValidJson(t *testing.T) {
 		So(file.URL, ShouldEqual, "https://aws.s3/ons/myfile.exel")
 	})
 }
+
+func TestCreateInstance(t *testing.T) {
+
+	Convey("Given a dummy job and slice of codelists", t, func() {
+
+		job := &Job{}
+		datasetID := "123"
+		datasetURL := "/wut"
+		codelists := []CodeList{
+			{
+				Name:        "codelist1",
+				ID:          "1",
+				IsHierarchy: false,
+			},
+			{
+				Name:        "codelist2",
+				ID:          "2",
+				IsHierarchy: true,
+			},
+		}
+
+		Convey("When CreateInstance is called", func() {
+
+			instance := CreateInstance(job, datasetID, datasetURL, codelists)
+
+			Convey("Then there should be a single build hierarchy task for the codelist that is marked as a hierarchy", func() {
+
+				So(instance.ImportTasks.BuildHierarchyTasks[0].State, ShouldEqual, CreatedState)
+				So(instance.ImportTasks.BuildHierarchyTasks[0].DimensionName, ShouldEqual, "codelist2")
+				So(instance.ImportTasks.BuildHierarchyTasks[0].CodeListID, ShouldEqual, "2")
+			})
+		})
+	})
+}

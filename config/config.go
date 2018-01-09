@@ -3,8 +3,8 @@ package config
 import (
 	"time"
 
-	"github.com/kelseyhightower/envconfig"
 	"encoding/json"
+	"github.com/kelseyhightower/envconfig"
 )
 
 // Configuration structure which hold information for configuring the import API
