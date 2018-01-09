@@ -16,8 +16,8 @@ type Configuration struct {
 	KafkaMaxBytes           int           `envconfig:"KAFKA_MAX_BYTES"`
 	SecretKey               string        `envconfig:"SECRET_KEY"`
 	MongoDBURL              string        `envconfig:"MONGODB_IMPORTS_ADDR"`
-	MongoDBCollection       string        `envconfig:"MONGODB_IMPORTS_DATABASE"`
-	MongoDBDatabase         string        `envconfig:"MONGODB_IMPORTS_COLLECTION"`
+	MongoDBCollection       string        `envconfig:"MONGODB_IMPORTS_COLLECTION"`
+	MongoDBDatabase         string        `envconfig:"MONGODB_IMPORTS_DATABASE"`
 	DatasetAPIURL           string        `envconfig:"DATASET_API_URL"`
 	DatasetAPIAuthToken     string        `envconfig:"DATASET_API_AUTH_TOKEN"`
 	RecipeAPIURL            string        `envconfig:"RECIPE_API_URL"`
