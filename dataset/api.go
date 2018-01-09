@@ -33,10 +33,12 @@ func (api *API) CreateInstance(ctx context.Context, job *models.Job, recipeInst 
 		return
 	}
 
-	logData["jsonUpload"] = jsonUpload
+	logData["jsonRequest"] = string(jsonUpload)
 	jsonResult, httpCode, err := api.post(ctx, path, jsonUpload)
 	logData["httpCode"] = httpCode
-	logData["jsonResult"] = jsonResult
+	logData["jsonResponse"] = string(jsonResult)
+
+	log.Debug("create instance request", logData)
 
 	if err == nil && httpCode != http.StatusOK && httpCode != http.StatusCreated {
 		err = errors.New("bad response while creating instance")
