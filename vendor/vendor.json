@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "5JL3NRaXhli77Q9DERjQtJ7qLdQ=",
+			"path": "github.com/ONSdigital/dp-import/events",
+			"revision": "fb7cd48bdc0a9ac4dbca0b6d201adae3e61ecaef",
+			"revisionTime": "2018-01-08T15:17:02Z"
+		},
+		{
 			"checksumSHA1": "dzh4fF9o6j+mJEbJn5utm8Q+Pyg=",
 			"path": "github.com/ONSdigital/go-ns/avro",
 			"revision": "c493b1568574c9720d7805f23ce6271ac445dc57",
