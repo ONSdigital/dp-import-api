@@ -97,6 +97,8 @@ func TestCreateInstance(t *testing.T) {
 
 			Convey("Then there should be a single build hierarchy task for the codelist that is marked as a hierarchy", func() {
 
+				So(len(instance.ImportTasks.BuildHierarchyTasks), ShouldEqual, 1)
+
 				So(instance.ImportTasks.BuildHierarchyTasks[0].State, ShouldEqual, CreatedState)
 				So(instance.ImportTasks.BuildHierarchyTasks[0].DimensionName, ShouldEqual, "codelist2")
 				So(instance.ImportTasks.BuildHierarchyTasks[0].CodeListID, ShouldEqual, "2")
