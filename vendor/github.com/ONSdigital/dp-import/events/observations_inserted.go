@@ -22,4 +22,3 @@ var observationsInsertedSchema = `{
 var ObservationsInsertedSchema = avro.Schema{
 	Definition: observationsInsertedSchema,
 }
-
