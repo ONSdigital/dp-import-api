@@ -33,10 +33,12 @@ func (api *API) CreateInstance(ctx context.Context, job *models.Job, recipeInst 
 		return
 	}
 
-	logData["jsonUpload"] = jsonUpload
+	logData["json_request"] = string(jsonUpload)
 	jsonResult, httpCode, err := api.post(ctx, path, jsonUpload)
-	logData["httpCode"] = httpCode
-	logData["jsonResult"] = jsonResult
+	logData["http_code"] = httpCode
+	logData["json_response"] = string(jsonResult)
+
+	log.Debug("create instance request", logData)
 
 	if err == nil && httpCode != http.StatusOK && httpCode != http.StatusCreated {
 		err = errors.New("bad response while creating instance")
@@ -67,10 +69,10 @@ func (api *API) UpdateInstanceState(ctx context.Context, instanceID string, newS
 		return err
 	}
 
-	logData["jsonUpload"] = string(jsonUpload)
+	logData["json_request"] = string(jsonUpload)
 	jsonResult, httpCode, err := api.put(ctx, path, jsonUpload)
-	logData["httpCode"] = httpCode
-	logData["jsonResult"] = jsonResult
+	logData["http_code"] = httpCode
+	logData["json_response"] = jsonResult
 
 	if err == nil && httpCode != http.StatusOK {
 		err = errors.New("bad response while updating instance state")
@@ -107,7 +109,7 @@ func (api *API) callDatasetAPI(ctx context.Context, method, path string, payload
 	}
 
 	path = URL.String()
-	logData["URL"] = path
+	logData["url"] = path
 
 	var req *http.Request
 
@@ -137,7 +139,7 @@ func (api *API) callDatasetAPI(ctx context.Context, method, path string, payload
 		return nil, 0, err
 	}
 
-	logData["httpCode"] = resp.StatusCode
+	logData["http_code"] = resp.StatusCode
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= 300 {
 		log.Debug("unexpected status code from api", logData)
 	}

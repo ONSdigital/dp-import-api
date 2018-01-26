@@ -28,8 +28,7 @@ func (api *API) GetRecipe(ctx context.Context, ID string) (*models.Recipe, error
 	logData := log.Data{"ID": ID}
 
 	jsonResult, httpCode, err := api.get(ctx, fmt.Sprintf("%s/recipes/%s", api.URL, ID), nil)
-	logData["httpCode"] = httpCode
-	logData["jsonResult"] = jsonResult
+	logData["http_code"] = httpCode
 
 	if err == nil && httpCode != http.StatusOK {
 		return nil, errors.New("GetRecipe: Bad response")
@@ -41,7 +40,11 @@ func (api *API) GetRecipe(ctx context.Context, ID string) (*models.Recipe, error
 	}
 
 	var recipe *models.Recipe
-	json.Unmarshal(jsonResult, &recipe)
+	err = json.Unmarshal(jsonResult, &recipe)
+	if err != nil {
+		logData["json_response"] = jsonResult
+		log.ErrorC("failed to unmarshal json response from the recipe api", err, logData)
+	}
 	return recipe, nil
 }
 
@@ -59,7 +62,7 @@ func (api *API) callRecipeAPI(ctx context.Context, method, path string, payload 
 		return nil, 0, err
 	}
 	path = URL.String()
-	logData["URL"] = path
+	logData["url"] = path
 
 	var req *http.Request
 
@@ -87,7 +90,7 @@ func (api *API) callRecipeAPI(ctx context.Context, method, path string, payload 
 		return nil, 0, err
 	}
 
-	logData["httpCode"] = resp.StatusCode
+	logData["http_code"] = resp.StatusCode
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= 300 {
 		log.Debug("unexpected status code from API", logData)
 	}

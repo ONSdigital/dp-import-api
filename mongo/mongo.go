@@ -63,7 +63,7 @@ func (m *Mongo) GetJobs(filters []string) ([]models.Job, error) {
 // GetJob retrieves a single import job
 func (m *Mongo) GetJob(id string) (*models.Job, error) {
 	s := session.Copy()
-	defer s.Clone()
+	defer s.Close()
 	var job models.Job
 	err := s.DB(m.Database).C(m.Collection).Find(bson.M{"id": id}).One(&job)
 	if err != nil {

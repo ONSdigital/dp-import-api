@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+const (
+	CreatedState = "created"
+)
+
 // JobResults for list of Job items
 type JobResults struct {
 	Items []Job `json:"items"`
@@ -34,7 +38,7 @@ func (job *Job) Validate() error {
 		return errors.New("missing properties to create import queue job struct")
 	}
 	if job.State == "" {
-		job.State = "created"
+		job.State = CreatedState
 	}
 	if job.UploadedFiles == nil {
 		job.UploadedFiles = &[]UploadedFile{}
@@ -57,9 +61,10 @@ type RecipeInstance struct {
 }
 
 type CodeList struct {
-	ID   string `json:"id"`
-	HRef string `json:"href"`
-	Name string `json:"name"`
+	ID          string `json:"id"`
+	HRef        string `json:"href"`
+	Name        string `json:"name"`
+	IsHierarchy bool   `json:"is_hierarchy"`
 }
 
 // Event which has happened to an instance
@@ -72,15 +77,34 @@ type Event struct {
 
 // Instance which presents a single dataset being imported
 type Instance struct {
-	InstanceID           string         `json:"id,omitempty"`
-	Links                *InstanceLinks `json:"links,omitempty"`
-	State                string         `json:"state,omitempty"`
-	Events               []Event        `json:"events,omitempty"`
-	TotalObservations    int            `json:"total_observations,omitempty"`
-	InsertedObservations int            `json:"total_inserted_observations,omitempty"`
-	Headers              []string       `json:"headers,omitempty"`
-	Dimensions           []CodeList     `json:"dimensions,omitempty"`
-	LastUpdated          string         `json:"last_updated,omitempty"`
+	InstanceID        string               `json:"id,omitempty"`
+	Links             *InstanceLinks       `json:"links,omitempty"`
+	State             string               `json:"state,omitempty"`
+	Events            []Event              `json:"events,omitempty"`
+	TotalObservations int                  `json:"total_observations,omitempty"`
+	Headers           []string             `json:"headers,omitempty"`
+	Dimensions        []CodeList           `json:"dimensions,omitempty"`
+	LastUpdated       string               `json:"last_updated,omitempty"`
+	ImportTasks       *InstanceImportTasks `json:"import_tasks"`
+}
+
+// InstanceImportTasks
+type InstanceImportTasks struct {
+	ImportObservations  *ImportObservationsTask `bson:"import_observations,omitempty" json:"import_observations"`
+	BuildHierarchyTasks []*BuildHierarchyTask   `bson:"build_hierarchies,omitempty"   json:"build_hierarchies"`
+}
+
+// ImportObservationsTask represents the task of importing instance observation data into the database.
+type ImportObservationsTask struct {
+	State                string `json:"state,omitempty"`
+	InsertedObservations int    `json:"total_inserted_observations"`
+}
+
+// BuildHierarchyTask represents a task of importing a single hierarchy.
+type BuildHierarchyTask struct {
+	State         string `bson:"state,omitempty"          json:"state,omitempty"`
+	DimensionName string `bson:"dimension_name,omitempty" json:"dimension_name,omitempty"`
+	CodeListID    string `bson:"code_list_id,omitempty"   json:"code_list_id,omitempty"`
 }
 
 type InstanceLinks struct {
@@ -152,10 +176,32 @@ func CreateUploadedFile(reader io.Reader) (*UploadedFile, error) {
 
 // CreateInstance from a job ID
 func CreateInstance(job *Job, datasetID, datasetURL string, codelists []CodeList) *Instance {
+
+	buildHierarchyTasks := make([]*BuildHierarchyTask, 0)
+
+	for _, codelist := range codelists {
+
+		if codelist.IsHierarchy {
+			buildHierarchyTasks = append(buildHierarchyTasks, &BuildHierarchyTask{
+				State:         CreatedState,
+				CodeListID:    codelist.ID,
+				DimensionName: codelist.Name,
+			})
+		}
+	}
+
 	return &Instance{
 		Dimensions: codelists,
 		Links: &InstanceLinks{
 			Job:     IDLink{ID: job.ID, HRef: job.Links.Self.HRef},
 			Dataset: IDLink{ID: datasetID, HRef: datasetURL},
-		}}
+		},
+		ImportTasks: &InstanceImportTasks{
+			ImportObservations: &ImportObservationsTask{
+				State:                CreatedState,
+				InsertedObservations: 0,
+			},
+			BuildHierarchyTasks: buildHierarchyTasks,
+		},
+	}
 }
