@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"fmt"
+
 	"github.com/ONSdigital/dp-import-api/api-errors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/job"
@@ -17,6 +19,8 @@ import (
 //go:generate moq -out testapi/job_service.go -pkg testapi . JobService
 
 const internalError = "Internal server error"
+
+var genericError = "requested resource not found"
 
 // ImportAPI is a restful API used to manage importing datasets to be published
 type ImportAPI struct {
@@ -35,15 +39,21 @@ type JobService interface {
 func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, secretKey string, jobService JobService) *ImportAPI {
 
 	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService}
-	auth := NewAuthenticator(secretKey, "internal-token")
+	auth := NewAuthenticator(secretKey, "Internal-Token")
 
 	// External API for florence
-	api.router.Path("/jobs").Methods("POST").HandlerFunc(api.addJob)
-	api.router.Path("/jobs").Methods("GET").HandlerFunc(api.getJobs).Queries()
-	api.router.Path("/jobs/{id}").Methods("GET").HandlerFunc(api.getJob)
-	api.router.Path("/jobs/{id}").Methods("PUT").HandlerFunc(auth.ManualCheck(api.updateJob))
-	api.router.Path("/jobs/{id}/files").Methods("PUT").HandlerFunc(api.addUploadedFile)
+	api.router.Path("/jobs").Methods("POST").HandlerFunc(auth.Check(api.addJob))
+	api.router.Path("/jobs").Methods("GET").HandlerFunc(auth.Check(api.getJobs)).Queries()
+	api.router.Path("/jobs/{id}").Methods("GET").HandlerFunc(auth.Check(api.getJob))
+	api.router.Path("/jobs/{id}").Methods("PUT").HandlerFunc(auth.Check(api.updateJob))
+	api.router.Path("/jobs/{id}/files").Methods("PUT").HandlerFunc(auth.Check(api.addUploadedFile))
+	api.router.NotFoundHandler = &api
 	return &api
+}
+
+func (api *ImportAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("generic handler")
+	http.Error(w, genericError, http.StatusNotFound)
 }
 
 func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
@@ -80,7 +90,7 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
-
+	fmt.Println("jobs handler")
 	filtersQuery := r.URL.Query().Get("state")
 	var filterList []string
 	if filtersQuery == "" {
@@ -153,13 +163,13 @@ func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
 	log.Info("added uploaded file to job", log.Data{"job_id": jobID, "file": uploadedFile})
 }
 
-func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request, isAuth bool) {
+func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	jobID := vars["id"]
 	job, err := models.CreateJob(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		log.Error(err, log.Data{"job": job, "job_id": jobID, "is_auth": isAuth})
+		log.Error(err, log.Data{"job": job, "job_id": jobID})
 		http.Error(w, "bad client request received", http.StatusBadRequest)
 	}
 
