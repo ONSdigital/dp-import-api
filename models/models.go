@@ -97,8 +97,8 @@ type InstanceImportTasks struct {
 
 // ImportObservationsTask represents the task of importing instance observation data into the database.
 type ImportObservationsTask struct {
-	State                string `json:"state,omitempty"`
-	InsertedObservations int    `json:"total_inserted_observations"`
+	State                string `bson:"state,omitempty"             json:"state,omitempty"`
+	InsertedObservations int64  `bson:"total_inserted_observations" json:"total_inserted_observations"`
 }
 
 // BuildHierarchyTask represents a task of importing a single hierarchy.
@@ -213,7 +213,8 @@ func CreateInstance(job *Job, datasetID, datasetURL string, codelists []CodeList
 				State:                CreatedState,
 				InsertedObservations: 0,
 			},
-			BuildHierarchyTasks: buildHierarchyTasks,
+			BuildHierarchyTasks:   buildHierarchyTasks,
+			BuildSearchIndexTasks: buildSearchTasks,
 		},
 	}
 }
