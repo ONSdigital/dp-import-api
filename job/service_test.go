@@ -270,9 +270,8 @@ func TestService_UpdateJob_SaveFails(t *testing.T) {
 		Convey("When update job is called", func() {
 
 			err := jobService.UpdateJob(ctx, jobID, updatedJob)
-
 			Convey("The expected calls are made to dependencies", func() {
-				So(err, ShouldEqual, job.ErrSaveJobFailed)
+				So(err, ShouldEqual, mongo.InternalError)
 				So(len(mockedQueue.QueueCalls()), ShouldEqual, 0)
 			})
 		})

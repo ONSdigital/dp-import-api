@@ -102,8 +102,12 @@ func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile) error {
 		"$currentDate": bson.M{"last_updated": true},
 	}
 
-	_, err := s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update)
-	return err
+	err := s.DB(m.Database).C(m.Collection).Update(bson.M{"id": id}, update)
+	if err != nil && err == mgo.ErrNotFound {
+		return api_errors.JobNotFoundError
+	}
+	return nil
+
 }
 
 // UpdateJob adds or overides an existing import job
@@ -116,7 +120,7 @@ func (m *Mongo) UpdateJob(id string, job *models.Job) (err error) {
 		"$currentDate": bson.M{"last_updated": true},
 	}
 
-	_, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update)
+	err = s.DB(m.Database).C(m.Collection).Update(bson.M{"id": id}, update)
 
 	if err != nil && err == mgo.ErrNotFound {
 		return api_errors.JobNotFoundError

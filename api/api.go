@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"fmt"
-
 	"github.com/ONSdigital/dp-import-api/api-errors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/job"
@@ -52,7 +50,6 @@ func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, secretK
 }
 
 func (api *ImportAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("generic handler")
 	http.Error(w, genericError, http.StatusNotFound)
 }
 
@@ -90,7 +87,6 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("jobs handler")
 	filtersQuery := r.URL.Query().Get("state")
 	var filterList []string
 	if filtersQuery == "" {
@@ -171,6 +167,7 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error(err, log.Data{"job": job, "job_id": jobID})
 		http.Error(w, "bad client request received", http.StatusBadRequest)
+		return
 	}
 
 	err = api.jobService.UpdateJob(r.Context(), jobID, job)

@@ -103,7 +103,7 @@ func (service Service) UpdateJob(ctx context.Context, jobID string, job *models.
 
 	err := service.dataStore.UpdateJob(jobID, job)
 	if err != nil {
-		return ErrSaveJobFailed
+		return err
 	}
 
 	log.Info("job updated", log.Data{"job": job, "job_id": jobID})

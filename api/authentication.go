@@ -24,7 +24,7 @@ func (a *Authenticator) Check(handle func(http.ResponseWriter, *http.Request)) h
 		key := r.Header.Get(a.headerName)
 		if key == "" {
 			http.Error(w, genericError, http.StatusNotFound)
-			log.Error(errors.New("client missing token"), log.Data{"header": a.headerName})
+			log.Error(errors.New("client missing auth token in header"), log.Data{"header": a.headerName})
 			return
 		}
 		if key != a.secretKey {
