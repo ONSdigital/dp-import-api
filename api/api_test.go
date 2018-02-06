@@ -21,7 +21,6 @@ var (
 	dstore              = mockdatastore.DataStorer{}
 	dstoreNotFound      = mockdatastore.DataStorer{NotFound: true}
 	dstoreInternalError = mockdatastore.DataStorer{InternalError: true}
-	mockJobService      = &testapi.JobServiceMock{}
 	dummyJob            = &models.Job{ID: "34534543543"}
 )
 
@@ -35,7 +34,7 @@ func TestAddJobReturnsInternalError(t *testing.T) {
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
 
-		mockJobService = &testapi.JobServiceMock{
+		mockJobService := &testapi.JobServiceMock{
 			CreateJobFunc: func(ctx context.Context, newJob *models.Job) (*models.Job, error) {
 				return nil, job.ErrSaveJobFailed
 			},
@@ -53,6 +52,7 @@ func TestGetJobsReturnsInternalError(t *testing.T) {
 		r, err := createRequestWithAuth("GET", "http://localhost:21800/jobs", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
+		mockJobService := &testapi.JobServiceMock{}
 		api := CreateImportAPI(mux.NewRouter(), &dstoreInternalError, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusInternalServerError)
@@ -64,6 +64,7 @@ func TestGetJobs(t *testing.T) {
 	Convey("When a get jobs request has a datastore, an ok status is returned ", t, func() {
 		r, err := createRequestWithAuth("GET", "http://localhost:21800/jobs", nil)
 		So(err, ShouldBeNil)
+		mockJobService := &testapi.JobServiceMock{}
 		w := httptest.NewRecorder()
 		api := CreateImportAPI(mux.NewRouter(), &dstore, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
@@ -77,6 +78,7 @@ func TestGetJobReturnsNotFound(t *testing.T) {
 		r, err := createRequestWithAuth("GET", "http://localhost:21800/jobs/000000", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
+		mockJobService := &testapi.JobServiceMock{}
 		api := CreateImportAPI(mux.NewRouter(), &dstoreNotFound, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusNotFound)
@@ -89,6 +91,7 @@ func TestGetJob(t *testing.T) {
 		r, err := createRequestWithAuth("GET", "http://localhost:21800/jobs/123", nil)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
+		mockJobService := &testapi.JobServiceMock{}
 		api := CreateImportAPI(mux.NewRouter(), &dstore, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusOK)
@@ -103,7 +106,7 @@ func TestAddJobReturnsBadClientRequest(t *testing.T) {
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
 
-		mockJobService = &testapi.JobServiceMock{
+		mockJobService := &testapi.JobServiceMock{
 			CreateJobFunc: func(ctx context.Context, newJob *models.Job) (*models.Job, error) {
 				return nil, job.ErrInvalidJob
 			},
@@ -122,7 +125,7 @@ func TestAddJob(t *testing.T) {
 		r, err := createRequestWithAuth("POST", "http://localhost:21800/jobs", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-
+		mockJobService := &testapi.JobServiceMock{}
 		mockJobService = &testapi.JobServiceMock{
 			CreateJobFunc: func(ctx context.Context, job *models.Job) (*models.Job, error) {
 				return dummyJob, nil
@@ -143,6 +146,7 @@ func TestAddS3FileReturnsNotFound(t *testing.T) {
 		r, err := createRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
+		mockJobService := &testapi.JobServiceMock{}
 		api := CreateImportAPI(mux.NewRouter(), &dstoreNotFound, secretKey, mockJobService)
 		api.router.ServeHTTP(w, r)
 		So(w.Code, ShouldEqual, http.StatusNotFound)
@@ -157,7 +161,7 @@ func TestUpdateJobState(t *testing.T) {
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
 
-		mockJobService = &testapi.JobServiceMock{
+		mockJobService := &testapi.JobServiceMock{
 			UpdateJobFunc: func(ctx context.Context, jobID string, job *models.Job) error {
 				return nil
 			},
@@ -176,7 +180,7 @@ func TestUpdateJobStateReturnsNotFound(t *testing.T) {
 		r, err := createRequestWithAuth("PUT", "http://localhost:21800/jobs/12345", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-
+		mockJobService := &testapi.JobServiceMock{}
 		mockJobService = &testapi.JobServiceMock{
 			UpdateJobFunc: func(ctx context.Context, jobID string, job *models.Job) error {
 				return api_errors.JobNotFoundError
@@ -197,7 +201,7 @@ func TestUpdateJobStateToSubmitted(t *testing.T) {
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
 
-		mockJobService = &testapi.JobServiceMock{
+		mockJobService := &testapi.JobServiceMock{
 			UpdateJobFunc: func(ctx context.Context, jobID string, job *models.Job) error {
 				return nil
 			},
