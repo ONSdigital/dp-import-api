@@ -18,7 +18,7 @@ import (
 
 const internalError = "Internal server error"
 
-var genericError = "requested resource not found"
+const notFoundError = "requested resource not found"
 
 // ImportAPI is a restful API used to manage importing datasets to be published
 type ImportAPI struct {
@@ -50,7 +50,7 @@ func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, secretK
 }
 
 func (api *ImportAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, genericError, http.StatusNotFound)
+	http.Error(w, notFoundError, http.StatusNotFound)
 }
 
 func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {

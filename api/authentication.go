@@ -23,12 +23,12 @@ func (a *Authenticator) Check(handle func(http.ResponseWriter, *http.Request)) h
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		key := r.Header.Get(a.headerName)
 		if key == "" {
-			http.Error(w, genericError, http.StatusNotFound)
+			http.Error(w, notFoundError, http.StatusNotFound)
 			log.Error(errors.New("client missing auth token in header"), log.Data{"header": a.headerName})
 			return
 		}
 		if key != a.secretKey {
-			http.Error(w, genericError, http.StatusNotFound)
+			http.Error(w, notFoundError, http.StatusNotFound)
 			log.Error(errors.New("unauthorised access to API"), log.Data{"header": a.headerName})
 			return
 		}

@@ -14,9 +14,7 @@ build:
 debug:
 	HUMAN_LOG=1 go run cmd/$(MAIN)/main.go
 acceptance:
-	SECRET_KEY=0C30662F-6CF6-43B0-A96A-954772267FF5 MONGODB_IMPORTS_DATABASE=test \
-		   HUMAN_LOG=1 go run cmd/$(MAIN)/main.go
-
+	MONGODB_IMPORTS_DATABASE=test HUMAN_LOG=1 go run cmd/$(MAIN)/main.go
 test:
 	go test -cover $(shell go list ./... | grep -v /vendor/)
 

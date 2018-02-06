@@ -10,7 +10,7 @@ import (
 
 func TestMiddleWareAuthenticationReturnsForbidden(t *testing.T) {
 	t.Parallel()
-	Convey("When no access token is provide, forbidden status code is returned", t, func() {
+	Convey("When no access token is provide, not found status code is returned", t, func() {
 		auth := NewAuthenticator("123", "internal-token")
 		r, err := http.NewRequest("POST", "http://localhost:21800/jobs", nil)
 		So(err, ShouldBeNil)
@@ -22,7 +22,7 @@ func TestMiddleWareAuthenticationReturnsForbidden(t *testing.T) {
 
 func TestMiddleWareAuthenticationReturnsUnauthorised(t *testing.T) {
 	t.Parallel()
-	Convey("When a invalid access token is provide, unauthorised status code is returned", t, func() {
+	Convey("When a invalid access token is provide, not found status code is returned", t, func() {
 		auth := NewAuthenticator("123", "internal-token")
 		r, err := http.NewRequest("POST", "http://localhost:21800/jobs", nil)
 		r.Header.Set("internal-token", "12")
