@@ -7,7 +7,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/models"
 )
 
-var internalError = errors.New("DataStore internal error")
+var InternalError = errors.New("DataStore internal error")
 
 type DataStorer struct {
 	NotFound      bool
@@ -16,21 +16,21 @@ type DataStorer struct {
 
 func (ds *DataStorer) AddJob(importJob *models.Job) (*models.Job, error) {
 	if ds.InternalError {
-		return &models.Job{}, internalError
+		return &models.Job{}, InternalError
 	}
 	return &models.Job{ID: "34534543543"}, nil
 }
 
 func (ds *DataStorer) GetJobs(filter []string) ([]models.Job, error) {
 	if ds.InternalError {
-		return []models.Job{}, internalError
+		return []models.Job{}, InternalError
 	}
 	return []models.Job{{ID: "34534543543"}}, nil
 }
 
 func (ds *DataStorer) GetJob(jobID string) (*models.Job, error) {
 	if ds.InternalError {
-		return &models.Job{}, internalError
+		return &models.Job{}, InternalError
 	}
 	if ds.NotFound {
 		return &models.Job{}, api_errors.JobNotFoundError
@@ -43,7 +43,7 @@ func (ds *DataStorer) AddInstance(jobID string) (string, error) {
 		return "", api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
-		return "", internalError
+		return "", InternalError
 	}
 	return "123", nil
 }
@@ -53,7 +53,7 @@ func (ds *DataStorer) UpdateJob(string, *models.Job) error {
 		return api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
-		return internalError
+		return InternalError
 	}
 	return nil
 }
@@ -63,7 +63,7 @@ func (ds *DataStorer) UpdateJobState(string, string) error {
 		return api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
-		return internalError
+		return InternalError
 	}
 	return nil
 }
@@ -73,7 +73,7 @@ func (ds *DataStorer) AddUploadedFile(jobID string, message *models.UploadedFile
 		return api_errors.JobNotFoundError
 	}
 	if ds.InternalError {
-		return internalError
+		return InternalError
 	}
 	return nil
 }

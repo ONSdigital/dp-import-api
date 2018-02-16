@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"encoding/json"
+
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -46,6 +47,7 @@ func Get() (*Configuration, error) {
 		MongoDBURL:              "localhost:27017",
 		MongoDBDatabase:         "imports",
 		MongoDBCollection:       "imports",
+		SecretKey:               "0C30662F-6CF6-43B0-A96A-954772267FF5",
 		DatasetAPIURL:           "http://localhost:22000",
 		RecipeAPIURL:            "http://localhost:22300",
 		GracefulShutdownTimeout: time.Second * 5,
