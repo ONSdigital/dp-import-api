@@ -28,7 +28,9 @@ func (api *API) CreateInstance(ctx context.Context, job *models.Job, recipeInst 
 	logData := log.Data{"URL": path, "job_id": job.ID, "job_url": job.Links.Self.HRef}
 
 	var jsonUpload []byte
-	if jsonUpload, err = json.Marshal(models.CreateInstance(job, recipeInst.DatasetID, datasetPath, recipeInst.CodeLists)); err != nil {
+	newInstance := models.CreateInstance(job, recipeInst.DatasetID, datasetPath, recipeInst.CodeLists)
+
+	if jsonUpload, err = json.Marshal(newInstance); err != nil {
 		log.ErrorC("CreateInstance marshal", err, logData)
 		return
 	}
