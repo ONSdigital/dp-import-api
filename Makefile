@@ -13,7 +13,8 @@ build:
 	go build -o $(BUILD_ARCH)/$(BIN_DIR)/$(MAIN) cmd/$(MAIN)/main.go
 debug:
 	HUMAN_LOG=1 go run cmd/$(MAIN)/main.go
-
+acceptance:
+	MONGODB_IMPORTS_DATABASE=test HUMAN_LOG=1 go run cmd/$(MAIN)/main.go
 test:
 	go test -cover $(shell go list ./... | grep -v /vendor/)
 

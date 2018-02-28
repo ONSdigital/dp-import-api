@@ -88,16 +88,17 @@ type Instance struct {
 	ImportTasks       *InstanceImportTasks `json:"import_tasks"`
 }
 
-// InstanceImportTasks
+// InstanceImportTasks represents all of the tasks required to complete an import job.
 type InstanceImportTasks struct {
-	ImportObservations  *ImportObservationsTask `bson:"import_observations,omitempty" json:"import_observations"`
-	BuildHierarchyTasks []*BuildHierarchyTask   `bson:"build_hierarchies,omitempty"   json:"build_hierarchies"`
+	ImportObservations    *ImportObservationsTask `bson:"import_observations,omitempty"  json:"import_observations"`
+	BuildHierarchyTasks   []*BuildHierarchyTask   `bson:"build_hierarchies,omitempty"    json:"build_hierarchies"`
+	BuildSearchIndexTasks []*BuildSearchIndexTask `bson:"build_search_indexes,omitempty" json:"build_search_indexes"`
 }
 
 // ImportObservationsTask represents the task of importing instance observation data into the database.
 type ImportObservationsTask struct {
-	State                string `json:"state,omitempty"`
-	InsertedObservations int    `json:"total_inserted_observations"`
+	State                string `bson:"state,omitempty"             json:"state,omitempty"`
+	InsertedObservations int64  `bson:"total_inserted_observations" json:"total_inserted_observations"`
 }
 
 // BuildHierarchyTask represents a task of importing a single hierarchy.
@@ -105,6 +106,12 @@ type BuildHierarchyTask struct {
 	State         string `bson:"state,omitempty"          json:"state,omitempty"`
 	DimensionName string `bson:"dimension_name,omitempty" json:"dimension_name,omitempty"`
 	CodeListID    string `bson:"code_list_id,omitempty"   json:"code_list_id,omitempty"`
+}
+
+// BuildSearchIndexTask represents a task of importing a single search index into search.
+type BuildSearchIndexTask struct {
+	State         string `bson:"state,omitempty"          json:"state,omitempty"`
+	DimensionName string `bson:"dimension_name,omitempty" json:"dimension_name,omitempty"`
 }
 
 type InstanceLinks struct {
@@ -178,13 +185,18 @@ func CreateUploadedFile(reader io.Reader) (*UploadedFile, error) {
 func CreateInstance(job *Job, datasetID, datasetURL string, codelists []CodeList) *Instance {
 
 	buildHierarchyTasks := make([]*BuildHierarchyTask, 0)
+	buildSearchTasks := make([]*BuildSearchIndexTask, 0)
 
 	for _, codelist := range codelists {
-
 		if codelist.IsHierarchy {
 			buildHierarchyTasks = append(buildHierarchyTasks, &BuildHierarchyTask{
 				State:         CreatedState,
 				CodeListID:    codelist.ID,
+				DimensionName: codelist.Name,
+			})
+
+			buildSearchTasks = append(buildSearchTasks, &BuildSearchIndexTask{
+				State:         CreatedState,
 				DimensionName: codelist.Name,
 			})
 		}
@@ -201,7 +213,8 @@ func CreateInstance(job *Job, datasetID, datasetURL string, codelists []CodeList
 				State:                CreatedState,
 				InsertedObservations: 0,
 			},
-			BuildHierarchyTasks: buildHierarchyTasks,
+			BuildHierarchyTasks:   buildHierarchyTasks,
+			BuildSearchIndexTasks: buildSearchTasks,
 		},
 	}
 }
