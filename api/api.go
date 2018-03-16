@@ -12,6 +12,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/gorilla/mux"
+	"github.com/ONSdigital/go-ns/identity"
 )
 
 //go:generate moq -out testapi/job_service.go -pkg testapi . JobService
@@ -37,14 +38,13 @@ type JobService interface {
 func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, secretKey string, jobService JobService) *ImportAPI {
 
 	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService}
-	auth := NewAuthenticator(secretKey, "Internal-Token")
 
 	// External API for florence
-	api.router.Path("/jobs").Methods("POST").HandlerFunc(auth.Check(api.addJob))
-	api.router.Path("/jobs").Methods("GET").HandlerFunc(auth.Check(api.getJobs)).Queries()
-	api.router.Path("/jobs/{id}").Methods("GET").HandlerFunc(auth.Check(api.getJob))
-	api.router.Path("/jobs/{id}").Methods("PUT").HandlerFunc(auth.Check(api.updateJob))
-	api.router.Path("/jobs/{id}/files").Methods("PUT").HandlerFunc(auth.Check(api.addUploadedFile))
+	api.router.Path("/jobs").Methods("POST").HandlerFunc(identity.Check(api.addJob))
+	api.router.Path("/jobs").Methods("GET").HandlerFunc(identity.Check(api.getJobs)).Queries()
+	api.router.Path("/jobs/{id}").Methods("GET").HandlerFunc(identity.Check(api.getJob))
+	api.router.Path("/jobs/{id}").Methods("PUT").HandlerFunc(identity.Check(api.updateJob))
+	api.router.Path("/jobs/{id}/files").Methods("PUT").HandlerFunc(identity.Check(api.addUploadedFile))
 	api.router.NotFoundHandler = &api
 	return &api
 }

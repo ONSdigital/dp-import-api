@@ -21,6 +21,8 @@ import (
 	"github.com/ONSdigital/go-ns/rchttp"
 	"github.com/ONSdigital/go-ns/server"
 	"github.com/gorilla/mux"
+	"github.com/justinas/alice"
+	"github.com/ONSdigital/go-ns/identity"
 )
 
 func main() {
@@ -58,7 +60,9 @@ func main() {
 	router := mux.NewRouter()
 	router.Path("/healthcheck").HandlerFunc(healthcheck.Handler)
 
-	httpServer := server.New(config.BindAddr, router)
+	alice := alice.New(identity.Handler(true)).Then(router)
+
+	httpServer := server.New(config.BindAddr, alice)
 	httpServer.HandleOSSignals = false
 
 	signals := make(chan os.Signal, 1)

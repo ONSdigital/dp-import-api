@@ -115,6 +115,9 @@ func (api *API) callDatasetAPI(ctx context.Context, method, path string, payload
 
 	var req *http.Request
 
+	req.Header.Add("Authorization", api.AuthToken)
+	req.Header.Add("User-Identity", ctx.Value("User-Identity").(string))
+
 	if payload != nil && method != "GET" {
 		req, err = http.NewRequest(method, path, bytes.NewReader(payload.([]byte)))
 		req.Header.Add("Content-type", "application/json")
