@@ -24,6 +24,7 @@ type Configuration struct {
 	DatasetAPIAuthToken     string        `envconfig:"DATASET_API_AUTH_TOKEN"      json:"-"`
 	RecipeAPIURL            string        `envconfig:"RECIPE_API_URL"`
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
+	ZebedeeURL              string        `envconfig:"ZEBEDEE_URL"`
 }
 
 var cfg *Configuration

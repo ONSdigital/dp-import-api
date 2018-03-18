@@ -249,7 +249,9 @@ func TestUpdateJobStateToSubmitted(t *testing.T) {
 
 func createRequestWithAuth(method, URL string, body io.Reader) (*http.Request, error) {
 	r, err := http.NewRequest(method, URL, body)
-	r.Header.Set("internal-token", secretKey)
+	ctx := r.Context()
+	ctx = context.WithValue(ctx, "Caller-Identity", "someone@ons.gov.uk")
+	r = r.WithContext(ctx)
 	return r, err
 }
 
