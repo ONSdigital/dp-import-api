@@ -35,7 +35,7 @@ type JobService interface {
 }
 
 // CreateImportAPI returns the api with all the routes configured
-func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, secretKey string, jobService JobService) *ImportAPI {
+func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, jobService JobService) *ImportAPI {
 
 	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService}
 

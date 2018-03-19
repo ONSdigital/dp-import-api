@@ -137,7 +137,6 @@ func (api *API) callDatasetAPI(ctx context.Context, method, path string, payload
 		return nil, 0, err
 	}
 
-	req.Header.Set("Internal-token", api.AuthToken)
 	resp, err := api.Client.Do(ctx, req)
 	if err != nil {
 		log.ErrorC("Failed to action dataset api", err, logData)
