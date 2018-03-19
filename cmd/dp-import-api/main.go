@@ -72,7 +72,8 @@ func main() {
 	urlBuilder := url.NewBuilder(config.Host, config.DatasetAPIURL)
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
 
-	datasetAPI := dataset.API{client, config.DatasetAPIURL, config.ServiceAuthToken}
+	// todo: remove config.DatasetAPIAuthToken when the DatasetAPI supports identity based auth.
+	datasetAPI := dataset.API{client, config.DatasetAPIURL, config.DatasetAPIAuthToken, config.ServiceAuthToken}
 	recipeAPI := recipe.API{client, config.RecipeAPIURL}
 
 	jobService := job.NewService(mongoDataStore, jobQueue, &datasetAPI, &recipeAPI, urlBuilder)

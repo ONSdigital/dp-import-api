@@ -16,9 +16,10 @@ import (
 
 // API aggregates a client and URL and other common data for accessing the API
 type API struct {
-	Client    *rchttp.Client
-	URL       string
-	AuthToken string
+	Client           *rchttp.Client
+	URL              string
+	AuthToken        string
+	ServiceAuthToken string
 }
 
 // CreateInstance tells the Dataset API to create a Dataset instance
@@ -115,9 +116,6 @@ func (api *API) callDatasetAPI(ctx context.Context, method, path string, payload
 
 	var req *http.Request
 
-	req.Header.Add("Authorization", api.AuthToken)
-	req.Header.Add("User-Identity", ctx.Value("User-Identity").(string))
-
 	if payload != nil && method != "GET" {
 		req, err = http.NewRequest(method, path, bytes.NewReader(payload.([]byte)))
 		req.Header.Add("Content-type", "application/json")
@@ -136,6 +134,11 @@ func (api *API) callDatasetAPI(ctx context.Context, method, path string, payload
 		log.ErrorC("failed to create request for dataset api", err, logData)
 		return nil, 0, err
 	}
+
+	// todo: remove Internal-token when dataset API is using identity based service tokens.
+	req.Header.Set("Internal-token", api.AuthToken)
+	req.Header.Add("Authorization", api.ServiceAuthToken)
+	req.Header.Add("User-Identity", ctx.Value("User-Identity").(string))
 
 	resp, err := api.Client.Do(ctx, req)
 	if err != nil {
