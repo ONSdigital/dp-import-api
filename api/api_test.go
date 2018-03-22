@@ -13,6 +13,7 @@ import (
 	job "github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/models"
 	mockdatastore "github.com/ONSdigital/dp-import-api/mongo/testmongo"
+	"github.com/ONSdigital/go-ns/identity"
 	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -250,7 +251,7 @@ func TestUpdateJobStateToSubmitted(t *testing.T) {
 func createRequestWithAuth(method, URL string, body io.Reader) (*http.Request, error) {
 	r, err := http.NewRequest(method, URL, body)
 	ctx := r.Context()
-	ctx = context.WithValue(ctx, "Caller-Identity", "someone@ons.gov.uk")
+	ctx = identity.SetCaller(ctx, "someone@ons.gov.uk")
 	r = r.WithContext(ctx)
 	return r, err
 }

@@ -10,6 +10,7 @@ import (
 	"net/url"
 
 	"github.com/ONSdigital/dp-import-api/models"
+	"github.com/ONSdigital/go-ns/identity"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/rchttp"
 )
@@ -137,8 +138,9 @@ func (api *API) callDatasetAPI(ctx context.Context, method, path string, payload
 
 	// todo: remove Internal-token when dataset API is using identity based service tokens.
 	req.Header.Set("Internal-token", api.AuthToken)
-	req.Header.Add("Authorization", api.ServiceAuthToken)
-	req.Header.Add("User-Identity", ctx.Value("User-Identity").(string))
+
+	identity.AddServiceTokenHeader(req, api.ServiceAuthToken)
+	identity.AddUserHeader(req, identity.User(ctx))
 
 	resp, err := api.Client.Do(ctx, req)
 	if err != nil {

@@ -16,13 +16,13 @@ import (
 	"github.com/ONSdigital/dp-import-api/recipe"
 	"github.com/ONSdigital/dp-import-api/url"
 	"github.com/ONSdigital/go-ns/handlers/healthcheck"
+	"github.com/ONSdigital/go-ns/identity"
 	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/rchttp"
 	"github.com/ONSdigital/go-ns/server"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
-	"github.com/ONSdigital/go-ns/identity"
 )
 
 func main() {
