@@ -16,11 +16,13 @@ import (
 	"github.com/ONSdigital/dp-import-api/recipe"
 	"github.com/ONSdigital/dp-import-api/url"
 	"github.com/ONSdigital/go-ns/handlers/healthcheck"
+	"github.com/ONSdigital/go-ns/identity"
 	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/rchttp"
 	"github.com/ONSdigital/go-ns/server"
 	"github.com/gorilla/mux"
+	"github.com/justinas/alice"
 )
 
 func main() {
@@ -58,7 +60,10 @@ func main() {
 	router := mux.NewRouter()
 	router.Path("/healthcheck").HandlerFunc(healthcheck.Handler)
 
-	httpServer := server.New(config.BindAddr, router)
+	identityHandler := identity.Handler(true, config.ZebedeeURL)
+	alice := alice.New(identityHandler).Then(router)
+
+	httpServer := server.New(config.BindAddr, alice)
 	httpServer.HandleOSSignals = false
 
 	signals := make(chan os.Signal, 1)
@@ -67,11 +72,12 @@ func main() {
 	urlBuilder := url.NewBuilder(config.Host, config.DatasetAPIURL)
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
 
-	datasetAPI := dataset.API{client, config.DatasetAPIURL, config.DatasetAPIAuthToken}
+	// todo: remove config.DatasetAPIAuthToken when the DatasetAPI supports identity based auth.
+	datasetAPI := dataset.API{client, config.DatasetAPIURL, config.DatasetAPIAuthToken, config.ServiceAuthToken}
 	recipeAPI := recipe.API{client, config.RecipeAPIURL}
 
 	jobService := job.NewService(mongoDataStore, jobQueue, &datasetAPI, &recipeAPI, urlBuilder)
-	_ = api.CreateImportAPI(router, mongoDataStore, config.SecretKey, jobService)
+	_ = api.CreateImportAPI(router, mongoDataStore, jobService)
 
 	// signals the web server shutdown, so a graceful exit is required
 	httpErrChannel := make(chan error)

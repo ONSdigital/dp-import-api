@@ -10,15 +10,17 @@ import (
 	"net/url"
 
 	"github.com/ONSdigital/dp-import-api/models"
+	"github.com/ONSdigital/go-ns/identity"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/rchttp"
 )
 
 // API aggregates a client and URL and other common data for accessing the API
 type API struct {
-	Client    *rchttp.Client
-	URL       string
-	AuthToken string
+	Client           *rchttp.Client
+	URL              string
+	AuthToken        string
+	ServiceAuthToken string
 }
 
 // CreateInstance tells the Dataset API to create a Dataset instance
@@ -134,7 +136,12 @@ func (api *API) callDatasetAPI(ctx context.Context, method, path string, payload
 		return nil, 0, err
 	}
 
+	// todo: remove Internal-token when dataset API is using identity based service tokens.
 	req.Header.Set("Internal-token", api.AuthToken)
+
+	identity.AddServiceTokenHeader(req, api.ServiceAuthToken)
+	identity.AddUserHeader(req, identity.User(ctx))
+
 	resp, err := api.Client.Do(ctx, req)
 	if err != nil {
 		log.ErrorC("Failed to action dataset api", err, logData)
