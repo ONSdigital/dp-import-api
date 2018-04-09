@@ -17,6 +17,7 @@ type Configuration struct {
 	InputFileAvailableTopic string        `envconfig:"INPUT_FILE_AVAILABLE_TOPIC"`
 	KafkaMaxBytes           int           `envconfig:"KAFKA_MAX_BYTES"`
 	SecretKey               string        `envconfig:"SECRET_KEY"                  json:"-"`
+	ServiceAuthToken        string        `envconfig:"SERVICE_AUTH_TOKEN"          json:"-"`
 	MongoDBURL              string        `envconfig:"MONGODB_IMPORTS_ADDR"        json:"-"`
 	MongoDBCollection       string        `envconfig:"MONGODB_IMPORTS_COLLECTION"`
 	MongoDBDatabase         string        `envconfig:"MONGODB_IMPORTS_DATABASE"`
@@ -24,6 +25,7 @@ type Configuration struct {
 	DatasetAPIAuthToken     string        `envconfig:"DATASET_API_AUTH_TOKEN"      json:"-"`
 	RecipeAPIURL            string        `envconfig:"RECIPE_API_URL"`
 	GracefulShutdownTimeout time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
+	ZebedeeURL              string        `envconfig:"ZEBEDEE_URL"`
 }
 
 var cfg *Configuration
@@ -48,12 +50,21 @@ func Get() (*Configuration, error) {
 		MongoDBDatabase:         "imports",
 		MongoDBCollection:       "imports",
 		SecretKey:               "0C30662F-6CF6-43B0-A96A-954772267FF5",
+		ServiceAuthToken:        "0C30662F-6CF6-43B0-A96A-954772267FF5",
 		DatasetAPIURL:           "http://localhost:22000",
 		RecipeAPIURL:            "http://localhost:22300",
 		GracefulShutdownTimeout: time.Second * 5,
+		ZebedeeURL:              "http://localhost:8082",
 	}
 
-	return cfg, envconfig.Process("", cfg)
+	err := envconfig.Process("", cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.ServiceAuthToken = "Bearer " + cfg.ServiceAuthToken
+
+	return cfg, nil
 }
 
 // String is implemented to prevent sensitive fields being logged.
