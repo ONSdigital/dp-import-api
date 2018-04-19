@@ -9,10 +9,16 @@
 			"revisionTime": "2018-01-16T09:54:17Z"
 		},
 		{
-			"checksumSHA1": "dzh4fF9o6j+mJEbJn5utm8Q+Pyg=",
+			"checksumSHA1": "HMAf5TW1yZQha9LhZ0twmgyytzw=",
+			"path": "github.com/ONSdigital/go-ns/audit",
+			"revision": "f94c80d87b01a1e0e901c990abf83a4122625ddf",
+			"revisionTime": "2018-04-19T13:04:54Z"
+		},
+		{
+			"checksumSHA1": "CbaDCSFTgiKp+kMRo8x3tu1ll4k=",
 			"path": "github.com/ONSdigital/go-ns/avro",
-			"revision": "c493b1568574c9720d7805f23ce6271ac445dc57",
-			"revisionTime": "2017-07-28T08:24:17Z"
+			"revision": "c4803612b0d566c7bfd07096b8cbf4d0837c5cd3",
+			"revisionTime": "2018-04-17T07:06:17Z"
 		},
 		{
 			"checksumSHA1": "ei+/RCSa0XO9v9rQxAh0uqyJ/28=",
@@ -27,10 +33,10 @@
 			"revisionTime": "2017-08-30T09:15:21Z"
 		},
 		{
-			"checksumSHA1": "BIF0W+bUAeNWG9eYVgpXvgWj1Hs=",
+			"checksumSHA1": "mV6xzcAAbU5ImZj8HDO5MVbG0c4=",
 			"path": "github.com/ONSdigital/go-ns/identity",
-			"revision": "09c05d2d8cd73ce74f857807357e0de74089d1d8",
-			"revisionTime": "2018-03-22T12:39:27Z"
+			"revision": "20b9fe189bdfcb83a04e2967989a03d64fd9c1a7",
+			"revisionTime": "2018-04-13T09:56:01Z"
 		},
 		{
 			"checksumSHA1": "FyeCEY30Rz0d477/Za2UhQ/Jnjs=",
@@ -165,6 +171,12 @@
 			"path": "github.com/pierrec/xxHash/xxHash32",
 			"revision": "5a004441f897722c627870a981d02b29924215fa",
 			"revisionTime": "2016-01-12T16:53:51Z"
+		},
+		{
+			"checksumSHA1": "rJab1YdNhQooDiBWNnt7TLWPyBU=",
+			"path": "github.com/pkg/errors",
+			"revision": "c605e284fe17294bda444b34710735b29d1a9d90",
+			"revisionTime": "2017-05-05T04:36:39Z"
 		},
 		{
 			"checksumSHA1": "KAzbLjI9MzW2tjfcAsK75lVRp6I=",

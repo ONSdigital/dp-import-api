@@ -13,6 +13,7 @@ import (
 	"github.com/ONSdigital/go-ns/identity"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/gorilla/mux"
+	"github.com/ONSdigital/go-ns/audit"
 )
 
 //go:generate moq -out testapi/job_service.go -pkg testapi . JobService
@@ -21,11 +22,16 @@ const internalError = "Internal server error"
 
 const notFoundError = "requested resource not found"
 
+var (
+	auditGetJobSuccess = &audit.Event{AttemptedAction: "getJob", Result: "success"}
+)
+
 // ImportAPI is a restful API used to manage importing datasets to be published
 type ImportAPI struct {
 	dataStore  datastore.DataStorer
 	router     *mux.Router
 	jobService JobService
+	auditor    Auditor
 }
 
 // JobService provide business logic for job related operations.
@@ -34,10 +40,12 @@ type JobService interface {
 	UpdateJob(ctx context.Context, jobID string, job *models.Job) error
 }
 
-// CreateImportAPI returns the api with all the routes configured
-func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, jobService JobService) *ImportAPI {
+type Auditor audit.AuditorService
 
-	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService}
+// CreateImportAPI returns the api with all the routes configured
+func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, jobService JobService, auditor Auditor) *ImportAPI {
+
+	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService, auditor: auditor}
 
 	// External API for florence
 	api.router.Path("/jobs").Methods("POST").HandlerFunc(identity.Check(api.addJob))
@@ -94,9 +102,11 @@ func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
 	} else {
 		filterList = strings.Split(filtersQuery, ",")
 	}
+
 	jobs, err := api.dataStore.GetJobs(filterList)
 	if err != nil {
 		log.Error(err, log.Data{})
+		api.auditor.Record(r.Context(), "getJobs", "notFound", nil)
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
@@ -107,6 +117,14 @@ func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setJSONContentType(w)
+
+	err = api.auditor.Record(r.Context(), "getJobs", "success", nil)
+	if err != nil {
+		log.ErrorC("error while attempting to audit event, failing request", err, nil)
+		log.Error(err, log.Data{})
+		http.Error(w, internalError, http.StatusInternalServerError)
+		return
+	}
 	_, err = w.Write(bytes)
 	if err != nil {
 		log.Error(err, log.Data{})
@@ -119,8 +137,10 @@ func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
 func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	jobID := vars["id"]
+
 	job, err := api.dataStore.GetJob(jobID)
 	if err != nil {
+		api.auditor.Record(r.Context(), "getJob", "notFound", audit.Params{"jobID": jobID})
 		log.Error(err, log.Data{})
 		setErrorCode(w, err)
 		return
@@ -132,6 +152,13 @@ func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setJSONContentType(w)
+	err = api.auditor.Record(r.Context(), "getJob", "success", audit.Params{"jobID": jobID})
+	if err != nil {
+		log.Error(err, nil)
+		http.Error(w, internalError, http.StatusInternalServerError)
+		return
+	}
+
 	_, err = w.Write(bytes)
 	if err != nil {
 		log.Error(err, log.Data{})

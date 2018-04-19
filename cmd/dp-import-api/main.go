@@ -23,6 +23,7 @@ import (
 	"github.com/ONSdigital/go-ns/server"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
+	"github.com/ONSdigital/go-ns/audit"
 )
 
 func main() {
@@ -60,8 +61,16 @@ func main() {
 	router := mux.NewRouter()
 	router.Path("/healthcheck").HandlerFunc(healthcheck.Handler)
 
+	moqAuditProducer := &audit.DummyProducer{
+		OutputChan: make(chan []byte, 1),
+		ExitChan:   make(chan bool, 1),
+	}
+	moqAuditProducer.Run()
+
+	auditor := audit.New(moqAuditProducer, "dp-import-api", "")
 	identityHandler := identity.Handler(true, config.ZebedeeURL)
-	alice := alice.New(identityHandler).Then(router)
+
+	alice := alice.New(auditor.Interceptor(), identityHandler).Then(router)
 
 	httpServer := server.New(config.BindAddr, alice)
 	httpServer.HandleOSSignals = false
@@ -77,7 +86,7 @@ func main() {
 	recipeAPI := recipe.API{client, config.RecipeAPIURL}
 
 	jobService := job.NewService(mongoDataStore, jobQueue, &datasetAPI, &recipeAPI, urlBuilder)
-	_ = api.CreateImportAPI(router, mongoDataStore, jobService)
+	_ = api.CreateImportAPI(router, mongoDataStore, jobService, auditor)
 
 	// signals the web server shutdown, so a graceful exit is required
 	httpErrChannel := make(chan error)
@@ -94,6 +103,9 @@ func main() {
 
 	shutdownGracefully := func(httpDead bool) {
 		// gracefully retire resources
+
+		moqAuditProducer.ExitChan <- true
+
 		ctx, cancel := context.WithTimeout(context.Background(), config.GracefulShutdownTimeout)
 		defer cancel()
 
