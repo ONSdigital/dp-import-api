@@ -18,6 +18,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/audit"
+	"github.com/ONSdigital/go-ns/common"
 	"github.com/pkg/errors"
 )
 
@@ -27,8 +28,6 @@ var (
 	dstoreInternalError = mockdatastore.DataStorer{InternalError: true}
 	dummyJob            = &models.Job{ID: "34534543543"}
 )
-
-const secretKey = "123"
 
 func TestAddJobReturnsInternalError(t *testing.T) {
 	t.Parallel()
@@ -103,7 +102,7 @@ func TestGetJobs(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		auditorMock = &audit.AuditorServiceMock{
-			RecordFunc: func(ctx context.Context, action string, result string, params audit.Params) error {
+			RecordFunc: func(ctx context.Context, action string, result string, params common.Params) error {
 				return errors.New("BOOM")
 			},
 		}
@@ -308,7 +307,7 @@ func TestUpdateJobStateToSubmitted(t *testing.T) {
 	})
 }
 
-func verifyAuditorCalls(auditor *audit.AuditorServiceMock, action string, result string, params audit.Params) {
+func verifyAuditorCalls(auditor *audit.AuditorServiceMock, action string, result string, params common.Params) {
 	So(len(auditor.RecordCalls()), ShouldEqual, 1)
 	So(auditor.RecordCalls()[0].Action, ShouldEqual, action)
 	So(auditor.RecordCalls()[0].Result, ShouldEqual, result)
@@ -334,7 +333,7 @@ func createRequestWithOutAuth(method, URL string, body io.Reader) (*http.Request
 
 func newAuditorMock() *audit.AuditorServiceMock {
 	return &audit.AuditorServiceMock{
-		RecordFunc: func(ctx context.Context, action string, result string, params audit.Params) error {
+		RecordFunc: func(ctx context.Context, action string, result string, params common.Params) error {
 			log.Debug("capturing audit event", nil)
 			return nil
 		},

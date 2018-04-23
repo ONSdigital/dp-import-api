@@ -9,16 +9,22 @@
 			"revisionTime": "2018-01-16T09:54:17Z"
 		},
 		{
-			"checksumSHA1": "HMAf5TW1yZQha9LhZ0twmgyytzw=",
+			"checksumSHA1": "Px/Depml9dLzJSk6/nnmh+qFzfw=",
 			"path": "github.com/ONSdigital/go-ns/audit",
-			"revision": "f94c80d87b01a1e0e901c990abf83a4122625ddf",
-			"revisionTime": "2018-04-19T13:04:54Z"
+			"revision": "91c674f1ed9afea1a9da4ee1b343dde7b1319076",
+			"revisionTime": "2018-04-23T17:13:23Z"
 		},
 		{
 			"checksumSHA1": "CbaDCSFTgiKp+kMRo8x3tu1ll4k=",
 			"path": "github.com/ONSdigital/go-ns/avro",
 			"revision": "c4803612b0d566c7bfd07096b8cbf4d0837c5cd3",
 			"revisionTime": "2018-04-17T07:06:17Z"
+		},
+		{
+			"checksumSHA1": "6pOAGjYo4KeNinJ1QoTPqnxhk9U=",
+			"path": "github.com/ONSdigital/go-ns/common",
+			"revision": "f94c80d87b01a1e0e901c990abf83a4122625ddf",
+			"revisionTime": "2018-04-19T13:04:54Z"
 		},
 		{
 			"checksumSHA1": "ei+/RCSa0XO9v9rQxAh0uqyJ/28=",
@@ -33,10 +39,10 @@
 			"revisionTime": "2017-08-30T09:15:21Z"
 		},
 		{
-			"checksumSHA1": "mV6xzcAAbU5ImZj8HDO5MVbG0c4=",
+			"checksumSHA1": "pFR62zDHcebe2brhfBYfKL0KVJs=",
 			"path": "github.com/ONSdigital/go-ns/identity",
-			"revision": "20b9fe189bdfcb83a04e2967989a03d64fd9c1a7",
-			"revisionTime": "2018-04-13T09:56:01Z"
+			"revision": "91c674f1ed9afea1a9da4ee1b343dde7b1319076",
+			"revisionTime": "2018-04-23T17:13:23Z"
 		},
 		{
 			"checksumSHA1": "FyeCEY30Rz0d477/Za2UhQ/Jnjs=",

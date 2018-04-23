@@ -67,8 +67,8 @@ func main() {
 	}
 	moqAuditProducer.Run()
 
-	auditor := audit.New(moqAuditProducer, "dp-import-api", "")
-	identityHandler := identity.Handler(true, config.ZebedeeURL)
+	auditor := audit.New(moqAuditProducer, "dp-import-api")
+	identityHandler := identity.Handler(auditor, true, config.ZebedeeURL)
 
 	alice := alice.New(auditor.Interceptor(), identityHandler).Then(router)
 

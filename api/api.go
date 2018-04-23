@@ -14,6 +14,7 @@ import (
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/gorilla/mux"
 	"github.com/ONSdigital/go-ns/audit"
+	"github.com/ONSdigital/go-ns/common"
 )
 
 //go:generate moq -out testapi/job_service.go -pkg testapi . JobService
@@ -121,7 +122,6 @@ func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
 	err = api.auditor.Record(r.Context(), "getJobs", "success", nil)
 	if err != nil {
 		log.ErrorC("error while attempting to audit event, failing request", err, nil)
-		log.Error(err, log.Data{})
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
@@ -140,7 +140,7 @@ func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
 
 	job, err := api.dataStore.GetJob(jobID)
 	if err != nil {
-		api.auditor.Record(r.Context(), "getJob", "notFound", audit.Params{"jobID": jobID})
+		api.auditor.Record(r.Context(), "getJob", "notFound", common.Params{"jobID": jobID})
 		log.Error(err, log.Data{})
 		setErrorCode(w, err)
 		return
@@ -152,7 +152,7 @@ func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setJSONContentType(w)
-	err = api.auditor.Record(r.Context(), "getJob", "success", audit.Params{"jobID": jobID})
+	err = api.auditor.Record(r.Context(), "getJob", "success", common.Params{"jobID": jobID})
 	if err != nil {
 		log.Error(err, nil)
 		http.Error(w, internalError, http.StatusInternalServerError)
