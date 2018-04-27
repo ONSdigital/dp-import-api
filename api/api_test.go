@@ -25,8 +25,6 @@ var (
 	dummyJob            = &models.Job{ID: "34534543543"}
 )
 
-const secretKey = "123"
-
 func TestAddJobReturnsInternalError(t *testing.T) {
 	t.Parallel()
 	Convey("When the job service fails to save a job, an internal error is returned", t, func() {
@@ -78,7 +76,7 @@ func TestGetJobs(t *testing.T) {
 		w := httptest.NewRecorder()
 		api := CreateImportAPI(mux.NewRouter(), &dstore, mockJobService)
 		api.router.ServeHTTP(w, r)
-		So(w.Code, ShouldEqual, http.StatusNotFound)
+		So(w.Code, ShouldEqual, http.StatusUnauthorized)
 	})
 }
 
@@ -113,7 +111,7 @@ func TestGetJob(t *testing.T) {
 		mockJobService := &testapi.JobServiceMock{}
 		api := CreateImportAPI(mux.NewRouter(), &dstore, mockJobService)
 		api.router.ServeHTTP(w, r)
-		So(w.Code, ShouldEqual, http.StatusNotFound)
+		So(w.Code, ShouldEqual, http.StatusUnauthorized)
 	})
 }
 
@@ -204,7 +202,7 @@ func TestUpdateJobState(t *testing.T) {
 
 		api := CreateImportAPI(mux.NewRouter(), &dstore, mockJobService)
 		api.router.ServeHTTP(w, r)
-		So(w.Code, ShouldEqual, http.StatusNotFound)
+		So(w.Code, ShouldEqual, http.StatusUnauthorized)
 	})
 }
 
