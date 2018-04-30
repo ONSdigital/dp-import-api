@@ -10,12 +10,12 @@ import (
 
 	"github.com/ONSdigital/dp-import-api/api-errors"
 	"github.com/ONSdigital/dp-import-api/api/testapi"
-	job "github.com/ONSdigital/dp-import-api/job"
+	"github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/models"
 	mockdatastore "github.com/ONSdigital/dp-import-api/mongo/testmongo"
-	"github.com/ONSdigital/go-ns/identity"
 	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/ONSdigital/go-ns/common"
 )
 
 var (
@@ -24,8 +24,6 @@ var (
 	dstoreInternalError = mockdatastore.DataStorer{InternalError: true}
 	dummyJob            = &models.Job{ID: "34534543543"}
 )
-
-const secretKey = "123"
 
 func TestAddJobReturnsInternalError(t *testing.T) {
 	t.Parallel()
@@ -78,7 +76,7 @@ func TestGetJobs(t *testing.T) {
 		w := httptest.NewRecorder()
 		api := CreateImportAPI(mux.NewRouter(), &dstore, mockJobService)
 		api.router.ServeHTTP(w, r)
-		So(w.Code, ShouldEqual, http.StatusNotFound)
+		So(w.Code, ShouldEqual, http.StatusUnauthorized)
 	})
 }
 
@@ -113,7 +111,7 @@ func TestGetJob(t *testing.T) {
 		mockJobService := &testapi.JobServiceMock{}
 		api := CreateImportAPI(mux.NewRouter(), &dstore, mockJobService)
 		api.router.ServeHTTP(w, r)
-		So(w.Code, ShouldEqual, http.StatusNotFound)
+		So(w.Code, ShouldEqual, http.StatusUnauthorized)
 	})
 }
 
@@ -204,7 +202,7 @@ func TestUpdateJobState(t *testing.T) {
 
 		api := CreateImportAPI(mux.NewRouter(), &dstore, mockJobService)
 		api.router.ServeHTTP(w, r)
-		So(w.Code, ShouldEqual, http.StatusNotFound)
+		So(w.Code, ShouldEqual, http.StatusUnauthorized)
 	})
 }
 
@@ -251,7 +249,7 @@ func TestUpdateJobStateToSubmitted(t *testing.T) {
 func createRequestWithAuth(method, URL string, body io.Reader) (*http.Request, error) {
 	r, err := http.NewRequest(method, URL, body)
 	ctx := r.Context()
-	ctx = identity.SetCaller(ctx, "someone@ons.gov.uk")
+	ctx = common.SetCaller(ctx, "someone@ons.gov.uk")
 	r = r.WithContext(ctx)
 	return r, err
 }

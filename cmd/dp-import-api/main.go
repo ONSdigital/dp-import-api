@@ -60,7 +60,7 @@ func main() {
 	router := mux.NewRouter()
 	router.Path("/healthcheck").HandlerFunc(healthcheck.Handler)
 
-	identityHandler := identity.Handler(true, config.ZebedeeURL)
+	identityHandler := identity.Handler(config.ZebedeeURL)
 	alice := alice.New(identityHandler).Then(router)
 
 	httpServer := server.New(config.BindAddr, alice)
