@@ -2,8 +2,7 @@ package audit
 
 import "github.com/ONSdigital/go-ns/avro"
 
-var event = `
-{
+var event = `{
   "type": "record",
   "name": "audit-event",
   "namespace": "",
@@ -14,12 +13,7 @@ var event = `
       "default": ""
     },
     {
-      "type": "string",
       "name": "service",
-      "default": ""
-    },
-    {
-      "name": "namespace",
       "type": "string",
       "default": ""
     },
@@ -39,36 +33,25 @@ var event = `
       "default": ""
     },
     {
-      "name": "result",
+      "name": "action_result",
       "type": "string",
       "default": ""
     },
     {
       "name": "params",
-      "default": [],
-      "type": {
-        "type": "array",
-        "items": {
-          "name": "Params",
-          "type": "record",
-          "fields": [
-            {
-              "name": "key",
-              "type": "string",
-              "default": ""
-            },
-            {
-              "name": "value",
-              "type": "string",
-              "default": ""
-            }
-          ]
+      "default": null,
+      "type": [
+        "null",
+        {
+          "type": "map",
+          "values": "string"
         }
-      }
+      ]
     }
   ]
 }`
 
+// EventSchema defines the avro schema for an audit event.
 var EventSchema *avro.Schema = &avro.Schema{
 	Definition: event,
 }

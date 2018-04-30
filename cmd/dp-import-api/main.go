@@ -24,10 +24,13 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	"github.com/ONSdigital/go-ns/audit"
+	"github.com/ONSdigital/go-ns/handlers/requestID"
 )
 
+const serviceNamespace = "dp-import-api"
+
 func main() {
-	log.Namespace = "dp-import-api"
+	log.Namespace = serviceNamespace
 	config, err := config.Get()
 	if err != nil {
 		log.Error(err, nil)
@@ -61,16 +64,12 @@ func main() {
 	router := mux.NewRouter()
 	router.Path("/healthcheck").HandlerFunc(healthcheck.Handler)
 
-	moqAuditProducer := &audit.DummyProducer{
-		OutputChan: make(chan []byte, 1),
-		ExitChan:   make(chan bool, 1),
-	}
-	moqAuditProducer.Run()
-
-	auditor := audit.New(moqAuditProducer, "dp-import-api")
+	// TODO replace with impl when ready.
+	auditor := &audit.NopAuditor{}
 	identityHandler := identity.Handler(auditor, true, config.ZebedeeURL)
 
-	alice := alice.New(auditor.Interceptor(), identityHandler).Then(router)
+	// TODO how long should the ID be?
+	alice := alice.New(requestID.Handler(16), identityHandler).Then(router)
 
 	httpServer := server.New(config.BindAddr, alice)
 	httpServer.HandleOSSignals = false
@@ -102,10 +101,6 @@ func main() {
 	}()
 
 	shutdownGracefully := func(httpDead bool) {
-		// gracefully retire resources
-
-		moqAuditProducer.ExitChan <- true
-
 		ctx, cancel := context.WithTimeout(context.Background(), config.GracefulShutdownTimeout)
 		defer cancel()
 
@@ -139,6 +134,9 @@ func main() {
 	case err := <-directProducer.Errors():
 		log.ErrorC("kafka direct producer", err, nil)
 		shutdownGracefully(false)
+		/*	case err := <-auditProducer.Errors():
+				log.ErrorC("kafka audit producer", err, nil)
+				shutdownGracefully(false)*/
 	case err := <-httpErrChannel:
 		log.ErrorC("error channel", err, nil)
 		shutdownGracefully(true)
