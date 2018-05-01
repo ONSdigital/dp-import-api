@@ -15,7 +15,6 @@ import (
 	"github.com/ONSdigital/dp-import-api/mongo"
 	"github.com/ONSdigital/dp-import-api/recipe"
 	"github.com/ONSdigital/dp-import-api/url"
-	"github.com/ONSdigital/go-ns/handlers/healthcheck"
 	"github.com/ONSdigital/go-ns/identity"
 	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/ONSdigital/go-ns/log"
@@ -23,6 +22,8 @@ import (
 	"github.com/ONSdigital/go-ns/server"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
+	"github.com/ONSdigital/go-ns/healthcheck"
+	handlershealthcheck "github.com/ONSdigital/go-ns/handlers/healthcheck"
 )
 
 func main() {
@@ -58,10 +59,11 @@ func main() {
 	}
 
 	router := mux.NewRouter()
-	router.Path("/healthcheck").HandlerFunc(healthcheck.Handler)
 
+	healthcheckHandler := healthcheck.NewMiddleware(handlershealthcheck.Handler)
 	identityHandler := identity.Handler(config.ZebedeeURL)
-	alice := alice.New(identityHandler).Then(router)
+
+	alice := alice.New(healthcheckHandler, identityHandler).Then(router)
 
 	httpServer := server.New(config.BindAddr, alice)
 	httpServer.HandleOSSignals = false
