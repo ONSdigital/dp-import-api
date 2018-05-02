@@ -13,7 +13,6 @@ import (
 	"github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/models"
 	mockdatastore "github.com/ONSdigital/dp-import-api/mongo/testmongo"
-	"github.com/ONSdigital/go-ns/identity"
 	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/ONSdigital/go-ns/log"
@@ -70,7 +69,7 @@ func TestGetJobsReturnsInternalError(t *testing.T) {
 		So(auditorMock.RecordCalls()[0].Result, ShouldEqual, actionAttempted)
 
 		So(auditorMock.RecordCalls()[1].Action, ShouldEqual, getJobsAuditAction)
-		So(auditorMock.RecordCalls()[1].Result, ShouldEqual, notFound)
+		So(auditorMock.RecordCalls()[1].Result, ShouldEqual, actionUnsuccessful)
 	})
 }
 
@@ -179,7 +178,7 @@ func TestGetJobReturnsNotFound(t *testing.T) {
 		So(auditorMock.RecordCalls()[0].Params, ShouldResemble, common.Params{jobIDKey: "000000"})
 
 		So(auditorMock.RecordCalls()[1].Action, ShouldEqual, getJobAuditAction)
-		So(auditorMock.RecordCalls()[1].Result, ShouldEqual, notFound)
+		So(auditorMock.RecordCalls()[1].Result, ShouldEqual, actionUnsuccessful)
 		So(auditorMock.RecordCalls()[1].Params, ShouldResemble, common.Params{jobIDKey: "000000"})
 	})
 }
@@ -471,7 +470,7 @@ func TestUpdateJobStateReturnsNotFound(t *testing.T) {
 		So(auditorMock.RecordCalls()[0].Result, ShouldEqual, actionAttempted)
 		So(auditorMock.RecordCalls()[0].Params, ShouldResemble, common.Params{jobIDKey: "12345"})
 		So(auditorMock.RecordCalls()[1].Action, ShouldEqual, updateJobAction)
-		So(auditorMock.RecordCalls()[1].Result, ShouldEqual, notFound)
+		So(auditorMock.RecordCalls()[1].Result, ShouldEqual, actionUnsuccessful)
 		So(auditorMock.RecordCalls()[1].Params, ShouldResemble, common.Params{jobIDKey: "12345"})
 	})
 }
@@ -502,7 +501,7 @@ func TestUpdateJobStateToSubmitted(t *testing.T) {
 func createRequestWithAuth(method, URL string, body io.Reader) (*http.Request, error) {
 	r, err := http.NewRequest(method, URL, body)
 	ctx := r.Context()
-	ctx = identity.SetCaller(ctx, "someone@ons.gov.uk")
+	ctx = common.SetCaller(ctx, "someone@ons.gov.uk")
 	r = r.WithContext(ctx)
 	return r, err
 }

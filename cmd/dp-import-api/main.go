@@ -60,13 +60,19 @@ func main() {
 		log.ErrorC("direct kafka producer error", err, nil)
 		os.Exit(1)
 	}
+	auditProducer, err := kafka.NewProducer(config.Brokers, "audit-events", config.KafkaMaxBytes)
+	if err != nil {
+		log.ErrorC("direct kafka producer error", err, nil)
+		os.Exit(1)
+	}
 
 	router := mux.NewRouter()
 	router.Path("/healthcheck").HandlerFunc(healthcheck.Handler)
 
 	// TODO replace with impl when ready.
-	auditor := &audit.NopAuditor{}
-	identityHandler := identity.Handler(auditor, true, config.ZebedeeURL)
+	//auditor := &audit.NopAuditor{}
+	auditor := audit.New(auditProducer, "dp-import-api")
+	identityHandler := identity.Handler(config.ZebedeeURL)
 
 	// TODO how long should the ID be?
 	alice := alice.New(requestID.Handler(16), identityHandler).Then(router)
@@ -109,6 +115,8 @@ func main() {
 				log.Error(err, nil)
 			}
 		}
+
+		auditProducer.Close(ctx)
 
 		if err = dataBakerProducer.Close(ctx); err != nil {
 			log.Error(err, nil)

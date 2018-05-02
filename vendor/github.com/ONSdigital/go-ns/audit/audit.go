@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/ONSdigital/go-ns/common"
 	"github.com/ONSdigital/go-ns/handlers/requestID"
-	"github.com/ONSdigital/go-ns/identity"
 	"github.com/ONSdigital/go-ns/log"
 	"sort"
 	"time"
@@ -56,8 +55,10 @@ type Auditor struct {
 	producer      OutboundProducer
 }
 
+// NopAuditor is an no op implementation of the AuditorService.
 type NopAuditor struct{}
 
+//Record is a no op implementation of Auditor.Record
 func (a *NopAuditor) Record(ctx context.Context, attemptedAction string, actionResult string, params common.Params) error {
 	return nil
 }
@@ -77,7 +78,7 @@ func New(producer OutboundProducer, namespace string) *Auditor {
 // decide what do with the error in these cases.
 func (a *Auditor) Record(ctx context.Context, attemptedAction string, actionResult string, params common.Params) error {
 	//NOTE: for now we are only auditing user actions - this may be subject to change
-	user := identity.User(ctx)
+	user := common.User(ctx)
 	if user == "" {
 		log.Debug("not user attempted action: skipping audit event", nil)
 		return nil
@@ -103,29 +104,15 @@ func (a *Auditor) Record(ctx context.Context, attemptedAction string, actionResu
 
 	avroBytes, err := a.marshalToAvro(e)
 	if err != nil {
-		log.Error(err, nil)
 		return NewAuditError("error marshalling event to arvo", attemptedAction, actionResult, params)
 	}
 
-	log.Info("logging audit message", log.Data{"auditEvent": e})
 	a.producer.Output() <- avroBytes
 	return nil
 }
 
 //NewAuditError creates new audit.Error with default field values where necessary and orders the params alphabetically.
 func NewAuditError(cause string, attemptedAction string, actionResult string, params common.Params) Error {
-	if cause == "" {
-		cause = nilStr
-	}
-
-	if attemptedAction == "" {
-		attemptedAction = nilStr
-	}
-
-	if actionResult == "" {
-		actionResult = nilStr
-	}
-
 	return Error{
 		Cause:  cause,
 		Action: attemptedAction,
@@ -146,10 +133,10 @@ func (e Error) formatParams() string {
 		return "[]"
 	}
 
-	keyValuePairs := make([]struct {
+	var keyValuePairs []struct {
 		key   string
 		value string
-	}, 0)
+	}
 
 	for k, v := range e.Params {
 		keyValuePairs = append(keyValuePairs, struct {
