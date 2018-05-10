@@ -78,8 +78,9 @@ func TestGetJobsReturnsInternalError(t *testing.T) {
 		calls := auditorMock.RecordCalls()
 
 		So(len(calls), ShouldEqual, 2)
-		verifyAuditorCalls(calls[0], getJobsAction, actionAttempted, nil)
-		verifyAuditorCalls(calls[1], getJobsAction, actionUnsuccessful, nil)
+		p := common.Params{}
+		verifyAuditorCalls(calls[0], getJobsAction, actionAttempted, p)
+		verifyAuditorCalls(calls[1], getJobsAction, actionUnsuccessful, p)
 	})
 }
 
@@ -97,9 +98,10 @@ func TestGetJobs(t *testing.T) {
 		So(w.Code, ShouldEqual, http.StatusOK)
 
 		calls := auditorMock.RecordCalls()
+		p := common.Params{}
 		So(len(calls), ShouldEqual, 2)
-		verifyAuditorCalls(calls[0], getJobsAction, actionAttempted, nil)
-		verifyAuditorCalls(calls[1], getJobsAction, actionSuccessful, nil)
+		verifyAuditorCalls(calls[0], getJobsAction, actionAttempted, p)
+		verifyAuditorCalls(calls[1], getJobsAction, actionSuccessful, p)
 	})
 
 	Convey("When a get jobs request has a no auth token a 401 is returned", t, func() {
@@ -135,7 +137,7 @@ func TestGetJobs(t *testing.T) {
 
 		calls := auditorMock.RecordCalls()
 		So(len(calls), ShouldEqual, 1)
-		verifyAuditorCalls(calls[0], getJobsAction, actionAttempted, nil)
+		verifyAuditorCalls(calls[0], getJobsAction, actionAttempted, common.Params{})
 	})
 
 	Convey("When a get jobs request is successful but auditing action successful fails an internal server error status is returned", t, func() {
@@ -159,9 +161,10 @@ func TestGetJobs(t *testing.T) {
 		So(w.Code, ShouldEqual, http.StatusInternalServerError)
 
 		calls := auditorMock.RecordCalls()
+		p := common.Params{}
 		So(len(calls), ShouldEqual, 2)
-		verifyAuditorCalls(calls[0], getJobsAction, actionAttempted, nil)
-		verifyAuditorCalls(calls[1], getJobsAction, actionSuccessful, nil)
+		verifyAuditorCalls(calls[0], getJobsAction, actionAttempted, p)
+		verifyAuditorCalls(calls[1], getJobsAction, actionSuccessful, p)
 	})
 
 	Convey("When a datastore.getJobs returns an error then a 500 status is returned", t, func() {
@@ -182,9 +185,10 @@ func TestGetJobs(t *testing.T) {
 		So(w.Code, ShouldEqual, http.StatusInternalServerError)
 
 		calls := auditorMock.RecordCalls()
+		p := common.Params{}
 		So(len(calls), ShouldEqual, 2)
-		verifyAuditorCalls(calls[0], getJobsAction, actionAttempted, nil)
-		verifyAuditorCalls(calls[1], getJobsAction, actionUnsuccessful, nil)
+		verifyAuditorCalls(calls[0], getJobsAction, actionAttempted, p)
+		verifyAuditorCalls(calls[1], getJobsAction, actionUnsuccessful, p)
 	})
 
 	Convey("When a datastore.getJobs returns an error and auditing action unsuccessful errors then a 500 status is returned", t, func() {
@@ -210,9 +214,10 @@ func TestGetJobs(t *testing.T) {
 		So(w.Code, ShouldEqual, http.StatusInternalServerError)
 
 		calls := auditorMock.RecordCalls()
+		p := common.Params{}
 		So(len(calls), ShouldEqual, 2)
-		verifyAuditorCalls(calls[0], getJobsAction, actionAttempted, nil)
-		verifyAuditorCalls(calls[1], getJobsAction, actionUnsuccessful, nil)
+		verifyAuditorCalls(calls[0], getJobsAction, actionAttempted, p)
+		verifyAuditorCalls(calls[1], getJobsAction, actionUnsuccessful, p)
 	})
 }
 

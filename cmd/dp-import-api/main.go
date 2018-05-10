@@ -31,7 +31,7 @@ const serviceNamespace = "dp-import-api"
 
 func main() {
 	log.Namespace = serviceNamespace
-	config, err := config.Get()
+	cfg, err := config.Get()
 	if err != nil {
 		log.Error(err, nil)
 		os.Exit(1)
@@ -40,27 +40,27 @@ func main() {
 
 	// sensitive fields are omitted from config.String().
 	log.Info("loaded config", log.Data{
-		"config": config,
+		"config": cfg,
 	})
 
-	mongoDataStore, err := mongo.NewDatastore(config.MongoDBURL, config.MongoDBDatabase, config.MongoDBCollection)
+	mongoDataStore, err := mongo.NewDatastore(cfg.MongoDBURL, cfg.MongoDBDatabase, cfg.MongoDBCollection)
 	if err != nil {
 		log.ErrorC("mongodb datastore error", err, nil)
 		os.Exit(1)
 	}
 
-	dataBakerProducer, err := kafka.NewProducer(config.Brokers, config.DatabakerImportTopic, config.KafkaMaxBytes)
+	dataBakerProducer, err := kafka.NewProducer(cfg.Brokers, cfg.DatabakerImportTopic, cfg.KafkaMaxBytes)
 	if err != nil {
 		log.ErrorC("data baker kafka producer error", err, nil)
 		os.Exit(1)
 	}
 
-	directProducer, err := kafka.NewProducer(config.Brokers, config.InputFileAvailableTopic, config.KafkaMaxBytes)
+	directProducer, err := kafka.NewProducer(cfg.Brokers, cfg.InputFileAvailableTopic, cfg.KafkaMaxBytes)
 	if err != nil {
 		log.ErrorC("direct kafka producer error", err, nil)
 		os.Exit(1)
 	}
-	auditProducer, err := kafka.NewProducer(config.Brokers, "audit-events", config.KafkaMaxBytes)
+	auditProducer, err := kafka.NewProducer(cfg.Brokers, cfg.AuditEventTopic, cfg.KafkaMaxBytes)
 	if err != nil {
 		log.ErrorC("direct kafka producer error", err, nil)
 		os.Exit(1)
@@ -69,26 +69,24 @@ func main() {
 	router := mux.NewRouter()
 	router.Path("/healthcheck").HandlerFunc(healthcheck.Handler)
 
-	// TODO replace with impl when ready.
-	//auditor := &audit.NopAuditor{}
-	auditor := audit.New(auditProducer, "dp-import-api")
-	identityHandler := identity.Handler(config.ZebedeeURL)
+	auditor := audit.New(auditProducer, serviceNamespace)
+	identityHandler := identity.Handler(cfg.ZebedeeURL)
 
 	// TODO how long should the ID be?
 	alice := alice.New(requestID.Handler(16), identityHandler).Then(router)
 
-	httpServer := server.New(config.BindAddr, alice)
+	httpServer := server.New(cfg.BindAddr, alice)
 	httpServer.HandleOSSignals = false
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
-	urlBuilder := url.NewBuilder(config.Host, config.DatasetAPIURL)
+	urlBuilder := url.NewBuilder(cfg.Host, cfg.DatasetAPIURL)
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
 
 	// todo: remove config.DatasetAPIAuthToken when the DatasetAPI supports identity based auth.
-	datasetAPI := dataset.API{client, config.DatasetAPIURL, config.DatasetAPIAuthToken, config.ServiceAuthToken}
-	recipeAPI := recipe.API{client, config.RecipeAPIURL}
+	datasetAPI := dataset.API{client, cfg.DatasetAPIURL, cfg.DatasetAPIAuthToken, cfg.ServiceAuthToken}
+	recipeAPI := recipe.API{client, cfg.RecipeAPIURL}
 
 	jobService := job.NewService(mongoDataStore, jobQueue, &datasetAPI, &recipeAPI, urlBuilder)
 	_ = api.CreateImportAPI(router, mongoDataStore, jobService, auditor)
@@ -97,7 +95,7 @@ func main() {
 	httpErrChannel := make(chan error)
 	// launch web server in background
 	go func() {
-		log.Debug("listening...", log.Data{"bind_address": config.BindAddr})
+		log.Debug("listening...", log.Data{"bind_address": cfg.BindAddr})
 		if err := httpServer.ListenAndServe(); err != nil {
 			log.Error(err, nil)
 			httpErrChannel <- err
@@ -107,7 +105,7 @@ func main() {
 	}()
 
 	shutdownGracefully := func(httpDead bool) {
-		ctx, cancel := context.WithTimeout(context.Background(), config.GracefulShutdownTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
 		defer cancel()
 
 		if !httpDead {
@@ -116,7 +114,9 @@ func main() {
 			}
 		}
 
-		auditProducer.Close(ctx)
+		if err = auditProducer.Close(ctx); err != nil {
+			log.Error(err, nil)
+		}
 
 		if err = dataBakerProducer.Close(ctx); err != nil {
 			log.Error(err, nil)
@@ -142,9 +142,9 @@ func main() {
 	case err := <-directProducer.Errors():
 		log.ErrorC("kafka direct producer", err, nil)
 		shutdownGracefully(false)
-		/*	case err := <-auditProducer.Errors():
-				log.ErrorC("kafka audit producer", err, nil)
-				shutdownGracefully(false)*/
+	case err := <-auditProducer.Errors():
+		log.ErrorC("kafka audit producer", err, nil)
+		shutdownGracefully(false)
 	case err := <-httpErrChannel:
 		log.ErrorC("error channel", err, nil)
 		shutdownGracefully(true)
