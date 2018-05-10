@@ -15,7 +15,6 @@ import (
 	"github.com/ONSdigital/dp-import-api/mongo"
 	"github.com/ONSdigital/dp-import-api/recipe"
 	"github.com/ONSdigital/dp-import-api/url"
-	"github.com/ONSdigital/go-ns/handlers/healthcheck"
 	"github.com/ONSdigital/go-ns/identity"
 	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/ONSdigital/go-ns/log"
@@ -25,6 +24,8 @@ import (
 	"github.com/justinas/alice"
 	"github.com/ONSdigital/go-ns/audit"
 	"github.com/ONSdigital/go-ns/handlers/requestID"
+	"github.com/ONSdigital/go-ns/healthcheck"
+	handlershealthcheck "github.com/ONSdigital/go-ns/handlers/healthcheck"
 )
 
 const serviceNamespace = "dp-import-api"
@@ -67,13 +68,12 @@ func main() {
 	}
 
 	router := mux.NewRouter()
-	router.Path("/healthcheck").HandlerFunc(healthcheck.Handler)
 
-	auditor := audit.New(auditProducer, serviceNamespace)
+	healthcheckHandler := healthcheck.NewMiddleware(handlershealthcheck.Handler)
 	identityHandler := identity.Handler(cfg.ZebedeeURL)
 
 	// TODO how long should the ID be?
-	alice := alice.New(requestID.Handler(16), identityHandler).Then(router)
+	alice := alice.New(requestID.Handler(16), healthcheckHandler, identityHandler).Then(router)
 
 	httpServer := server.New(cfg.BindAddr, alice)
 	httpServer.HandleOSSignals = false
@@ -89,6 +89,8 @@ func main() {
 	recipeAPI := recipe.API{client, cfg.RecipeAPIURL}
 
 	jobService := job.NewService(mongoDataStore, jobQueue, &datasetAPI, &recipeAPI, urlBuilder)
+	auditor := audit.New(auditProducer, serviceNamespace)
+
 	_ = api.CreateImportAPI(router, mongoDataStore, jobService, auditor)
 
 	// signals the web server shutdown, so a graceful exit is required
