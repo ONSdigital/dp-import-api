@@ -61,7 +61,7 @@ func main() {
 		log.ErrorC("direct kafka producer error", err, nil)
 		os.Exit(1)
 	}
-	auditProducer, err := kafka.NewProducer(cfg.Brokers, cfg.AuditEventTopic, cfg.KafkaMaxBytes)
+	auditProducer, err := kafka.NewProducer(cfg.Brokers, cfg.AuditEventsTopic, cfg.KafkaMaxBytes)
 	if err != nil {
 		log.ErrorC("direct kafka producer error", err, nil)
 		os.Exit(1)
