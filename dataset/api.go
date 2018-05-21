@@ -139,8 +139,7 @@ func (api *API) callDatasetAPI(ctx context.Context, method, path string, payload
 	// todo: remove Internal-token when dataset API is using identity based service tokens.
 	req.Header.Set("Internal-token", api.AuthToken)
 
-	common.AddServiceTokenHeader(req, api.ServiceAuthToken)
-	common.AddUserHeader(req, common.User(ctx))
+	common.AddAuthHeaders(req.Context(), req, api.ServiceAuthToken)
 
 	resp, err := api.Client.Do(ctx, req)
 	if err != nil {

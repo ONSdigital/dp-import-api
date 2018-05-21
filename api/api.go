@@ -13,6 +13,8 @@ import (
 	"github.com/ONSdigital/go-ns/identity"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/gorilla/mux"
+	"github.com/ONSdigital/go-ns/audit"
+	"github.com/ONSdigital/go-ns/common"
 )
 
 //go:generate moq -out testapi/job_service.go -pkg testapi . JobService
@@ -21,11 +23,29 @@ const internalError = "Internal server error"
 
 const notFoundError = "requested resource not found"
 
+const (
+	// audit actions
+	uploadFileAction = "uploadFile"
+	updateJobAction  = "updateJob"
+	addJobAction     = "addJob"
+	getJobAction     = "getJob"
+	getJobsAction    = "getJobs"
+
+	// audit results
+	actionSuccessful    = "actionSuccess"
+	actionUnsuccessful  = "actionUnsuccessful"
+	actionAttempted     = "actionAttempted"
+	auditError          = "error auditing action, failing request"
+	jobIDKey            = "job_id"
+	internalServerError = "Internal server error"
+)
+
 // ImportAPI is a restful API used to manage importing datasets to be published
 type ImportAPI struct {
 	dataStore  datastore.DataStorer
 	router     *mux.Router
 	jobService JobService
+	auditor    Auditor
 }
 
 // JobService provide business logic for job related operations.
@@ -34,10 +54,12 @@ type JobService interface {
 	UpdateJob(ctx context.Context, jobID string, job *models.Job) error
 }
 
-// CreateImportAPI returns the api with all the routes configured
-func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, jobService JobService) *ImportAPI {
+type Auditor audit.AuditorService
 
-	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService}
+// CreateImportAPI returns the api with all the routes configured
+func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, jobService JobService, auditor Auditor) *ImportAPI {
+
+	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService, auditor: auditor}
 
 	// External API for florence
 	api.router.Path("/jobs").Methods("POST").HandlerFunc(identity.Check(api.addJob))
@@ -57,28 +79,47 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 	job, err := models.CreateJob(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		log.Error(err, log.Data{})
+		log.Error(err, nil)
 		http.Error(w, "Bad client request received", http.StatusBadRequest)
+		return
+	}
+
+	logData := log.Data{"recipeID": job.RecipeID}
+	auditParams := common.Params{"recipeID": job.RecipeID}
+	if err := api.auditor.Record(r.Context(), addJobAction, actionAttempted, auditParams); err != nil {
+		handleAuditError(w, err, logData)
 		return
 	}
 
 	createdJob, err := api.jobService.CreateJob(r.Context(), job)
 	if err != nil {
+		if err := api.auditor.Record(r.Context(), addJobAction, actionUnsuccessful, auditParams); err != nil {
+			handleAuditError(w, err, logData)
+			return
+		}
 		setErrorCode(w, err)
 		return
 	}
 
+	logData["job"] = job
+	auditParams["createdJobID"] = createdJob.ID
+
 	bytes, err := json.Marshal(createdJob)
 	if err != nil {
-		log.Error(err, log.Data{"job": job})
+		log.Error(err, logData)
 		http.Error(w, internalError, http.StatusInternalServerError)
+		return
+	}
+
+	if err := api.auditor.Record(r.Context(), addJobAction, actionSuccessful, auditParams); err != nil {
+		handleAuditError(w, err, logData)
 		return
 	}
 
 	setJSONContentType(w)
 	w.WriteHeader(http.StatusCreated)
 	if _, err = w.Write(bytes); err != nil {
-		log.Error(err, log.Data{"instance": createdJob})
+		log.Error(err, logData)
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
@@ -87,26 +128,45 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
+	auditParams := common.Params{}
+
 	filtersQuery := r.URL.Query().Get("state")
 	var filterList []string
 	if filtersQuery == "" {
 		filterList = nil
 	} else {
 		filterList = strings.Split(filtersQuery, ",")
+		auditParams["filterQuery"] = filtersQuery
 	}
+
+	if err := api.auditor.Record(r.Context(), getJobsAction, actionAttempted, auditParams); err != nil {
+		handleAuditError(w, err, nil)
+		return
+	}
+
 	jobs, err := api.dataStore.GetJobs(filterList)
 	if err != nil {
-		log.Error(err, log.Data{})
+		log.Error(err, nil)
+		if err := api.auditor.Record(r.Context(), getJobsAction, actionUnsuccessful, auditParams); err != nil {
+			handleAuditError(w, err, nil)
+			return
+		}
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
+	logData := log.Data{"Jobs": jobs}
 	bytes, err := json.Marshal(jobs)
 	if err != nil {
-		log.Error(err, log.Data{"Jobs": jobs})
+		log.Error(err, logData)
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
 	setJSONContentType(w)
+
+	if err := api.auditor.Record(r.Context(), getJobsAction, actionSuccessful, auditParams); err != nil {
+		handleAuditError(w, err, logData)
+		return
+	}
 	_, err = w.Write(bytes)
 	if err != nil {
 		log.Error(err, log.Data{})
@@ -119,9 +179,21 @@ func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
 func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	jobID := vars["id"]
+	logData := log.Data{jobIDKey: jobID}
+	auditParams := common.Params{jobIDKey: jobID}
+
+	if err := api.auditor.Record(r.Context(), getJobAction, actionAttempted, auditParams); err != nil {
+		handleAuditError(w, err, logData)
+		return
+	}
+
 	job, err := api.dataStore.GetJob(jobID)
 	if err != nil {
-		log.Error(err, log.Data{})
+		if err := api.auditor.Record(r.Context(), getJobAction, actionUnsuccessful, auditParams); err != nil {
+			handleAuditError(w, err, logData)
+			return
+		}
+		log.Error(err, logData)
 		setErrorCode(w, err)
 		return
 	}
@@ -132,50 +204,94 @@ func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setJSONContentType(w)
+	if err := api.auditor.Record(r.Context(), getJobAction, actionSuccessful, auditParams); err != nil {
+		handleAuditError(w, err, logData)
+		return
+	}
+
 	_, err = w.Write(bytes)
 	if err != nil {
 		log.Error(err, log.Data{})
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
-	log.Info("Returning an import job", log.Data{"id": jobID})
+	log.Info("Returning an import job", logData)
 }
 
 func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	jobID := vars["id"]
+	logData := log.Data{jobIDKey: jobID}
+	auditParams := common.Params{jobIDKey: jobID}
+
+	if err := api.auditor.Record(r.Context(), uploadFileAction, actionAttempted, auditParams); err != nil {
+		handleAuditError(w, err, logData)
+		return
+	}
+
 	uploadedFile, err := models.CreateUploadedFile(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		log.Error(err, log.Data{"file": uploadedFile, "job_id": jobID})
+		log.Error(err, logData)
 		http.Error(w, "bad client request received", http.StatusBadRequest)
 		return
 	}
-	if err = api.dataStore.AddUploadedFile(jobID, uploadedFile); err != nil {
-		log.Error(err, log.Data{"file": uploadedFile, "job_id": jobID})
+
+	logData["file"] = uploadedFile
+	auditParams["fileAlias"] = uploadedFile.AliasName
+	auditParams["fileURL"] = uploadedFile.URL
+
+	if err := api.dataStore.AddUploadedFile(jobID, uploadedFile); err != nil {
+		if err := api.auditor.Record(r.Context(), uploadFileAction, actionUnsuccessful, auditParams); err != nil {
+			handleAuditError(w, err, logData)
+			return
+		}
+		log.ErrorC("error while adding up", err, logData)
 		setErrorCode(w, err)
 		return
 	}
-	log.Info("added uploaded file to job", log.Data{"job_id": jobID, "file": uploadedFile})
+	if err := api.auditor.Record(r.Context(), uploadFileAction, actionSuccessful, auditParams); err != nil {
+		handleAuditError(w, err, logData)
+		return
+	}
+	log.Info("added uploaded file to job", log.Data{jobIDKey: jobID, "file": uploadedFile})
 }
 
 func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	jobID := vars["id"]
+	logData := log.Data{jobIDKey: jobID}
+	auditParams := common.Params{jobIDKey: jobID}
+
+	if err := api.auditor.Record(r.Context(), updateJobAction, actionAttempted, auditParams); err != nil {
+		handleAuditError(w, err, logData)
+		return
+	}
+
 	job, err := models.CreateJob(r.Body)
 	defer r.Body.Close()
 	if err != nil {
-		log.Error(err, log.Data{"job": job, "job_id": jobID})
+		log.Error(err, logData)
 		http.Error(w, "bad client request received", http.StatusBadRequest)
 		return
 	}
 
-	err = api.jobService.UpdateJob(r.Context(), jobID, job)
-
-	if err != nil {
-		log.Error(err, log.Data{"job_id": jobID})
+	logData["job"] = job
+	if err := api.jobService.UpdateJob(r.Context(), jobID, job); err != nil {
+		log.ErrorC("error updating job", err, logData)
+		if err := api.auditor.Record(r.Context(), updateJobAction, actionUnsuccessful, auditParams); err != nil {
+			handleAuditError(w, err, logData)
+			return
+		}
 		setErrorCode(w, err)
+		return
 	}
+
+	if err := api.auditor.Record(r.Context(), updateJobAction, actionSuccessful, auditParams); err != nil {
+		handleAuditError(w, err, logData)
+		return
+	}
+	log.Info("job update completed successfully", logData)
 }
 
 func setErrorCode(w http.ResponseWriter, err error) {
@@ -205,6 +321,12 @@ func setErrorCode(w http.ResponseWriter, err error) {
 		http.Error(w, internalError, http.StatusInternalServerError)
 		return
 	}
+}
+
+func handleAuditError(w http.ResponseWriter, err error, logData log.Data) {
+	log.ErrorC(auditError, err, logData)
+	w.WriteHeader(http.StatusInternalServerError)
+	w.Write([]byte(internalServerError))
 }
 
 func setJSONContentType(w http.ResponseWriter) {
