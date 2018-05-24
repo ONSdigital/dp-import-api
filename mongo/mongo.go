@@ -7,10 +7,10 @@ import (
 	"github.com/ONSdigital/dp-import-api/api-errors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
-	mongocloser "github.com/ONSdigital/go-ns/mongo"
+	mongolib "github.com/ONSdigital/go-ns/mongo"
 
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"github.com/gedge/mgo"
+	"github.com/gedge/mgo/bson"
 )
 
 var _ datastore.DataStorer = (*Mongo)(nil)
@@ -92,15 +92,14 @@ func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile) error {
 	s := session.Copy()
 	defer s.Close()
 
-	update := bson.M{
+	update := mongolib.WithUpdates(bson.M{
 		"$addToSet": bson.M{
 			"files": bson.M{
 				"alias_name": file.AliasName,
 				"url":        file.URL,
 			},
 		},
-		"$currentDate": bson.M{"last_updated": true},
-	}
+	})
 
 	err := s.DB(m.Database).C(m.Collection).Update(bson.M{"id": id}, update)
 	if err != nil && err == mgo.ErrNotFound {
@@ -115,10 +114,9 @@ func (m *Mongo) UpdateJob(id string, job *models.Job) (err error) {
 	s := session.Copy()
 	defer s.Close()
 
-	update := bson.M{
-		"$set":         job,
-		"$currentDate": bson.M{"last_updated": true},
-	}
+	update := mongolib.WithUpdates(bson.M{
+		"$set": job,
+	})
 
 	err = s.DB(m.Database).C(m.Collection).Update(bson.M{"id": id}, update)
 
@@ -134,15 +132,14 @@ func (m *Mongo) UpdateJobState(id, newState string) (err error) {
 	s := session.Copy()
 	defer s.Close()
 
-	update := bson.M{
-		"$set":         bson.M{"state": newState},
-		"$currentDate": bson.M{"last_updated": true},
-	}
+	update := mongolib.WithUpdates(bson.M{
+		"$set": bson.M{"state": newState},
+	})
 
 	_, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update)
 	return
 }
 
 func (m *Mongo) Close(ctx context.Context) error {
-	return mongocloser.Close(ctx, session)
+	return mongolib.Close(ctx, session)
 }

@@ -5,7 +5,8 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-	"time"
+
+	mongolib "github.com/ONSdigital/go-ns/mongo"
 )
 
 const (
@@ -24,7 +25,7 @@ type Job struct {
 	State         string          `bson:"state,omitempty"          json:"state,omitempty"`
 	UploadedFiles *[]UploadedFile `bson:"files,omitempty"          json:"files,omitempty"`
 	Links         LinksMap        `bson:"links,omitempty"          json:"links,omitempty"`
-	LastUpdated   time.Time       `bson:"last_updated,omitempty"   json:"last_updated,omitempty"`
+	mongolib.Timestamps
 }
 
 type LinksMap struct {
