@@ -9,8 +9,8 @@ import (
 	"github.com/ONSdigital/dp-import-api/models"
 	mongocloser "github.com/ONSdigital/go-ns/mongo"
 
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
 )
 
 var _ datastore.DataStorer = (*Mongo)(nil)
@@ -106,8 +106,8 @@ func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile) error {
 	if err != nil && err == mgo.ErrNotFound {
 		return api_errors.JobNotFoundError
 	}
-	return nil
 
+	return nil
 }
 
 // UpdateJob adds or overides an existing import job
