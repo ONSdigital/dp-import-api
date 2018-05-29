@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,12 +14,11 @@ import (
 	"github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/models"
 	mockdatastore "github.com/ONSdigital/dp-import-api/mongo/testmongo"
-	"github.com/gorilla/mux"
-	. "github.com/smartystreets/goconvey/convey"
-	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/audit"
 	"github.com/ONSdigital/go-ns/common"
-	"github.com/pkg/errors"
+	"github.com/ONSdigital/go-ns/log"
+	"github.com/gorilla/mux"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 var (
@@ -395,8 +395,8 @@ func TestAddJob(t *testing.T) {
 		r, err := createRequestWithAuth("POST", "http://localhost:21800/jobs", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		mockJobService := &testapi.JobServiceMock{}
-		mockJobService = &testapi.JobServiceMock{
+
+		mockJobService := &testapi.JobServiceMock{
 			CreateJobFunc: func(ctx context.Context, job *models.Job) (*models.Job, error) {
 				return dummyJob, nil
 			},
@@ -424,8 +424,8 @@ func TestAddJob(t *testing.T) {
 		r, err := createRequestWithAuth("POST", "http://localhost:21800/jobs", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		mockJobService := &testapi.JobServiceMock{}
-		mockJobService = &testapi.JobServiceMock{
+
+		mockJobService := &testapi.JobServiceMock{
 			CreateJobFunc: func(ctx context.Context, job *models.Job) (*models.Job, error) {
 				return dummyJob, nil
 			},
@@ -443,7 +443,7 @@ func TestAddJob(t *testing.T) {
 		verifyAuditorCalls(calls[0], addJobAction, actionAttempted, common.Params{"recipeID": "test"})
 	})
 
-	Convey("when a job is created successfully but auditing action successful errors then an error response is returned", t, func() {
+	Convey("when a job is created successfully but auditing action successful errors then a jobInstance model is returned", t, func() {
 		auditorMock := newAuditorMock()
 		auditorMock.RecordFunc = func(ctx context.Context, action string, result string, params common.Params) error {
 			if result == actionSuccessful {
@@ -456,8 +456,8 @@ func TestAddJob(t *testing.T) {
 		r, err := createRequestWithAuth("POST", "http://localhost:21800/jobs", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		mockJobService := &testapi.JobServiceMock{}
-		mockJobService = &testapi.JobServiceMock{
+
+		mockJobService := &testapi.JobServiceMock{
 			CreateJobFunc: func(ctx context.Context, job *models.Job) (*models.Job, error) {
 				return dummyJob, nil
 			},
@@ -465,8 +465,8 @@ func TestAddJob(t *testing.T) {
 
 		api := CreateImportAPI(mux.NewRouter(), &dstore, mockJobService, auditorMock)
 		api.router.ServeHTTP(w, r)
-		So(w.Code, ShouldEqual, http.StatusInternalServerError)
-		So(strings.TrimSpace(w.Body.String()), ShouldEqual, internalError)
+		So(w.Code, ShouldEqual, http.StatusCreated)
+		So(w.Body.String(), ShouldContainSubstring, "\"id\":\"34534543543\"")
 
 		calls := auditorMock.RecordCalls()
 		So(len(calls), ShouldEqual, 2)
@@ -487,8 +487,8 @@ func TestAddJob(t *testing.T) {
 		r, err := createRequestWithAuth("POST", "http://localhost:21800/jobs", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		mockJobService := &testapi.JobServiceMock{}
-		mockJobService = &testapi.JobServiceMock{
+
+		mockJobService := &testapi.JobServiceMock{
 			CreateJobFunc: func(ctx context.Context, job *models.Job) (*models.Job, error) {
 				return nil, errors.New("create job error")
 			},
@@ -585,7 +585,7 @@ func TestAddFile(t *testing.T) {
 		verifyAuditorCalls(calls[1], uploadFileAction, actionUnsuccessful, params)
 	})
 
-	Convey("when upload is successful but auditing action successful errors then a 500 status is returned", t, func() {
+	Convey("when upload is successful but auditing action successful errors then a 200 status is still returned", t, func() {
 		auditorMock := &audit.AuditorServiceMock{
 			RecordFunc: func(ctx context.Context, action string, result string, params common.Params) error {
 				if result == actionSuccessful {
@@ -602,8 +602,7 @@ func TestAddFile(t *testing.T) {
 		api := CreateImportAPI(mux.NewRouter(), &dstore, mockJobService, auditorMock)
 		api.router.ServeHTTP(w, r)
 
-		So(w.Code, ShouldEqual, http.StatusInternalServerError)
-		So(w.Body.String(), ShouldEqual, internalError)
+		So(w.Code, ShouldEqual, http.StatusOK)
 
 		calls := auditorMock.RecordCalls()
 		So(len(calls), ShouldEqual, 2)
@@ -719,8 +718,8 @@ func TestUpdateJobStateReturnsNotFound(t *testing.T) {
 		r, err := createRequestWithAuth("PUT", "http://localhost:21800/jobs/12345", reader)
 		So(err, ShouldBeNil)
 		w := httptest.NewRecorder()
-		mockJobService := &testapi.JobServiceMock{}
-		mockJobService = &testapi.JobServiceMock{
+
+		mockJobService := &testapi.JobServiceMock{
 			UpdateJobFunc: func(ctx context.Context, jobID string, job *models.Job) error {
 				return api_errors.JobNotFoundError
 			},
@@ -795,7 +794,7 @@ func TestUpdateJobStateToSubmitted(t *testing.T) {
 		verifyAuditorCalls(calls[1], updateJobAction, actionUnsuccessful, common.Params{jobIDKey: "12345"})
 	})
 
-	Convey("When a job state is updated to submitted but auditing action successful returns an error then a 500 status is returned", t, func() {
+	Convey("When a job state is updated to submitted but auditing action successful returns an error then a 200 status is still returned", t, func() {
 		auditorMock := &audit.AuditorServiceMock{
 			RecordFunc: func(ctx context.Context, action string, result string, params common.Params) error {
 				if result == actionSuccessful {
@@ -818,8 +817,8 @@ func TestUpdateJobStateToSubmitted(t *testing.T) {
 		api := CreateImportAPI(mux.NewRouter(), &dstore, mockJobService, auditorMock)
 		api.router.ServeHTTP(w, r)
 
-		So(w.Code, ShouldEqual, http.StatusInternalServerError)
-		So(w.Body.String(), ShouldEqual, internalError)
+		So(w.Code, ShouldEqual, http.StatusOK)
+
 		calls := auditorMock.RecordCalls()
 		So(len(calls), ShouldEqual, 2)
 		verifyAuditorCalls(calls[0], updateJobAction, actionAttempted, common.Params{jobIDKey: "12345"})

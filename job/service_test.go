@@ -107,7 +107,7 @@ func TestService_CreateJob_CreateInstanceFails(t *testing.T) {
 			createdJob, err := jobService.CreateJob(ctx, newJob)
 
 			Convey("The expected error is returned", func() {
-				So(err, ShouldEqual, job.ErrCreateInstanceFailed)
+				So(err, ShouldResemble, job.ErrCreateInstanceFailed("dataset1"))
 				So(createdJob, ShouldBeNil)
 			})
 		})

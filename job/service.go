@@ -3,6 +3,7 @@ package job
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
@@ -15,10 +16,17 @@ import (
 //go:generate moq -out testjob/dataset_api.go -pkg testjob . DatasetAPI
 //go:generate moq -out testjob/recipe_api.go -pkg testjob . RecipeAPI
 
-var ErrInvalidJob = errors.New("the provided Job is not valid")
-var ErrGetRecipeFailed = errors.New("failed to get recipe")
-var ErrCreateInstanceFailed = errors.New("failed to create a new instance on the dataset api")
-var ErrSaveJobFailed = errors.New("failed to save job")
+// A list of custom errors
+var (
+	ErrInvalidJob      = errors.New("the provided Job is not valid")
+	ErrGetRecipeFailed = errors.New("failed to get recipe")
+	ErrSaveJobFailed   = errors.New("failed to save job")
+)
+
+// ErrCreateInstanceFailed builds the message for an error when creating an instance
+func ErrCreateInstanceFailed(datasetID string) error {
+	return fmt.Errorf("failed to create a new instance on the dataset api for: [%s]", datasetID)
+}
 
 // Service provides job related functionality.
 type Service struct {
@@ -78,7 +86,7 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 		// now create an instance for this file
 		instance, err := service.datasetAPI.CreateInstance(ctx, job, &oi)
 		if err != nil {
-			return nil, ErrCreateInstanceFailed
+			return nil, ErrCreateInstanceFailed(oi.DatasetID)
 		}
 
 		job.Links.Instances = append(job.Links.Instances,
