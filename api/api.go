@@ -64,11 +64,11 @@ func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, jobServ
 	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService, auditor: auditor}
 
 	// External API for florence
-	api.router.Path("/jobs").Methods("POST").HandlerFunc(identity.Check(api.addJob))
-	api.router.Path("/jobs").Methods("GET").HandlerFunc(identity.Check(api.getJobs)).Queries()
-	api.router.Path("/jobs/{id}").Methods("GET").HandlerFunc(identity.Check(api.getJob))
-	api.router.Path("/jobs/{id}").Methods("PUT").HandlerFunc(identity.Check(api.updateJob))
-	api.router.Path("/jobs/{id}/files").Methods("PUT").HandlerFunc(identity.Check(api.addUploadedFile))
+	api.router.Path("/jobs").Methods("POST").HandlerFunc(identity.Check(api.addJobHandler))
+	api.router.Path("/jobs").Methods("GET").HandlerFunc(identity.Check(api.getJobsHandler)).Queries()
+	api.router.Path("/jobs/{id}").Methods("GET").HandlerFunc(identity.Check(api.getJobHandler))
+	api.router.Path("/jobs/{id}").Methods("PUT").HandlerFunc(identity.Check(api.updateJobHandler))
+	api.router.Path("/jobs/{id}/files").Methods("PUT").HandlerFunc(identity.Check(api.addUploadedFileHandler))
 	api.router.NotFoundHandler = &api
 	return &api
 }
@@ -77,7 +77,7 @@ func (api *ImportAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, notFoundError, http.StatusNotFound)
 }
 
-func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
+func (api *ImportAPI) addJobHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	job, err := models.CreateJob(r.Body)
@@ -95,26 +95,7 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var createdJob *models.Job
-	b, err := func() (bytes []byte, err error) {
-		createdJob, err = api.jobService.CreateJob(ctx, job)
-		if err != nil {
-			log.ErrorCtx(ctx, errors.WithMessage(err, "addJob endpoint: error creating job resource"), logData)
-			return nil, err
-		}
-
-		logData["job"] = createdJob
-		auditParams["createdJobID"] = createdJob.ID
-
-		bytes, err = json.Marshal(createdJob)
-		if err != nil {
-			log.ErrorCtx(ctx, errors.WithMessage(err, "addJob endpoint: failed to marshal job resource into bytes"), logData)
-			return nil, err
-		}
-
-		return bytes, nil
-	}()
-
+	b, err := api.addJob(ctx, job, auditParams, logData)
 	if err != nil {
 		if auditError := api.auditor.Record(ctx, addJobAction, actionUnsuccessful, auditParams); auditError != nil {
 			handleAuditError(ctx, w, addJobAction, actionUnsuccessful, auditError, logData)
@@ -140,7 +121,7 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 	audit.LogInfo(ctx, "created new import job", logData)
 }
 
-func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
+func (api *ImportAPI) getJobsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	auditParams := common.Params{}
 	logData := log.Data{}
@@ -160,25 +141,7 @@ func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	b, err := func() (bytes []byte, err error) {
-		jobs, err := api.dataStore.GetJobs(filterList)
-		if err != nil {
-			log.ErrorCtx(ctx, errors.WithMessage(err, "getJobs endpoint: failed to retrieve a list of jobs"), logData)
-			return nil, err
-		}
-		logData["Jobs"] = jobs
-
-		bytes, err = json.Marshal(jobs)
-		if err != nil {
-			log.ErrorCtx(ctx, errors.WithMessage(err, "getJobs endpoint: failed to marshal jobs resource into bytes"), logData)
-			return nil, err
-		}
-
-		return bytes, nil
-	}()
-
-	setJSONContentType(w)
-
+	b, err := api.getJobs(ctx, filterList, auditParams, logData)
 	if err != nil {
 		if auditError := api.auditor.Record(ctx, getJobsAction, actionUnsuccessful, auditParams); auditError != nil {
 			handleAuditError(ctx, w, getJobsAction, actionUnsuccessful, auditError, logData)
@@ -194,6 +157,8 @@ func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setJSONContentType(w)
+
 	_, err = w.Write(b)
 	if err != nil {
 		audit.LogError(ctx, errors.WithMessage(err, "getJobs endpoint: error writing bytes to response"), logData)
@@ -204,7 +169,7 @@ func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
 	audit.LogInfo(ctx, "getJobs endpoint: request successful", logData)
 }
 
-func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
+func (api *ImportAPI) getJobHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	jobID := vars["id"]
 	logData := log.Data{jobIDKey: jobID}
@@ -216,26 +181,7 @@ func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var job *models.Job
-	b, err := func() (bytes []byte, err error) {
-		job, err = api.dataStore.GetJob(jobID)
-		if err != nil {
-			log.ErrorCtx(ctx, errors.WithMessage(err, "getJob endpoint: failed to find job"), logData)
-			return nil, err
-		}
-
-		logData["job"] = job
-
-		bytes, err = json.Marshal(job)
-		if err != nil {
-			log.ErrorCtx(ctx, errors.WithMessage(err, "getJob endpoint: failed to marshal jobs resource into bytes"), logData)
-			return nil, err
-		}
-		return bytes, nil
-	}()
-
-	setJSONContentType(w)
-
+	b, err := api.getJob(ctx, jobID, auditParams, logData)
 	if err != nil {
 		if auditError := api.auditor.Record(ctx, getJobAction, actionUnsuccessful, auditParams); auditError != nil {
 			handleAuditError(ctx, w, getJobAction, actionUnsuccessful, auditError, logData)
@@ -251,6 +197,8 @@ func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setJSONContentType(w)
+
 	_, err = w.Write(b)
 	if err != nil {
 		audit.LogError(ctx, errors.WithMessage(err, "getJob endpoint: error writing bytes to response"), logData)
@@ -261,7 +209,7 @@ func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
 	audit.LogInfo(ctx, "getJob endpoint: request successful", logData)
 }
 
-func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
+func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	jobID := vars["id"]
 	logData := log.Data{jobIDKey: jobID}
@@ -274,26 +222,7 @@ func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	options := make(map[string]bool)
-	if err := func(options map[string]bool) (err error) {
-		uploadedFile, err := models.CreateUploadedFile(r.Body)
-		defer r.Body.Close()
-		if err != nil {
-			log.ErrorCtx(ctx, errors.WithMessage(err, "addUploadFile endpoint: failed to create uploaded file resource"), logData)
-			options[badRequest] = true
-			return err
-		}
-
-		logData["file"] = uploadedFile
-		auditParams["fileAlias"] = uploadedFile.AliasName
-		auditParams["fileURL"] = uploadedFile.URL
-
-		if err := api.dataStore.AddUploadedFile(jobID, uploadedFile); err != nil {
-			log.ErrorCtx(ctx, errors.WithMessage(err, "addUploadFile endpoint: failed to store uploaded file resource"), logData)
-			return err
-		}
-
-		return nil
-	}(options); err != nil {
+	if err := api.addUploadFile(ctx, r, jobID, options, auditParams, logData); err != nil {
 		if auditError := api.auditor.Record(ctx, uploadFileAction, actionUnsuccessful, auditParams); auditError != nil {
 			handleAuditError(ctx, w, uploadFileAction, actionUnsuccessful, auditError, logData)
 			return
@@ -311,7 +240,7 @@ func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
 	audit.LogInfo(ctx, "added uploaded file to job", logData)
 }
 
-func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
+func (api *ImportAPI) updateJobHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	vars := mux.Vars(r)
 	jobID := vars["id"]
@@ -324,23 +253,7 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	options := make(map[string]bool)
-	if err := func(options map[string]bool) (err error) {
-		job, err := models.CreateJob(r.Body)
-		defer r.Body.Close()
-		if err != nil {
-			log.ErrorCtx(ctx, errors.WithMessage(err, "updateJob endpoint: failed to update job resource"), logData)
-			options[badRequest] = true
-			return err
-		}
-
-		logData["job"] = job
-		if err := api.jobService.UpdateJob(ctx, jobID, job); err != nil {
-			log.ErrorCtx(ctx, errors.WithMessage(err, "updateJob endpoint: failed to store updated job resource"), logData)
-			return err
-		}
-
-		return nil
-	}(options); err != nil {
+	if err := api.updateJob(ctx, r, jobID, options, auditParams, logData); err != nil {
 		if auditError := api.auditor.Record(ctx, updateJobAction, actionUnsuccessful, auditParams); auditError != nil {
 			handleAuditError(ctx, w, updateJobAction, actionUnsuccessful, auditError, logData)
 			return
@@ -407,4 +320,96 @@ func handleAuditError(ctx context.Context, w http.ResponseWriter, auditedAction 
 
 func setJSONContentType(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
+}
+
+func (api *ImportAPI) addJob(ctx context.Context, job *models.Job, auditParams common.Params, logData log.Data) (b []byte, err error) {
+	createdJob, err := api.jobService.CreateJob(ctx, job)
+	if err != nil {
+		log.ErrorCtx(ctx, errors.WithMessage(err, "addJob endpoint: error creating job resource"), logData)
+		return
+	}
+
+	logData["job"] = createdJob
+	auditParams["createdJobID"] = createdJob.ID
+
+	b, err = json.Marshal(createdJob)
+	if err != nil {
+		log.ErrorCtx(ctx, errors.WithMessage(err, "addJob endpoint: failed to marshal job resource into bytes"), logData)
+		return nil, err
+	}
+
+	return
+}
+
+func (api *ImportAPI) getJobs(ctx context.Context, filterList []string, auditParams common.Params, logData log.Data) (b []byte, err error) {
+	jobs, err := api.dataStore.GetJobs(filterList)
+	if err != nil {
+		log.ErrorCtx(ctx, errors.WithMessage(err, "getJobs endpoint: failed to retrieve a list of jobs"), logData)
+		return
+	}
+	logData["Jobs"] = jobs
+
+	b, err = json.Marshal(jobs)
+	if err != nil {
+		log.ErrorCtx(ctx, errors.WithMessage(err, "getJobs endpoint: failed to marshal jobs resource into bytes"), logData)
+		return
+	}
+
+	return
+}
+
+func (api *ImportAPI) getJob(ctx context.Context, jobID string, auditParams common.Params, logData log.Data) (b []byte, err error) {
+	job, err := api.dataStore.GetJob(jobID)
+	if err != nil {
+		log.ErrorCtx(ctx, errors.WithMessage(err, "getJob endpoint: failed to find job"), logData)
+		return
+	}
+
+	logData["job"] = job
+
+	b, err = json.Marshal(job)
+	if err != nil {
+		log.ErrorCtx(ctx, errors.WithMessage(err, "getJob endpoint: failed to marshal jobs resource into bytes"), logData)
+		return
+	}
+	return
+}
+
+func (api *ImportAPI) addUploadFile(ctx context.Context, r *http.Request, jobID string, options map[string]bool, auditParams common.Params, logData log.Data) (err error) {
+	uploadedFile, err := models.CreateUploadedFile(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		log.ErrorCtx(ctx, errors.WithMessage(err, "addUploadFile endpoint: failed to create uploaded file resource"), logData)
+		options[badRequest] = true
+		return
+	}
+
+	logData["file"] = uploadedFile
+	auditParams["fileAlias"] = uploadedFile.AliasName
+	auditParams["fileURL"] = uploadedFile.URL
+
+	if err = api.dataStore.AddUploadedFile(jobID, uploadedFile); err != nil {
+		log.ErrorCtx(ctx, errors.WithMessage(err, "addUploadFile endpoint: failed to store uploaded file resource"), logData)
+		return
+	}
+
+	return
+}
+
+func (api *ImportAPI) updateJob(ctx context.Context, r *http.Request, jobID string, options map[string]bool, auditParams common.Params, logData log.Data) (err error) {
+	job, err := models.CreateJob(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		log.ErrorCtx(ctx, errors.WithMessage(err, "updateJob endpoint: failed to update job resource"), logData)
+		options[badRequest] = true
+		return
+	}
+
+	logData["job"] = job
+	if err = api.jobService.UpdateJob(ctx, jobID, job); err != nil {
+		log.ErrorCtx(ctx, errors.WithMessage(err, "updateJob endpoint: failed to store updated job resource"), logData)
+		return
+	}
+
+	return
 }
