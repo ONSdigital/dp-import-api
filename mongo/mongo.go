@@ -7,7 +7,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/api-errors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
-	mongocloser "github.com/ONSdigital/go-ns/mongo"
+	"github.com/ONSdigital/go-ns/mongo"
 
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
@@ -79,7 +79,14 @@ func (m *Mongo) GetJob(id string) (*models.Job, error) {
 func (m *Mongo) AddJob(job *models.Job) (*models.Job, error) {
 	s := session.Copy()
 	defer s.Close()
-	job.LastUpdated = time.Now().UTC()
+
+	currentTime := time.Now().UTC()
+	job.LastUpdated = currentTime
+	// Replace line below with
+	// job.UniqueTimestamp = bson.NewMongoTimestamp(currentTime, 1)
+	// once mgo has been updated with new function `NewMongoTimestamp`
+	job.UniqueTimestamp = 1
+
 	if err := s.DB(m.Database).C(m.Collection).Insert(job); err != nil {
 		return nil, err
 	}
@@ -99,9 +106,24 @@ func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile) error {
 				"url":        file.URL,
 			},
 		},
-		"$currentDate": bson.M{"last_updated": true},
+		"$currentDate": bson.M{
+			"last_updated": true,
+			"unique_timestamp": bson.M{
+				"$type": "timestamp",
+			},
+		},
 	}
 
+	// Replace above with below once go-ns mongo package has been updated
+	// update := bson.M{
+	// 	"$addToSet": bson.M{
+	// 		"files": bson.M{
+	// 			"alias_name": file.AliasName,
+	// 			"url":        file.URL,
+	// 		},
+	// 	},
+	// }
+	// mongo.WithUpdates(update)
 	err := s.DB(m.Database).C(m.Collection).Update(bson.M{"id": id}, update)
 	if err != nil && err == mgo.ErrNotFound {
 		return api_errors.JobNotFoundError
@@ -116,10 +138,17 @@ func (m *Mongo) UpdateJob(id string, job *models.Job) (err error) {
 	defer s.Close()
 
 	update := bson.M{
-		"$set":         job,
-		"$currentDate": bson.M{"last_updated": true},
+		"$set": job,
+		"$currentDate": bson.M{
+			"last_updated": true,
+			"unique_timestamp": bson.M{
+				"$type": "timestamp",
+			},
+		},
 	}
 
+	// Replace above with below once go-ns mongo package has been updated
+	//mongo.WithUpdates(bson.M{"$set": job})
 	err = s.DB(m.Database).C(m.Collection).Update(bson.M{"id": id}, update)
 
 	if err != nil && err == mgo.ErrNotFound {
@@ -135,14 +164,22 @@ func (m *Mongo) UpdateJobState(id, newState string) (err error) {
 	defer s.Close()
 
 	update := bson.M{
-		"$set":         bson.M{"state": newState},
-		"$currentDate": bson.M{"last_updated": true},
+		"$set": bson.M{"state": newState},
+		"$currentDate": bson.M{
+			"last_updated": true,
+			"unique_timestamp": bson.M{
+				"$type": "timestamp",
+			},
+		},
 	}
 
+	// Replace above with below once go-ns mongo package has been updated
+	// mongo.WithUpdates(bson.M{"$set": bson.M{"state": newState}})
 	_, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update)
 	return
 }
 
+// Close disconnects the mongo session
 func (m *Mongo) Close(ctx context.Context) error {
-	return mongocloser.Close(ctx, session)
+	return mongo.Close(ctx, session)
 }

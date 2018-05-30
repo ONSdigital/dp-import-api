@@ -20,10 +20,6 @@ import (
 
 //go:generate moq -out testapi/job_service.go -pkg testapi . JobService
 
-const internalError = "Internal server error"
-
-const notFoundError = "requested resource not found"
-
 const (
 	// audit actions
 	uploadFileAction = "uploadFile"
@@ -33,12 +29,14 @@ const (
 	getJobsAction    = "getJobs"
 
 	// audit results
-	actionSuccessful    = "actionSuccess"
-	actionUnsuccessful  = "actionUnsuccessful"
-	actionAttempted     = "actionAttempted"
-	auditError          = "error auditing action, failing request"
-	jobIDKey            = "job_id"
-	internalServerError = "Internal server error"
+	actionSuccessful   = "actionSuccess"
+	actionUnsuccessful = "actionUnsuccessful"
+	actionAttempted    = "actionAttempted"
+	auditError         = "error auditing action, failing request"
+	jobIDKey           = "job_id"
+	badRequest         = "bad-request"
+	notFoundError      = "requested resource not found"
+	internalError      = "Internal server error"
 
 	auditActionErr = "failed to audit action"
 )
@@ -118,13 +116,12 @@ func (api *ImportAPI) addJob(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	if err != nil {
-		log.Info("errored", nil)
 		if auditError := api.auditor.Record(ctx, addJobAction, actionUnsuccessful, auditParams); auditError != nil {
 			handleAuditError(ctx, w, addJobAction, actionUnsuccessful, auditError, logData)
 			return
 		}
 
-		setErrorCode(w, err)
+		setErrorCode(w, err, nil)
 		return
 	}
 
@@ -188,7 +185,7 @@ func (api *ImportAPI) getJobs(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		setErrorCode(w, err)
+		setErrorCode(w, err, nil)
 		return
 	}
 
@@ -245,7 +242,7 @@ func (api *ImportAPI) getJob(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		setErrorCode(w, err)
+		setErrorCode(w, err, nil)
 		return
 	}
 
@@ -276,11 +273,13 @@ func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := func() (err error) {
+	options := make(map[string]bool)
+	if err := func(options map[string]bool) (err error) {
 		uploadedFile, err := models.CreateUploadedFile(r.Body)
 		defer r.Body.Close()
 		if err != nil {
 			log.ErrorCtx(ctx, errors.WithMessage(err, "addUploadFile endpoint: failed to create uploaded file resource"), logData)
+			options[badRequest] = true
 			return err
 		}
 
@@ -294,13 +293,13 @@ func (api *ImportAPI) addUploadedFile(w http.ResponseWriter, r *http.Request) {
 		}
 
 		return nil
-	}(); err != nil {
+	}(options); err != nil {
 		if auditError := api.auditor.Record(ctx, uploadFileAction, actionUnsuccessful, auditParams); auditError != nil {
 			handleAuditError(ctx, w, uploadFileAction, actionUnsuccessful, auditError, logData)
 			return
 		}
 
-		setErrorCode(w, err)
+		setErrorCode(w, err, options)
 		return
 	}
 
@@ -324,11 +323,13 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := func() (err error) {
+	options := make(map[string]bool)
+	if err := func(options map[string]bool) (err error) {
 		job, err := models.CreateJob(r.Body)
 		defer r.Body.Close()
 		if err != nil {
 			log.ErrorCtx(ctx, errors.WithMessage(err, "updateJob endpoint: failed to update job resource"), logData)
+			options[badRequest] = true
 			return err
 		}
 
@@ -339,12 +340,12 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 		}
 
 		return nil
-	}(); err != nil {
+	}(options); err != nil {
 		if auditError := api.auditor.Record(ctx, updateJobAction, actionUnsuccessful, auditParams); auditError != nil {
 			handleAuditError(ctx, w, updateJobAction, actionUnsuccessful, auditError, logData)
 			return
 		}
-		setErrorCode(w, err)
+		setErrorCode(w, err, options)
 		return
 	}
 
@@ -356,7 +357,7 @@ func (api *ImportAPI) updateJob(w http.ResponseWriter, r *http.Request) {
 	audit.LogInfo(ctx, "job update completed successfully", logData)
 }
 
-func setErrorCode(w http.ResponseWriter, err error) {
+func setErrorCode(w http.ResponseWriter, err error, opts map[string]bool) {
 	switch {
 	case err == api_errors.JobNotFoundError:
 		http.Error(w, "resource not found", http.StatusNotFound)
@@ -376,8 +377,12 @@ func setErrorCode(w http.ResponseWriter, err error) {
 	case err.Error() == "No dimension name found":
 		http.Error(w, "resource not found", http.StatusNotFound)
 		return
-	case err != nil:
-		http.Error(w, internalError, http.StatusInternalServerError)
+	default:
+		if opts != nil && opts[badRequest] {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+		} else {
+			http.Error(w, internalError, http.StatusInternalServerError)
+		}
 		return
 	}
 }
@@ -397,7 +402,7 @@ func handleAuditError(ctx context.Context, w http.ResponseWriter, auditedAction 
 	auditActionFailure(ctx, getJobsAction, actionAttempted, err, logData)
 
 	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte(internalServerError))
+	w.Write([]byte(internalError))
 }
 
 func setJSONContentType(w http.ResponseWriter) {

@@ -6,11 +6,12 @@ import (
 	"io"
 	"io/ioutil"
 	"time"
+
+	"github.com/globalsign/mgo/bson"
 )
 
-const (
-	CreatedState = "created"
-)
+// CreatedState represents onse possible state of the job resource
+const CreatedState = "created"
 
 // JobResults for list of Job items
 type JobResults struct {
@@ -19,14 +20,16 @@ type JobResults struct {
 
 // Job for importing datasets
 type Job struct {
-	ID            string          `bson:"id,omitempty"             json:"id,omitempty"`
-	RecipeID      string          `bson:"recipe,omitempty"         json:"recipe,omitempty"`
-	State         string          `bson:"state,omitempty"          json:"state,omitempty"`
-	UploadedFiles *[]UploadedFile `bson:"files,omitempty"          json:"files,omitempty"`
-	Links         LinksMap        `bson:"links,omitempty"          json:"links,omitempty"`
-	LastUpdated   time.Time       `bson:"last_updated,omitempty"   json:"last_updated,omitempty"`
+	ID              string              `bson:"id,omitempty"               json:"id,omitempty"`
+	RecipeID        string              `bson:"recipe,omitempty"           json:"recipe,omitempty"`
+	State           string              `bson:"state,omitempty"            json:"state,omitempty"`
+	UploadedFiles   *[]UploadedFile     `bson:"files,omitempty"            json:"files,omitempty"`
+	Links           LinksMap            `bson:"links,omitempty"            json:"links,omitempty"`
+	LastUpdated     time.Time           `bson:"last_updated,omitempty"     json:"last_updated,omitempty"`
+	UniqueTimestamp bson.MongoTimestamp `bson:"unique_timestamp,omitempty" json:"-"`
 }
 
+// LinksMap represents a list of links related to a job resource
 type LinksMap struct {
 	Instances []IDLink `bson:"instances,omitempty" json:"instances,omitempty"`
 	Self      IDLink   `bson:"self,omitempty" json:"self,omitempty"`
