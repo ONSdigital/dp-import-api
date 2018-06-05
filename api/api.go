@@ -311,8 +311,8 @@ func auditActionFailure(ctx context.Context, auditedAction string, auditedResult
 	audit.LogError(ctx, errors.WithMessage(err, auditActionErr), logData)
 }
 
-func handleAuditError(ctx context.Context, w http.ResponseWriter, auditedAction string, auditedResult string, err error, logData log.Data) {
-	auditActionFailure(ctx, getJobsAction, actionAttempted, err, logData)
+func handleAuditError(ctx context.Context, w http.ResponseWriter, auditedAction, auditedResult string, err error, logData log.Data) {
+	auditActionFailure(ctx, auditedAction, auditedResult, err, logData)
 
 	w.WriteHeader(http.StatusInternalServerError)
 	w.Write([]byte(internalError))
