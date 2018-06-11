@@ -52,6 +52,7 @@ func (api *ImportAPI) addJobHandler(w http.ResponseWriter, r *http.Request) {
 	// record successful attempt to add job
 	api.auditor.Record(ctx, addJobAction, audit.Successful, auditParams)
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	writeBody(ctx, w, b, "addJob", logData)
 

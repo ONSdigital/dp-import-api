@@ -68,7 +68,6 @@ func writeBody(ctx context.Context, w http.ResponseWriter, b []byte, action stri
 	w.Header().Set("Content-Type", "application/json")
 	if _, err := w.Write(b); err != nil {
 		log.ErrorCtx(ctx, errors.Wrapf(err, "%s endpoint: failed to write response body", action), data)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
