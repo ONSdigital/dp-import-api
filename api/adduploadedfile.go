@@ -56,14 +56,13 @@ func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Requ
 	// record successful attempt to add uploaded file to job
 	api.auditor.Record(ctx, uploadFileAction, audit.Successful, auditParams)
 
-	log.InfoCtx(ctx, "added uploaded file to job", logData)
+	log.InfoCtx(ctx, "added uxploaded file to job", logData)
 }
 
 func (api *ImportAPI) addUploadFile(ctx context.Context, uploadedFile *models.UploadedFile, jobID string, auditParams common.Params, logData log.Data) (err error) {
 
 	if err = api.dataStore.AddUploadedFile(jobID, uploadedFile); err != nil {
 		log.ErrorCtx(ctx, errors.WithMessage(err, "addUploadFile endpoint: failed to store uploaded file resource"), logData)
-		return
 	}
 
 	return

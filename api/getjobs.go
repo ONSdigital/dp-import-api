@@ -19,9 +19,7 @@ func (api *ImportAPI) getJobsHandler(w http.ResponseWriter, r *http.Request) {
 
 	filtersQuery := r.URL.Query().Get("state")
 	var filterList []string
-	if filtersQuery == "" {
-		filterList = nil
-	} else {
+	if filtersQuery != "" {
 		filterList = strings.Split(filtersQuery, ",")
 		logData["filterQuery"] = filtersQuery
 		auditParams["filterQuery"] = filtersQuery
@@ -50,7 +48,7 @@ func (api *ImportAPI) getJobsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeBody(ctx, w, b, "getJobs", logData)
+	writeResponse(ctx, w, http.StatusOK, b, "getJobs", logData)
 
 	log.InfoCtx(ctx, "getJobs endpoint: request successful", logData)
 }
@@ -66,7 +64,6 @@ func (api *ImportAPI) getJobs(ctx context.Context, filterList []string, auditPar
 	b, err = json.Marshal(jobs)
 	if err != nil {
 		log.ErrorCtx(ctx, errors.WithMessage(err, "getJobs endpoint: failed to marshal jobs resource into bytes"), logData)
-		return
 	}
 
 	return

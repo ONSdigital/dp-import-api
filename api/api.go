@@ -64,8 +64,9 @@ func (api *ImportAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, notFoundError, http.StatusNotFound)
 }
 
-func writeBody(ctx context.Context, w http.ResponseWriter, b []byte, action string, data log.Data) {
+func writeResponse(ctx context.Context, w http.ResponseWriter, statusCode int, b []byte, action string, data log.Data) {
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
 	if _, err := w.Write(b); err != nil {
 		log.ErrorCtx(ctx, errors.Wrapf(err, "%s endpoint: failed to write response body", action), data)
 	}

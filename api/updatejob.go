@@ -58,7 +58,6 @@ func (api *ImportAPI) updateJob(ctx context.Context, r *http.Request, jobID stri
 
 	if err = api.jobService.UpdateJob(ctx, jobID, job); err != nil {
 		log.ErrorCtx(ctx, errors.WithMessage(err, "updateJob endpoint: failed to store updated job resource"), logData)
-		return
 	}
 
 	return

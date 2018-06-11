@@ -42,7 +42,7 @@ func (api *ImportAPI) getJobHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeBody(ctx, w, b, "getJob", logData)
+	writeResponse(ctx, w, http.StatusOK, b, "getJob", logData)
 
 	log.InfoCtx(ctx, "getJob endpoint: request successful", logData)
 }
@@ -59,7 +59,6 @@ func (api *ImportAPI) getJob(ctx context.Context, jobID string, auditParams comm
 	b, err = json.Marshal(job)
 	if err != nil {
 		log.ErrorCtx(ctx, errors.WithMessage(err, "getJob endpoint: failed to marshal jobs resource into bytes"), logData)
-		return
 	}
 	return
 }
