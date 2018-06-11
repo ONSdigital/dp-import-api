@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -14,6 +13,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/rchttp"
+	"github.com/pkg/errors"
 )
 
 // API provides a client for calling the Recipe API.
@@ -31,20 +31,22 @@ func (api *API) GetRecipe(ctx context.Context, ID string) (*models.Recipe, error
 	logData["http_code"] = httpCode
 
 	if err == nil && httpCode != http.StatusOK {
-		return nil, errors.New("GetRecipe: Bad response")
+		recipeErr := errors.New("bad response")
+		log.ErrorCtx(ctx, errors.Wrap(err, "GetRecipe: failed to retrieve recipe"), logData)
+		return nil, recipeErr
 	}
 
 	if err != nil {
-		log.ErrorC("GetRecipe get", err, logData)
+		log.ErrorCtx(ctx, errors.Wrap(err, "GetRecipe: failed to retrieve recipe"), logData)
 		return nil, err
 	}
 
 	var recipe *models.Recipe
-	err = json.Unmarshal(jsonResult, &recipe)
-	if err != nil {
+	if err = json.Unmarshal(jsonResult, &recipe); err != nil {
 		logData["json_response"] = jsonResult
-		log.ErrorC("failed to unmarshal json response from the recipe api", err, logData)
+		log.ErrorCtx(ctx, errors.Wrap(err, "GetRecipe: failed to unmarshal json response from the recipe api"), logData)
 	}
+
 	return recipe, nil
 }
 
@@ -58,9 +60,10 @@ func (api *API) callRecipeAPI(ctx context.Context, method, path string, payload 
 
 	URL, err := url.Parse(path)
 	if err != nil {
-		log.ErrorC("failed to create URL for recipe api call", err, logData)
+		log.ErrorCtx(ctx, errors.Wrap(err, "callRecipeAPI: failed to create URL for recipe api call"), logData)
 		return nil, 0, err
 	}
+
 	path = URL.String()
 	logData["url"] = path
 
@@ -78,28 +81,30 @@ func (api *API) callRecipeAPI(ctx context.Context, method, path string, payload 
 			logData["payload"] = payload.(url.Values)
 		}
 	}
+
 	// check req, above, didn't error
 	if err != nil {
-		log.ErrorC("failed to create request for recipe api", err, logData)
+		log.ErrorCtx(ctx, errors.Wrap(err, "callRecipeAPI: failed to create request for recipe api"), logData)
 		return nil, 0, err
 	}
 
 	resp, err := api.Client.Do(ctx, req)
 	if err != nil {
-		log.ErrorC("failed to action recipe api", err, logData)
+		log.ErrorCtx(ctx, errors.Wrap(err, "callRecipeAPI: failed to action recipe api"), logData)
 		return nil, 0, err
 	}
 
 	logData["http_code"] = resp.StatusCode
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= 300 {
-		log.Debug("unexpected status code from API", logData)
+		log.InfoCtx(ctx, "callRecipeAPI: unexpected status code from API", logData)
 	}
 
 	defer resp.Body.Close()
 	jsonBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.ErrorC("failed to read body from recipe api", err, logData)
+		log.ErrorCtx(ctx, errors.Wrap(err, "callRecipeAPI: failed to read body from recipe api"), logData)
 		return nil, resp.StatusCode, err
 	}
+
 	return jsonBody, resp.StatusCode, nil
 }

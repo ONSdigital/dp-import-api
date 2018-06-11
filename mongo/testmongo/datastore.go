@@ -3,7 +3,7 @@ package mongo
 import (
 	"errors"
 
-	"github.com/ONSdigital/dp-import-api/api-errors"
+	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/models"
 )
 
@@ -33,14 +33,14 @@ func (ds *DataStorer) GetJob(jobID string) (*models.Job, error) {
 		return &models.Job{}, InternalError
 	}
 	if ds.NotFound {
-		return &models.Job{}, api_errors.JobNotFoundError
+		return &models.Job{}, errs.ErrJobNotFound
 	}
 	return &models.Job{ID: "34534543543"}, nil
 }
 
 func (ds *DataStorer) AddInstance(jobID string) (string, error) {
 	if ds.NotFound {
-		return "", api_errors.JobNotFoundError
+		return "", errs.ErrJobNotFound
 	}
 	if ds.InternalError {
 		return "", InternalError
@@ -50,7 +50,7 @@ func (ds *DataStorer) AddInstance(jobID string) (string, error) {
 
 func (ds *DataStorer) UpdateJob(string, *models.Job) error {
 	if ds.NotFound {
-		return api_errors.JobNotFoundError
+		return errs.ErrJobNotFound
 	}
 	if ds.InternalError {
 		return InternalError
@@ -60,7 +60,7 @@ func (ds *DataStorer) UpdateJob(string, *models.Job) error {
 
 func (ds *DataStorer) UpdateJobState(string, string) error {
 	if ds.NotFound {
-		return api_errors.JobNotFoundError
+		return errs.ErrJobNotFound
 	}
 	if ds.InternalError {
 		return InternalError
@@ -70,7 +70,7 @@ func (ds *DataStorer) UpdateJobState(string, string) error {
 
 func (ds *DataStorer) AddUploadedFile(jobID string, message *models.UploadedFile) error {
 	if ds.NotFound {
-		return api_errors.JobNotFoundError
+		return errs.ErrJobNotFound
 	}
 	if ds.InternalError {
 		return InternalError
