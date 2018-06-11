@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/mocks"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -102,6 +103,52 @@ func TestCreateInstance(t *testing.T) {
 				So(instance.ImportTasks.BuildHierarchyTasks[0].State, ShouldEqual, CreatedState)
 				So(instance.ImportTasks.BuildHierarchyTasks[0].DimensionName, ShouldEqual, "codelist2")
 				So(instance.ImportTasks.BuildHierarchyTasks[0].CodeListID, ShouldEqual, "2")
+			})
+		})
+	})
+}
+
+func TestValidateState(t *testing.T) {
+	t.Parallel()
+	Convey("Given job has a valid state", t, func() {
+		listOfValidStates := []string{
+			CompletedState,
+			CreatedState,
+			SubmittedState,
+		}
+
+		for _, state := range listOfValidStates {
+			Convey("When validating job state of "+state, func() {
+				job := &Job{
+					State: state,
+				}
+				Convey("Then error should be nil", func() {
+					err := job.ValidateState()
+					So(err, ShouldBeNil)
+				})
+			})
+		}
+	})
+
+	Convey("Given job contains no state field", t, func() {
+		Convey("When validating job state ", func() {
+			job := &Job{}
+			Convey("Then error should be nil", func() {
+				err := job.ValidateState()
+				So(err, ShouldBeNil)
+			})
+		})
+	})
+
+	Convey("Given job contains an invalid state", t, func() {
+		Convey("When validating job state ", func() {
+			job := &Job{
+				State: "start",
+			}
+			Convey("Then error should be returned", func() {
+				err := job.ValidateState()
+				So(err, ShouldNotBeNil)
+				So(err, ShouldResemble, errs.ErrInvalidState)
 			})
 		})
 	})

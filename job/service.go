@@ -2,13 +2,14 @@ package job
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/dp-import-api/url"
 	"github.com/ONSdigital/go-ns/log"
+	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 )
 
@@ -18,7 +19,6 @@ import (
 
 // A list of custom errors
 var (
-	ErrInvalidJob      = errors.New("the provided Job is not valid")
 	ErrGetRecipeFailed = errors.New("failed to get recipe")
 	ErrSaveJobFailed   = errors.New("failed to save job")
 )
@@ -66,16 +66,17 @@ func NewService(dataStore datastore.DataStorer, queue Queue, datasetAPI DatasetA
 
 // CreateJob creates a new job using the given job instance.
 func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.Job, error) {
+	logData := log.Data{"job": job}
 
 	if err := job.Validate(); err != nil {
-		log.Error(err, log.Data{})
-		return nil, ErrInvalidJob
+		log.ErrorCtx(ctx, errors.Wrap(err, "CreateJob: failed validation"), logData)
+		return nil, errs.ErrInvalidJob
 	}
 
 	//Get details needed for instances from Recipe API
 	recipe, err := service.recipeAPI.GetRecipe(ctx, job.RecipeID)
 	if err != nil {
-		log.ErrorC("failed to get recipe details", err, log.Data{"job": job})
+		log.ErrorCtx(ctx, errors.Wrap(err, "CreateJob: failed to get recipe details"), logData)
 		return nil, ErrGetRecipeFailed
 	}
 
@@ -84,8 +85,10 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 
 	for _, oi := range recipe.OutputInstances {
 		// now create an instance for this file
-		instance, err := service.datasetAPI.CreateInstance(ctx, job, &oi)
-		if err != nil {
+		instance, instanceErr := service.datasetAPI.CreateInstance(ctx, job, &oi)
+		if instanceErr != nil {
+			logData["instance"] = oi
+			log.ErrorCtx(ctx, errors.Wrap(instanceErr, "CreateJob: failed to create instance in datastore"), logData)
 			return nil, ErrCreateInstanceFailed(oi.DatasetID)
 		}
 
@@ -99,7 +102,7 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 
 	createdJob, err := service.dataStore.AddJob(job)
 	if err != nil {
-		log.Error(err, log.Data{"job": job})
+		log.ErrorCtx(ctx, errors.Wrap(err, "CreateJob: failed to create job in datastore"), logData)
 		return nil, ErrSaveJobFailed
 	}
 

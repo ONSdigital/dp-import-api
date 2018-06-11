@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/job/testjob"
 	"github.com/ONSdigital/dp-import-api/models"
@@ -167,7 +168,7 @@ func TestService_CreateJob_InvalidJob(t *testing.T) {
 			createdJob, err := jobService.CreateJob(ctx, newJob)
 
 			Convey("Then an invalid job error is returned ", func() {
-				So(err, ShouldEqual, job.ErrInvalidJob)
+				So(err, ShouldEqual, errs.ErrInvalidJob)
 				So(createdJob, ShouldBeNil)
 			})
 		})

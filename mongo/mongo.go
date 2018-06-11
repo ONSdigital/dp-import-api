@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ONSdigital/dp-import-api/api-errors"
+	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/mongo"
@@ -52,7 +52,7 @@ func (m *Mongo) GetJobs(filters []string) ([]models.Job, error) {
 	results := []models.Job{}
 	if err := iter.All(&results); err != nil {
 		if err == mgo.ErrNotFound {
-			return nil, api_errors.JobNotFoundError
+			return nil, errs.ErrJobNotFound
 		}
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (m *Mongo) GetJob(id string) (*models.Job, error) {
 	err := s.DB(m.Database).C(m.Collection).Find(bson.M{"id": id}).One(&job)
 	if err != nil {
 		if err == mgo.ErrNotFound {
-			return nil, api_errors.JobNotFoundError
+			return nil, errs.ErrJobNotFound
 		}
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile) error {
 	// mongo.WithUpdates(update)
 	err := s.DB(m.Database).C(m.Collection).Update(bson.M{"id": id}, update)
 	if err != nil && err == mgo.ErrNotFound {
-		return api_errors.JobNotFoundError
+		return errs.ErrJobNotFound
 	}
 
 	return nil
@@ -152,7 +152,7 @@ func (m *Mongo) UpdateJob(id string, job *models.Job) (err error) {
 	err = s.DB(m.Database).C(m.Collection).Update(bson.M{"id": id}, update)
 
 	if err != nil && err == mgo.ErrNotFound {
-		return api_errors.JobNotFoundError
+		return errs.ErrJobNotFound
 	}
 
 	return
