@@ -2,15 +2,26 @@ package models
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"io/ioutil"
 	"time"
+
+	errs "github.com/ONSdigital/dp-import-api/apierrors"
+	"github.com/globalsign/mgo/bson"
 )
 
+// CreatedState represents onse possible state of the job resource
 const (
-	CreatedState = "created"
+	CompletedState = "completed"
+	CreatedState   = "created"
+	SubmittedState = "submitted"
 )
+
+var validStates = map[string]bool{
+	CompletedState: true,
+	CreatedState:   true,
+	SubmittedState: true,
+}
 
 // JobResults for list of Job items
 type JobResults struct {
@@ -19,14 +30,16 @@ type JobResults struct {
 
 // Job for importing datasets
 type Job struct {
-	ID            string          `bson:"id,omitempty"             json:"id,omitempty"`
-	RecipeID      string          `bson:"recipe,omitempty"         json:"recipe,omitempty"`
-	State         string          `bson:"state,omitempty"          json:"state,omitempty"`
-	UploadedFiles *[]UploadedFile `bson:"files,omitempty"          json:"files,omitempty"`
-	Links         LinksMap        `bson:"links,omitempty"          json:"links,omitempty"`
-	LastUpdated   time.Time       `bson:"last_updated,omitempty"   json:"last_updated,omitempty"`
+	ID              string              `bson:"id,omitempty"               json:"id,omitempty"`
+	RecipeID        string              `bson:"recipe,omitempty"           json:"recipe,omitempty"`
+	State           string              `bson:"state,omitempty"            json:"state,omitempty"`
+	UploadedFiles   *[]UploadedFile     `bson:"files,omitempty"            json:"files,omitempty"`
+	Links           LinksMap            `bson:"links,omitempty"            json:"links,omitempty"`
+	LastUpdated     time.Time           `bson:"last_updated,omitempty"     json:"last_updated,omitempty"`
+	UniqueTimestamp bson.MongoTimestamp `bson:"unique_timestamp,omitempty" json:"-"`
 }
 
+// LinksMap represents a list of links related to a job resource
 type LinksMap struct {
 	Instances []IDLink `bson:"instances,omitempty" json:"instances,omitempty"`
 	Self      IDLink   `bson:"self,omitempty" json:"self,omitempty"`
@@ -35,7 +48,7 @@ type LinksMap struct {
 // Validate the content of a job
 func (job *Job) Validate() error {
 	if job.RecipeID == "" {
-		return errors.New("missing properties to create import queue job struct")
+		return errs.ErrMissingProperties
 	}
 	if job.State == "" {
 		job.State = CreatedState
@@ -43,6 +56,19 @@ func (job *Job) Validate() error {
 	if job.UploadedFiles == nil {
 		job.UploadedFiles = &[]UploadedFile{}
 	}
+	return nil
+}
+
+// ValidateState checks the state is valid
+func (job *Job) ValidateState() error {
+	if job.State == "" {
+		return nil
+	}
+
+	if !validStates[job.State] {
+		return errs.ErrInvalidState
+	}
+
 	return nil
 }
 
@@ -128,7 +154,7 @@ type UploadedFile struct {
 // Validate the content of the structure
 func (s UploadedFile) Validate() error {
 	if s.URL == "" || s.AliasName == "" {
-		return errors.New("invalid json object received, alias_name and url are required")
+		return errs.ErrInvalidUploadedFileObject
 	}
 	return nil
 }
@@ -157,12 +183,12 @@ type IDLink struct {
 func CreateJob(reader io.Reader) (*Job, error) {
 	bytes, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return nil, errors.New("Failed to read message body")
+		return nil, errs.ErrFailedToReadRequestBody
 	}
 	var job Job
 	err = json.Unmarshal(bytes, &job)
 	if err != nil {
-		return nil, errors.New("Failed to parse json body")
+		return nil, errs.ErrFailedToParseJSONBody
 	}
 	return &job, nil
 }
@@ -171,12 +197,12 @@ func CreateJob(reader io.Reader) (*Job, error) {
 func CreateUploadedFile(reader io.Reader) (*UploadedFile, error) {
 	bytes, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return nil, errors.New("Failed to read message body")
+		return nil, errs.ErrFailedToReadRequestBody
 	}
 	var message UploadedFile
 	err = json.Unmarshal(bytes, &message)
 	if err != nil {
-		return nil, errors.New("Failed to parse json body")
+		return nil, errs.ErrFailedToParseJSONBody
 	}
 	return &message, message.Validate()
 }
