@@ -8,11 +8,15 @@ import (
 	"github.com/ONSdigital/go-ns/audit"
 	"github.com/ONSdigital/go-ns/common"
 	"github.com/ONSdigital/go-ns/log"
+	"github.com/ONSdigital/go-ns/request"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 )
 
 func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Request) {
+
+	defer request.DrainBody(r)
+
 	ctx := r.Context()
 	vars := mux.Vars(r)
 	jobID := vars["id"]
@@ -26,7 +30,6 @@ func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	uploadedFile, err := models.CreateUploadedFile(r.Body)
-	defer r.Body.Close()
 	if err != nil {
 		log.ErrorCtx(ctx, errors.WithMessage(err, "addUploadFile endpoint: failed to create uploaded file resource"), logData)
 

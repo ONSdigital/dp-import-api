@@ -9,10 +9,14 @@ import (
 	"github.com/ONSdigital/go-ns/audit"
 	"github.com/ONSdigital/go-ns/common"
 	"github.com/ONSdigital/go-ns/log"
+	"github.com/ONSdigital/go-ns/request"
 	"github.com/pkg/errors"
 )
 
 func (api *ImportAPI) addJobHandler(w http.ResponseWriter, r *http.Request) {
+
+	defer request.DrainBody(r)
+
 	ctx := r.Context()
 
 	// record attempt to add a job
@@ -23,7 +27,6 @@ func (api *ImportAPI) addJobHandler(w http.ResponseWriter, r *http.Request) {
 
 	// marshal request body into job structure
 	job, err := models.CreateJob(r.Body)
-	defer r.Body.Close()
 	if err != nil {
 		log.ErrorCtx(ctx, errors.WithMessage(err, "api endpoint addJob error - Bad client request received"), nil)
 
