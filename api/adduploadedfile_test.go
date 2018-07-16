@@ -16,6 +16,7 @@ import (
 	"github.com/gorilla/mux"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"io"
 )
 
 func TestFailureToAddFile(t *testing.T) {
@@ -43,11 +44,10 @@ func TestFailureToAddFile(t *testing.T) {
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
 
-				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, common.Params{"job_id":"12345"})
-				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Unsuccessful, common.Params{"job_id":"12345"})
+				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, common.Params{"job_id": "12345"})
+				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Unsuccessful, common.Params{"job_id": "12345"})
 			})
 		})
-
 
 		Convey("When the request body is invalid", func() {
 			Convey("Then return status bad request (400)", func() {
@@ -284,6 +284,11 @@ func TestSuccessfullyAddFile(t *testing.T) {
 				So(len(calls), ShouldEqual, 2)
 				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Successful, params)
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -313,6 +318,11 @@ func TestSuccessfullyAddFile(t *testing.T) {
 				So(len(calls), ShouldEqual, 2)
 				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Successful, params)
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 	})

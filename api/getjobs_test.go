@@ -45,7 +45,6 @@ func TestFailureToGetJobs(t *testing.T) {
 			})
 		})
 
-
 		Convey("When there is no available datastore", func() {
 			Convey("Then return status internal error (500)", func() {
 				mockJobService := &testapi.JobServiceMock{}

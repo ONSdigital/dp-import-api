@@ -15,6 +15,7 @@ import (
 	"github.com/ONSdigital/go-ns/common"
 	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
+	"io"
 )
 
 var dummyJob = &models.Job{ID: "34534543543"}
@@ -46,6 +47,11 @@ func TestFailureToAddJob(t *testing.T) {
 
 				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, common.Params{})
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Unsuccessful, common.Params{})
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -69,6 +75,11 @@ func TestFailureToAddJob(t *testing.T) {
 				So(len(calls), ShouldEqual, 2)
 				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Unsuccessful, nil)
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -96,6 +107,11 @@ func TestFailureToAddJob(t *testing.T) {
 				So(len(calls), ShouldEqual, 2)
 				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Unsuccessful, common.Params{"recipeID": ""})
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -123,6 +139,11 @@ func TestFailureToAddJob(t *testing.T) {
 
 				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Unsuccessful, common.Params{"recipeID": "test"})
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -155,6 +176,11 @@ func TestFailureToAddJob(t *testing.T) {
 
 				So(len(auditorMock.RecordCalls()), ShouldEqual, 1)
 				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -186,6 +212,11 @@ func TestFailureToAddJob(t *testing.T) {
 				So(len(calls), ShouldEqual, 2)
 				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Unsuccessful, nil)
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -221,6 +252,11 @@ func TestFailureToAddJob(t *testing.T) {
 				So(len(calls), ShouldEqual, 2)
 				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Unsuccessful, common.Params{"recipeID": "test"})
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 	})
@@ -257,6 +293,11 @@ func TestSuccessfullyAddJob(t *testing.T) {
 				p := common.Params{"createdJobID": dummyJob.ID, "recipeID": "test"}
 				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Successful, p)
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -291,6 +332,11 @@ func TestSuccessfullyAddJob(t *testing.T) {
 				So(len(calls), ShouldEqual, 2)
 				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Successful, common.Params{"recipeID": "test", "createdJobID": dummyJob.ID})
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 	})
