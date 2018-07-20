@@ -51,7 +51,8 @@ func TestFailureToUpdateJobState(t *testing.T) {
 				testapi.VerifyAuditorCalls(calls[1], updateJobAction, audit.Unsuccessful, common.Params{jobIDKey: "12345"})
 
 				Convey("Then the request body has been drained", func() {
-					_, err = r.Body.Read(make([]byte, 1))
+					bytesRead, err := r.Body.Read(make([]byte, 1))
+					So(bytesRead, ShouldEqual, 0)
 					So(err, ShouldEqual, io.EOF)
 				})
 			})
@@ -82,7 +83,8 @@ func TestFailureToUpdateJobState(t *testing.T) {
 				testapi.VerifyAuditorCalls(calls[1], updateJobAction, audit.Unsuccessful, common.Params{jobIDKey: "12345"})
 
 				Convey("Then the request body has been drained", func() {
-					_, err = r.Body.Read(make([]byte, 1))
+					bytesRead, err := r.Body.Read(make([]byte, 1))
+					So(bytesRead, ShouldEqual, 0)
 					So(err, ShouldEqual, io.EOF)
 				})
 			})
@@ -113,7 +115,8 @@ func TestFailureToUpdateJobState(t *testing.T) {
 				testapi.VerifyAuditorCalls(calls[1], updateJobAction, audit.Unsuccessful, common.Params{jobIDKey: "12345"})
 
 				Convey("Then the request body has been drained", func() {
-					_, err = r.Body.Read(make([]byte, 1))
+					bytesRead, err := r.Body.Read(make([]byte, 1))
+					So(bytesRead, ShouldEqual, 0)
 					So(err, ShouldEqual, io.EOF)
 				})
 			})
@@ -144,7 +147,8 @@ func TestFailureToUpdateJobState(t *testing.T) {
 				testapi.VerifyAuditorCalls(calls[1], updateJobAction, audit.Unsuccessful, common.Params{jobIDKey: "12345"})
 
 				Convey("Then the request body has been drained", func() {
-					_, err = r.Body.Read(make([]byte, 1))
+					bytesRead, err := r.Body.Read(make([]byte, 1))
+					So(bytesRead, ShouldEqual, 0)
 					So(err, ShouldEqual, io.EOF)
 				})
 			})
@@ -175,7 +179,8 @@ func TestFailureToUpdateJobState(t *testing.T) {
 				testapi.VerifyAuditorCalls(calls[1], updateJobAction, audit.Unsuccessful, common.Params{jobIDKey: "12345"})
 
 				Convey("Then the request body has been drained", func() {
-					_, err = r.Body.Read(make([]byte, 1))
+					bytesRead, err := r.Body.Read(make([]byte, 1))
+					So(bytesRead, ShouldEqual, 0)
 					So(err, ShouldEqual, io.EOF)
 				})
 			})
@@ -212,7 +217,8 @@ func TestFailureToUpdateJobState(t *testing.T) {
 				So(len(mockJobService.UpdateJobCalls()), ShouldEqual, 0)
 
 				Convey("Then the request body has been drained", func() {
-					_, err = r.Body.Read(make([]byte, 1))
+					bytesRead, err := r.Body.Read(make([]byte, 1))
+					So(bytesRead, ShouldEqual, 0)
 					So(err, ShouldEqual, io.EOF)
 				})
 			})
@@ -252,7 +258,8 @@ func TestFailureToUpdateJobState(t *testing.T) {
 				testapi.VerifyAuditorCalls(calls[1], updateJobAction, audit.Unsuccessful, common.Params{jobIDKey: "12345"})
 
 				Convey("Then the request body has been drained", func() {
-					_, err = r.Body.Read(make([]byte, 1))
+					bytesRead, err := r.Body.Read(make([]byte, 1))
+					So(bytesRead, ShouldEqual, 0)
 					So(err, ShouldEqual, io.EOF)
 				})
 			})
@@ -291,7 +298,8 @@ func TestSuccessfullyUpdateJobState(t *testing.T) {
 				testapi.VerifyAuditorCalls(calls[1], updateJobAction, audit.Successful, common.Params{jobIDKey: "12345"})
 
 				Convey("Then the request body has been drained", func() {
-					_, err = r.Body.Read(make([]byte, 1))
+					bytesRead, err := r.Body.Read(make([]byte, 1))
+					So(bytesRead, ShouldEqual, 0)
 					So(err, ShouldEqual, io.EOF)
 				})
 			})
@@ -328,7 +336,8 @@ func TestSuccessfullyUpdateJobState(t *testing.T) {
 				testapi.VerifyAuditorCalls(calls[1], updateJobAction, audit.Successful, common.Params{jobIDKey: "12345"})
 
 				Convey("Then the request body has been drained", func() {
-					_, err = r.Body.Read(make([]byte, 1))
+					bytesRead, err := r.Body.Read(make([]byte, 1))
+					So(bytesRead, ShouldEqual, 0)
 					So(err, ShouldEqual, io.EOF)
 				})
 			})

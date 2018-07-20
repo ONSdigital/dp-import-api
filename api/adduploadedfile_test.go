@@ -286,7 +286,8 @@ func TestSuccessfullyAddFile(t *testing.T) {
 				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Successful, params)
 
 				Convey("Then the request body has been drained", func() {
-					_, err = r.Body.Read(make([]byte, 1))
+					bytesRead, err := r.Body.Read(make([]byte, 1))
+					So(bytesRead, ShouldEqual, 0)
 					So(err, ShouldEqual, io.EOF)
 				})
 			})
@@ -320,7 +321,8 @@ func TestSuccessfullyAddFile(t *testing.T) {
 				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Successful, params)
 
 				Convey("Then the request body has been drained", func() {
-					_, err = r.Body.Read(make([]byte, 1))
+					bytesRead, err := r.Body.Read(make([]byte, 1))
+					So(bytesRead, ShouldEqual, 0)
 					So(err, ShouldEqual, io.EOF)
 				})
 			})
