@@ -19,12 +19,6 @@ func (api *ImportAPI) addJobHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// record attempt to add a job
-	if auditError := api.auditor.Record(ctx, addJobAction, audit.Attempted, nil); auditError != nil {
-		handleErr(ctx, w, auditError, nil)
-		return
-	}
-
 	// marshal request body into job structure
 	job, err := models.CreateJob(r.Body)
 	if err != nil {

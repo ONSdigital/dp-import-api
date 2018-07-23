@@ -16,10 +16,14 @@ import (
 	"github.com/gorilla/mux"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"io"
 )
 
 func TestFailureToAddFile(t *testing.T) {
+
 	t.Parallel()
+	attemptedAuditParams := common.Params{"caller_identity": "someone@ons.gov.uk", "job_id": "12345"}
+
 	Convey("Given a request to add a s3 file", t, func() {
 		Convey("When no auth token is provided", func() {
 			Convey("Then return status unauthorised (401)", func() {
@@ -38,7 +42,10 @@ func TestFailureToAddFile(t *testing.T) {
 				So(w.Body.String(), ShouldContainSubstring, errs.ErrUnauthorised.Error())
 
 				calls := auditorMock.RecordCalls()
-				So(len(calls), ShouldEqual, 0)
+				So(len(calls), ShouldEqual, 2)
+
+				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, common.Params{"job_id": "12345"})
+				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Unsuccessful, common.Params{"job_id": "12345"})
 			})
 		})
 
@@ -61,7 +68,7 @@ func TestFailureToAddFile(t *testing.T) {
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
 
-				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, common.Params{"job_id": "12345"})
+				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Unsuccessful, common.Params{"job_id": "12345"})
 			})
 		})
@@ -85,7 +92,7 @@ func TestFailureToAddFile(t *testing.T) {
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
 
-				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, common.Params{"job_id": "12345"})
+				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Unsuccessful, common.Params{"job_id": "12345"})
 			})
 		})
@@ -119,7 +126,7 @@ func TestFailureToAddFile(t *testing.T) {
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
 
-				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, params)
+				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Unsuccessful, params)
 			})
 		})
@@ -143,7 +150,7 @@ func TestFailureToAddFile(t *testing.T) {
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
 
-				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, params)
+				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Unsuccessful, params)
 			})
 		})
@@ -174,7 +181,7 @@ func TestFailureToAddFile(t *testing.T) {
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 1)
 
-				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, common.Params{jobIDKey: "12345"})
+				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, attemptedAuditParams)
 			})
 		})
 
@@ -204,7 +211,7 @@ func TestFailureToAddFile(t *testing.T) {
 
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
-				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, common.Params{"job_id": "12345"})
+				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Unsuccessful, common.Params{"job_id": "12345"})
 			})
 		})
@@ -235,7 +242,7 @@ func TestFailureToAddFile(t *testing.T) {
 
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
-				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, params)
+				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Unsuccessful, params)
 			})
 		})
@@ -244,6 +251,8 @@ func TestFailureToAddFile(t *testing.T) {
 
 func TestSuccessfullyAddFile(t *testing.T) {
 	t.Parallel()
+
+	attemptedAuditParams := common.Params{"caller_identity": "someone@ons.gov.uk", "job_id": "12345"}
 
 	params := common.Params{
 		jobIDKey:    "12345",
@@ -273,8 +282,14 @@ func TestSuccessfullyAddFile(t *testing.T) {
 
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
-				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, params)
+				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Successful, params)
+
+				Convey("Then the request body has been drained", func() {
+					bytesRead, err := r.Body.Read(make([]byte, 1))
+					So(bytesRead, ShouldEqual, 0)
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -302,8 +317,14 @@ func TestSuccessfullyAddFile(t *testing.T) {
 
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
-				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, params)
+				testapi.VerifyAuditorCalls(calls[0], uploadFileAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], uploadFileAction, audit.Successful, params)
+
+				Convey("Then the request body has been drained", func() {
+					bytesRead, err := r.Body.Read(make([]byte, 1))
+					So(bytesRead, ShouldEqual, 0)
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 	})

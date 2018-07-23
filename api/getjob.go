@@ -19,12 +19,6 @@ func (api *ImportAPI) getJobHandler(w http.ResponseWriter, r *http.Request) {
 	logData := log.Data{jobIDKey: jobID}
 	auditParams := common.Params{jobIDKey: jobID}
 
-	// record attempt to get jobs
-	if auditError := api.auditor.Record(ctx, getJobAction, audit.Attempted, auditParams); auditError != nil {
-		handleErr(ctx, w, auditError, logData)
-		return
-	}
-
 	b, err := api.getJob(ctx, jobID, auditParams, logData)
 	if err != nil {
 		// record unsuccessful attempt to get jobs
