@@ -80,7 +80,12 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 		return nil, ErrGetRecipeFailed
 	}
 
-	job.ID = (uuid.NewV4()).String()
+	jobID, err := uuid.NewV4()
+	if err != nil {
+		log.ErrorCtx(ctx, errors.Wrap(err, "CreateJob: failed to get UUID"), logData)
+		return nil, err
+	}
+	job.ID = jobID.String()
 	job.Links.Self.HRef = service.urlBuilder.GetJobURL(job.ID)
 
 	for _, oi := range recipe.OutputInstances {
