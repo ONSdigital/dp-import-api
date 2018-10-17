@@ -23,12 +23,6 @@ func (api *ImportAPI) updateJobHandler(w http.ResponseWriter, r *http.Request) {
 	logData := log.Data{jobIDKey: jobID}
 	auditParams := common.Params{jobIDKey: jobID}
 
-	// record attempt to update job
-	if auditError := api.auditor.Record(ctx, updateJobAction, audit.Attempted, auditParams); auditError != nil {
-		handleErr(ctx, w, auditError, logData)
-		return
-	}
-
 	if err := api.updateJob(ctx, r, jobID, auditParams, logData); err != nil {
 		// record unsuccessful attempt to update job
 		if auditError := api.auditor.Record(ctx, updateJobAction, audit.Unsuccessful, auditParams); auditError != nil {

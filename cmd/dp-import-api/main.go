@@ -37,7 +37,7 @@ func main() {
 		log.Error(err, nil)
 		os.Exit(1)
 	}
-	client := rchttp.DefaultClient
+	client := rchttp.NewClient()
 
 	// sensitive fields are omitted from config.String().
 	log.Info("loaded config", log.Data{
@@ -84,8 +84,7 @@ func main() {
 	urlBuilder := url.NewBuilder(cfg.Host, cfg.DatasetAPIURL)
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
 
-	// todo: remove config.DatasetAPIAuthToken when the DatasetAPI supports identity based auth.
-	datasetAPI := dataset.API{client, cfg.DatasetAPIURL, cfg.DatasetAPIAuthToken, cfg.ServiceAuthToken}
+	datasetAPI := dataset.API{client, cfg.DatasetAPIURL, cfg.ServiceAuthToken}
 	recipeAPI := recipe.API{client, cfg.RecipeAPIURL}
 
 	jobService := job.NewService(mongoDataStore, jobQueue, &datasetAPI, &recipeAPI, urlBuilder)

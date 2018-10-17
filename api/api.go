@@ -51,11 +51,11 @@ func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, jobServ
 	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService, auditor: auditor}
 
 	// External API for florence
-	api.router.Path("/jobs").Methods("POST").HandlerFunc(identity.Check(api.addJobHandler))
-	api.router.Path("/jobs").Methods("GET").HandlerFunc(identity.Check(api.getJobsHandler)).Queries()
-	api.router.Path("/jobs/{id}").Methods("GET").HandlerFunc(identity.Check(api.getJobHandler))
-	api.router.Path("/jobs/{id}").Methods("PUT").HandlerFunc(identity.Check(api.updateJobHandler))
-	api.router.Path("/jobs/{id}/files").Methods("PUT").HandlerFunc(identity.Check(api.addUploadedFileHandler))
+	api.router.Path("/jobs").Methods("POST").HandlerFunc(identity.Check(auditor, addJobAction, api.addJobHandler))
+	api.router.Path("/jobs").Methods("GET").HandlerFunc(identity.Check(auditor, getJobsAction, api.getJobsHandler)).Queries()
+	api.router.Path("/jobs/{id}").Methods("GET").HandlerFunc(identity.Check(auditor, getJobAction, api.getJobHandler))
+	api.router.Path("/jobs/{id}").Methods("PUT").HandlerFunc(identity.Check(auditor, updateJobAction, api.updateJobHandler))
+	api.router.Path("/jobs/{id}/files").Methods("PUT").HandlerFunc(identity.Check(auditor, uploadFileAction, api.addUploadedFileHandler))
 	api.router.NotFoundHandler = &api
 	return &api
 }
