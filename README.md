@@ -13,6 +13,8 @@ DP Import API
 * Run ```brew services start zookeeper```
 * Run ```brew services start kafka```
 
+Scripts for updating and debugging Kafka can be found [here](https://github.com/ONSdigital/dp-data-tools)(dp-data-tools)
+
 ### Configuration
 
 | Environment variable        | Default                                   | Description

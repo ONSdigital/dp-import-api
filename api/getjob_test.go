@@ -17,6 +17,9 @@ import (
 
 func TestFailureToGetJob(t *testing.T) {
 	t.Parallel()
+
+	attemptedAuditParams := common.Params{"caller_identity": "someone@ons.gov.uk", "job_id": "123"}
+
 	Convey("Given a request to get a job", t, func() {
 		Convey("When no auth token is provided", func() {
 			Convey("Then return status unauthorised (401)", func() {
@@ -34,7 +37,10 @@ func TestFailureToGetJob(t *testing.T) {
 				So(w.Body.String(), ShouldContainSubstring, errs.ErrUnauthorised.Error())
 
 				calls := auditorMock.RecordCalls()
-				So(len(calls), ShouldEqual, 0)
+				So(len(calls), ShouldEqual, 2)
+
+				testapi.VerifyAuditorCalls(calls[0], getJobAction, audit.Attempted, common.Params{jobIDKey: "123"})
+				testapi.VerifyAuditorCalls(calls[1], getJobAction, audit.Unsuccessful, common.Params{jobIDKey: "123"})
 			})
 		})
 
@@ -44,7 +50,7 @@ func TestFailureToGetJob(t *testing.T) {
 				mockJobService := &testapi.JobServiceMock{}
 				api := CreateImportAPI(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
 
-				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs/000000", nil)
+				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs/123", nil)
 				So(err, ShouldBeNil)
 
 				w := httptest.NewRecorder()
@@ -56,8 +62,8 @@ func TestFailureToGetJob(t *testing.T) {
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
 
-				testapi.VerifyAuditorCalls(calls[0], getJobAction, audit.Attempted, common.Params{jobIDKey: "000000"})
-				testapi.VerifyAuditorCalls(calls[1], getJobAction, audit.Unsuccessful, common.Params{jobIDKey: "000000"})
+				testapi.VerifyAuditorCalls(calls[0], getJobAction, audit.Attempted, attemptedAuditParams)
+				testapi.VerifyAuditorCalls(calls[1], getJobAction, audit.Unsuccessful, common.Params{jobIDKey: "123"})
 			})
 		})
 
@@ -85,7 +91,7 @@ func TestFailureToGetJob(t *testing.T) {
 
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 1)
-				testapi.VerifyAuditorCalls(calls[0], getJobAction, audit.Attempted, common.Params{jobIDKey: "123"})
+				testapi.VerifyAuditorCalls(calls[0], getJobAction, audit.Attempted, attemptedAuditParams)
 			})
 		})
 
@@ -115,9 +121,8 @@ func TestFailureToGetJob(t *testing.T) {
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
 
-				p := common.Params{jobIDKey: "123"}
-				testapi.VerifyAuditorCalls(calls[0], getJobAction, audit.Attempted, p)
-				testapi.VerifyAuditorCalls(calls[1], getJobAction, audit.Unsuccessful, p)
+				testapi.VerifyAuditorCalls(calls[0], getJobAction, audit.Attempted, attemptedAuditParams)
+				testapi.VerifyAuditorCalls(calls[1], getJobAction, audit.Unsuccessful, common.Params{jobIDKey: "123"})
 			})
 		})
 
@@ -147,9 +152,8 @@ func TestFailureToGetJob(t *testing.T) {
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
 
-				p := common.Params{jobIDKey: "123"}
-				testapi.VerifyAuditorCalls(calls[0], getJobAction, audit.Attempted, p)
-				testapi.VerifyAuditorCalls(calls[1], getJobAction, audit.Successful, p)
+				testapi.VerifyAuditorCalls(calls[0], getJobAction, audit.Attempted, attemptedAuditParams)
+				testapi.VerifyAuditorCalls(calls[1], getJobAction, audit.Successful, common.Params{jobIDKey: "123"})
 			})
 		})
 	})
@@ -157,6 +161,9 @@ func TestFailureToGetJob(t *testing.T) {
 
 func TestSuccessfullyGetJob(t *testing.T) {
 	t.Parallel()
+
+	attemptedAuditParams := common.Params{"caller_identity": "someone@ons.gov.uk", "job_id": "123"}
+
 	Convey("Given a request to get a job", t, func() {
 		Convey("When retrieval of job from datastore is successful", func() {
 			Convey("Then return status ok (200)", func() {
@@ -175,9 +182,8 @@ func TestSuccessfullyGetJob(t *testing.T) {
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
 
-				p := common.Params{jobIDKey: "123"}
-				testapi.VerifyAuditorCalls(calls[0], getJobAction, audit.Attempted, p)
-				testapi.VerifyAuditorCalls(calls[1], getJobAction, audit.Successful, p)
+				testapi.VerifyAuditorCalls(calls[0], getJobAction, audit.Attempted, attemptedAuditParams)
+				testapi.VerifyAuditorCalls(calls[1], getJobAction, audit.Successful, common.Params{jobIDKey: "123"})
 			})
 		})
 	})

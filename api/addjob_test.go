@@ -15,12 +15,16 @@ import (
 	"github.com/ONSdigital/go-ns/common"
 	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
+	"io"
 )
 
 var dummyJob = &models.Job{ID: "34534543543"}
 
 func TestFailureToAddJob(t *testing.T) {
+
 	t.Parallel()
+	attemptedAuditParams := common.Params{"caller_identity": "someone@ons.gov.uk"}
+
 	Convey("Given a request to add a job", t, func() {
 		Convey("When no auth token is provided", func() {
 			Convey("Then return status unauthorised (401)", func() {
@@ -39,7 +43,16 @@ func TestFailureToAddJob(t *testing.T) {
 				So(w.Body.String(), ShouldContainSubstring, errs.ErrUnauthorised.Error())
 
 				calls := auditorMock.RecordCalls()
-				So(len(calls), ShouldEqual, 0)
+				So(len(calls), ShouldEqual, 2)
+
+				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, common.Params{})
+				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Unsuccessful, common.Params{})
+
+				Convey("Then the request body has been drained", func() {
+					bytesRead, err := r.Body.Read(make([]byte, 1))
+					So(bytesRead, ShouldEqual, 0)
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -61,8 +74,13 @@ func TestFailureToAddJob(t *testing.T) {
 
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
-				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, nil)
+				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Unsuccessful, nil)
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -88,8 +106,13 @@ func TestFailureToAddJob(t *testing.T) {
 
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
-				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, nil)
+				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Unsuccessful, common.Params{"recipeID": ""})
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -115,8 +138,13 @@ func TestFailureToAddJob(t *testing.T) {
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
 
-				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, nil)
+				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Unsuccessful, common.Params{"recipeID": "test"})
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -148,7 +176,12 @@ func TestFailureToAddJob(t *testing.T) {
 				So(len(calls), ShouldEqual, 1)
 
 				So(len(auditorMock.RecordCalls()), ShouldEqual, 1)
-				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, nil)
+				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -178,8 +211,13 @@ func TestFailureToAddJob(t *testing.T) {
 
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
-				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, nil)
+				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Unsuccessful, nil)
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -213,15 +251,23 @@ func TestFailureToAddJob(t *testing.T) {
 
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
-				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, nil)
+				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Unsuccessful, common.Params{"recipeID": "test"})
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 	})
 }
 
 func TestSuccessfullyAddJob(t *testing.T) {
+
 	t.Parallel()
+	attemptedAuditParams := common.Params{"caller_identity": "someone@ons.gov.uk"}
+
 	Convey("Given a valid request to add a job", t, func() {
 		Convey("When successfully created in datastore", func() {
 			Convey("Then return status created (201)", func() {
@@ -246,8 +292,13 @@ func TestSuccessfullyAddJob(t *testing.T) {
 				So(len(calls), ShouldEqual, 2)
 
 				p := common.Params{"createdJobID": dummyJob.ID, "recipeID": "test"}
-				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, nil)
+				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Successful, p)
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 
@@ -280,8 +331,13 @@ func TestSuccessfullyAddJob(t *testing.T) {
 
 				calls := auditorMock.RecordCalls()
 				So(len(calls), ShouldEqual, 2)
-				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, nil)
+				testapi.VerifyAuditorCalls(calls[0], addJobAction, audit.Attempted, attemptedAuditParams)
 				testapi.VerifyAuditorCalls(calls[1], addJobAction, audit.Successful, common.Params{"recipeID": "test", "createdJobID": dummyJob.ID})
+
+				Convey("Then the request body has been drained", func() {
+					_, err = r.Body.Read(make([]byte, 1))
+					So(err, ShouldEqual, io.EOF)
+				})
 			})
 		})
 	})

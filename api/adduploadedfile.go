@@ -23,12 +23,6 @@ func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Requ
 	logData := log.Data{jobIDKey: jobID}
 	auditParams := common.Params{jobIDKey: jobID}
 
-	// record attempt to add uploaded file to job
-	if auditError := api.auditor.Record(ctx, uploadFileAction, audit.Attempted, auditParams); auditError != nil {
-		handleErr(ctx, w, auditError, logData)
-		return
-	}
-
 	uploadedFile, err := models.CreateUploadedFile(r.Body)
 	if err != nil {
 		log.ErrorCtx(ctx, errors.WithMessage(err, "addUploadFile endpoint: failed to create uploaded file resource"), logData)
