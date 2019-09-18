@@ -53,7 +53,7 @@ func (api *ImportAPI) getJobs(ctx context.Context, filterList []string, auditPar
 		log.ErrorCtx(ctx, errors.WithMessage(err, "getJobs endpoint: failed to retrieve a list of jobs"), logData)
 		return
 	}
-	logData["Jobs"] = jobs
+	logData["number_of_jobs"] = len(jobs)
 
 	b, err = json.Marshal(jobs)
 	if err != nil {

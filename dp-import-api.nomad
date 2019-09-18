@@ -28,11 +28,7 @@ job "dp-import-api" {
     }
 
     task "dp-import-api" {
-      driver = "exec"
-
-      artifact {
-        source = "s3::https://s3-eu-west-1.amazonaws.com/{{BUILD_BUCKET}}/dp-import-api/{{REVISION}}.tar.gz"
-      }
+      driver = "docker"
 
       artifact {
         source = "s3::https://s3-eu-west-1.amazonaws.com/{{DEPLOYMENT_BUCKET}}/dp-import-api/{{REVISION}}.tar.gz"
@@ -40,7 +36,14 @@ job "dp-import-api" {
 
       config {
         command = "${NOMAD_TASK_DIR}/start-task"
-        args    = ["${NOMAD_TASK_DIR}/dp-import-api"]
+
+        args = ["./dp-import-api"]
+
+        image = "{{ECR_URL}}:concourse-{{REVISION}}"
+
+        port_map {
+          http = "${NOMAD_PORT_http}"
+        }
       }
 
       service {
