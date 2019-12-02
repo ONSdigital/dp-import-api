@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,8 +12,8 @@ import (
 	"github.com/ONSdigital/dp-import-api/config"
 	"github.com/ONSdigital/dp-import-api/dataset"
 	"github.com/ONSdigital/dp-import-api/importqueue"
+	"github.com/ONSdigital/dp-import-api/initialise"
 	"github.com/ONSdigital/dp-import-api/job"
-	"github.com/ONSdigital/dp-import-api/mongo"
 	"github.com/ONSdigital/dp-import-api/recipe"
 	"github.com/ONSdigital/dp-import-api/url"
 	"github.com/ONSdigital/go-ns/audit"
@@ -20,7 +21,6 @@ import (
 	"github.com/ONSdigital/go-ns/handlers/requestID"
 	"github.com/ONSdigital/go-ns/healthcheck"
 	"github.com/ONSdigital/go-ns/identity"
-	"github.com/ONSdigital/go-ns/kafka"
 	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/rchttp"
 	"github.com/ONSdigital/go-ns/server"
@@ -32,42 +32,31 @@ const serviceNamespace = "dp-import-api"
 
 func main() {
 	log.Namespace = serviceNamespace
-	cfg, err := config.Get()
-	if err != nil {
-		log.Error(err, nil)
-		os.Exit(1)
-	}
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+
+	cfg, err := config.Get()
+	exitIfError(err, "unable to retrieve configuration")
 
 	// sensitive fields are omitted from config.String().
 	log.Info("loaded config", log.Data{
 		"config": cfg,
 	})
 
-	mongoDataStore, err := mongo.NewDatastore(cfg.MongoDBURL, cfg.MongoDBDatabase, cfg.MongoDBCollection)
-	if err != nil {
-		log.ErrorC("mongodb datastore error", err, nil)
-		os.Exit(1)
-	}
+	var serviceList initialise.ExternalServiceList
 
-	dataBakerProducer, err := kafka.NewProducer(cfg.Brokers, cfg.DatabakerImportTopic, cfg.KafkaMaxBytes)
-	if err != nil {
-		log.ErrorC("data baker kafka producer error", err, nil)
-		os.Exit(1)
-	}
+	mongoDataStore, err := serviceList.GetMongoDataStore(cfg)
+	logIfError(err, "mongodb datastore error")
 
-	directProducer, err := kafka.NewProducer(cfg.Brokers, cfg.InputFileAvailableTopic, cfg.KafkaMaxBytes)
-	if err != nil {
-		log.ErrorC("direct kafka producer error", err, nil)
-		os.Exit(1)
-	}
-	auditProducer, err := kafka.NewProducer(cfg.Brokers, cfg.AuditEventsTopic, cfg.KafkaMaxBytes)
-	if err != nil {
-		log.ErrorC("direct kafka producer error", err, nil)
-		os.Exit(1)
-	}
+	dataBakerProducer, err := serviceList.GetProducer(cfg.Brokers, cfg.DatabakerImportTopic, initialise.DataBakerProducer, cfg.KafkaMaxBytes)
+	logIfError(err, "databaker kafka producer error")
+
+	directProducer, err := serviceList.GetProducer(cfg.Brokers, cfg.InputFileAvailableTopic, initialise.DirectProducer, cfg.KafkaMaxBytes)
+	logIfError(err, "direct kafka producer error")
+
+	auditProducer, err := serviceList.GetProducer(cfg.Brokers, cfg.AuditEventsTopic, initialise.AuditProducer, cfg.KafkaMaxBytes)
+	logIfError(err, "direct kafka producer error")
 
 	router := mux.NewRouter()
 
@@ -90,13 +79,14 @@ func main() {
 	jobService := job.NewService(mongoDataStore, jobQueue, &datasetAPI, &recipeAPI, urlBuilder)
 	auditor := audit.New(auditProducer, serviceNamespace)
 
-	_ = api.CreateImportAPI(router, mongoDataStore, jobService, auditor)
+	api.CreateImportAPI(router, mongoDataStore, jobService, auditor)
 
 	// signals the web server shutdown, so a graceful exit is required
 	httpErrChannel := make(chan error)
+
 	// launch web server in background
 	go func() {
-		log.Debug("listening...", log.Data{"bind_address": cfg.BindAddr})
+		log.Info("listening...", log.Data{"bind_address": cfg.BindAddr})
 		if err := httpServer.ListenAndServe(); err != nil {
 			log.Error(err, nil)
 			httpErrChannel <- err
@@ -105,53 +95,65 @@ func main() {
 		httpErrChannel <- errors.New("http server completed - with no error")
 	}()
 
-	shutdownGracefully := func(httpDead bool) {
-		ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
-		defer cancel()
-
-		if !httpDead {
-			if err = httpServer.Shutdown(ctx); err != nil {
-				log.Error(err, nil)
-			}
-		}
-
-		if err = auditProducer.Close(ctx); err != nil {
-			log.Error(err, nil)
-		}
-
-		if err = dataBakerProducer.Close(ctx); err != nil {
-			log.Error(err, nil)
-		}
-
-		if err = directProducer.Close(ctx); err != nil {
-			log.Error(err, nil)
-		}
-
-		// mongo.Close() may use all remaining time in the context - do this last!
-		if err = mongoDataStore.Close(ctx); err != nil {
-			log.Error(err, nil)
-		}
-
-		log.Debug("graceful shutdown has completed", nil)
-		os.Exit(1)
-	}
-
+	// block until a fatal error occurs
 	select {
-	case err := <-dataBakerProducer.Errors():
-		log.ErrorC("kafka databaker producer", err, nil)
-		shutdownGracefully(false)
-	case err := <-directProducer.Errors():
-		log.ErrorC("kafka direct producer", err, nil)
-		shutdownGracefully(false)
-	case err := <-auditProducer.Errors():
-		log.ErrorC("kafka audit producer", err, nil)
-		shutdownGracefully(false)
 	case err := <-httpErrChannel:
-		log.ErrorC("error channel", err, nil)
-		shutdownGracefully(true)
+		log.ErrorC("api error received", err, nil)
 	case sig := <-signals:
 		log.Error(errors.New("os signal received"), log.Data{"signal": sig.String()})
-		shutdownGracefully(false)
 	}
 
+	log.Info(fmt.Sprintf("Shutdown with timeout: %s", cfg.GracefulShutdownTimeout), nil)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
+
+	// Gracefully shutdown the application closing any open resources.
+	go func() {
+		defer cancel()
+
+		log.Info("closing http server for healthcheck", nil)
+		if err = httpServer.Shutdown(ctx); err != nil {
+			logIfError(err, "unable to close api server")
+		}
+
+		if serviceList.MongoDataStore {
+			log.Info("closing mongo data store", nil)
+			// mongo.Close() may use all remaining time in the context
+			logIfError(mongoDataStore.Close(ctx), "unable to close mongo data store")
+		}
+
+		if serviceList.DataBakerProducer {
+			log.Info("closing data baker producer", nil)
+			logIfError(dataBakerProducer.Close(ctx), "unable to close data baker producer")
+		}
+
+		if serviceList.DirectProducer {
+			log.Info("closing direct producer", nil)
+			logIfError(directProducer.Close(ctx), "unable to close direct producer")
+		}
+
+		// Close audit producer last, to maximise capturing all events
+		if serviceList.AuditProducer {
+			log.Info("closing audit producer", nil)
+			logIfError(auditProducer.Close(ctx), "unable to close audit producer")
+		}
+	}()
+
+	// wait for shutdown success (via cancel) or failure (timeout)
+	<-ctx.Done()
+
+	log.Info("Shutdown complete", nil)
+	os.Exit(1)
+}
+
+func exitIfError(err error, message string) {
+	if err != nil {
+		log.ErrorC(message, err, nil)
+		os.Exit(1)
+	}
+}
+
+func logIfError(err error, message string) {
+	if err != nil {
+		log.ErrorC(message, err, nil)
+	}
 }
