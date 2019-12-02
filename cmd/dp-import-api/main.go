@@ -37,7 +37,9 @@ func main() {
 		log.Error(err, nil)
 		os.Exit(1)
 	}
-	client := rchttp.NewClient()
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 
 	// sensitive fields are omitted from config.String().
 	log.Info("loaded config", log.Data{
@@ -78,14 +80,12 @@ func main() {
 	httpServer := server.New(cfg.BindAddr, alice)
 	httpServer.HandleOSSignals = false
 
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
-
 	urlBuilder := url.NewBuilder(cfg.Host, cfg.DatasetAPIURL)
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
 
-	datasetAPI := dataset.API{client, cfg.DatasetAPIURL, cfg.ServiceAuthToken}
-	recipeAPI := recipe.API{client, cfg.RecipeAPIURL}
+	client := rchttp.NewClient()
+	datasetAPI := dataset.API{Client: client, URL: cfg.DatasetAPIURL, ServiceAuthToken: cfg.ServiceAuthToken}
+	recipeAPI := recipe.API{Client: client, URL: cfg.RecipeAPIURL}
 
 	jobService := job.NewService(mongoDataStore, jobQueue, &datasetAPI, &recipeAPI, urlBuilder)
 	auditor := audit.New(auditProducer, serviceNamespace)
