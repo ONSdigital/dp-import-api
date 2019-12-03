@@ -16,16 +16,9 @@ import (
 	"github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/recipe"
 	"github.com/ONSdigital/dp-import-api/url"
+	rchttp "github.com/ONSdigital/dp-rchttp"
 	"github.com/ONSdigital/go-ns/audit"
-	handlershealthcheck "github.com/ONSdigital/go-ns/handlers/healthcheck"
-	"github.com/ONSdigital/go-ns/handlers/requestID"
-	"github.com/ONSdigital/go-ns/healthcheck"
-	"github.com/ONSdigital/go-ns/identity"
 	"github.com/ONSdigital/go-ns/log"
-	"github.com/ONSdigital/go-ns/rchttp"
-	"github.com/ONSdigital/go-ns/server"
-	"github.com/gorilla/mux"
-	"github.com/justinas/alice"
 )
 
 const serviceNamespace = "dp-import-api"
@@ -58,17 +51,6 @@ func main() {
 	auditProducer, err := serviceList.GetProducer(cfg.Brokers, cfg.AuditEventsTopic, initialise.AuditProducer, cfg.KafkaMaxBytes)
 	logIfError(err, "direct kafka producer error")
 
-	router := mux.NewRouter()
-
-	healthcheckHandler := healthcheck.NewMiddleware(handlershealthcheck.Handler)
-	identityHandler := identity.Handler(cfg.ZebedeeURL)
-
-	// TODO how long should the ID be?
-	alice := alice.New(requestID.Handler(16), healthcheckHandler, identityHandler).Then(router)
-
-	httpServer := server.New(cfg.BindAddr, alice)
-	httpServer.HandleOSSignals = false
-
 	urlBuilder := url.NewBuilder(cfg.Host, cfg.DatasetAPIURL)
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
 
@@ -79,26 +61,10 @@ func main() {
 	jobService := job.NewService(mongoDataStore, jobQueue, &datasetAPI, &recipeAPI, urlBuilder)
 	auditor := audit.New(auditProducer, serviceNamespace)
 
-	api.CreateImportAPI(router, mongoDataStore, jobService, auditor)
-
-	// signals the web server shutdown, so a graceful exit is required
-	httpErrChannel := make(chan error)
-
-	// launch web server in background
-	go func() {
-		log.Info("listening...", log.Data{"bind_address": cfg.BindAddr})
-		if err := httpServer.ListenAndServe(); err != nil {
-			log.Error(err, nil)
-			httpErrChannel <- err
-			return
-		}
-		httpErrChannel <- errors.New("http server completed - with no error")
-	}()
+	api.CreateImportAPI(cfg.Host, cfg.BindAddr, cfg.ZebedeeURL, mongoDataStore, jobService, auditor)
 
 	// block until a fatal error occurs
 	select {
-	case err := <-httpErrChannel:
-		log.ErrorC("api error received", err, nil)
 	case sig := <-signals:
 		log.Error(errors.New("os signal received"), log.Data{"signal": sig.String()})
 	}
@@ -111,7 +77,7 @@ func main() {
 		defer cancel()
 
 		log.Info("closing http server for healthcheck", nil)
-		if err = httpServer.Shutdown(ctx); err != nil {
+		if err = api.Close(ctx); err != nil {
 			logIfError(err, "unable to close api server")
 		}
 
