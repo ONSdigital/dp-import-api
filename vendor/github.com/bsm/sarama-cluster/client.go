@@ -1,20 +1,12 @@
 package cluster
 
-import (
-	"errors"
-	"sync/atomic"
-
-	"github.com/Shopify/sarama"
-)
-
-var errClientInUse = errors.New("cluster: client is already used by another consumer")
+import "github.com/Shopify/sarama"
 
 // Client is a group client
 type Client struct {
 	sarama.Client
 	config Config
-
-	inUse uint32
+	own    bool
 }
 
 // NewClient creates a new client instance
@@ -33,18 +25,4 @@ func NewClient(addrs []string, config *Config) (*Client, error) {
 	}
 
 	return &Client{Client: client, config: *config}, nil
-}
-
-// ClusterConfig returns the cluster configuration.
-func (c *Client) ClusterConfig() *Config {
-	cfg := c.config
-	return &cfg
-}
-
-func (c *Client) claim() bool {
-	return atomic.CompareAndSwapUint32(&c.inUse, 0, 1)
-}
-
-func (c *Client) release() {
-	atomic.CompareAndSwapUint32(&c.inUse, 1, 0)
 }
