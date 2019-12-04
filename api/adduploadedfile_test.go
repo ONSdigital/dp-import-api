@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -16,7 +17,6 @@ import (
 	"github.com/gorilla/mux"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"io"
 )
 
 func TestFailureToAddFile(t *testing.T) {
@@ -29,7 +29,7 @@ func TestFailureToAddFile(t *testing.T) {
 			Convey("Then return status unauthorised (401)", func() {
 				auditorMock := testapi.NewAuditorMock()
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{ \"alias_name\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}")
 				r, err := testapi.CreateRequestWithOutAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
@@ -53,7 +53,7 @@ func TestFailureToAddFile(t *testing.T) {
 			Convey("Then return status bad request (400)", func() {
 				auditorMock := testapi.NewAuditorMock()
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
@@ -77,7 +77,7 @@ func TestFailureToAddFile(t *testing.T) {
 			Convey("Then return status bad request (400)", func() {
 				auditorMock := testapi.NewAuditorMock()
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{ \"url\":\"https://aws.s3/ons/myfile.exel\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
@@ -111,7 +111,7 @@ func TestFailureToAddFile(t *testing.T) {
 						return nil, errs.ErrInternalServer
 					},
 				}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.DstoreInternalError, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreInternalError, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{ \"alias_name\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
@@ -135,7 +135,7 @@ func TestFailureToAddFile(t *testing.T) {
 			Convey("Then return status not found (404)", func() {
 				auditorMock := testapi.NewAuditorMock()
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{ \"alias_name\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
@@ -166,7 +166,7 @@ func TestFailureToAddFile(t *testing.T) {
 					},
 				}
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{ \"alias_name\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
@@ -197,7 +197,7 @@ func TestFailureToAddFile(t *testing.T) {
 					},
 				}
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{ \"url\":\"https://aws.s3/ons/myfile.exel\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
@@ -228,7 +228,7 @@ func TestFailureToAddFile(t *testing.T) {
 					},
 				}
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{ \"alias_name\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
@@ -269,7 +269,7 @@ func TestSuccessfullyAddFile(t *testing.T) {
 					},
 				}
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{ \"alias_name\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
@@ -304,7 +304,7 @@ func TestSuccessfullyAddFile(t *testing.T) {
 					},
 				}
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{ \"alias_name\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
