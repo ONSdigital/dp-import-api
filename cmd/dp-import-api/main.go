@@ -63,6 +63,17 @@ func main() {
 
 	api.CreateImportAPI(cfg.Host, cfg.BindAddr, cfg.ZebedeeURL, mongoDataStore, jobService, auditor)
 
+	go func() {
+		select {
+		case err := <-dataBakerProducer.Errors():
+			log.ErrorC("kafka databaker producer", err, nil)
+		case err := <-directProducer.Errors():
+			log.ErrorC("kafka direct producer", err, nil)
+		case err := <-auditProducer.Errors():
+			log.ErrorC("kafka audit producer", err, nil)
+		}
+	}()
+
 	// block until a fatal error occurs
 	select {
 	case sig := <-signals:
