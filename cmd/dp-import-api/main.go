@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -80,7 +79,7 @@ func main() {
 		log.Error(errors.New("os signal received"), log.Data{"signal": sig.String()})
 	}
 
-	log.Info(fmt.Sprintf("Shutdown with timeout: %s", cfg.GracefulShutdownTimeout), nil)
+	log.Info("Shutdown service", log.Data{"timeout": cfg.GracefulShutdownTimeout})
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
 
 	// Gracefully shutdown the application closing any open resources.
