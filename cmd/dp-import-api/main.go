@@ -41,13 +41,13 @@ func main() {
 	mongoDataStore, err := serviceList.GetMongoDataStore(cfg)
 	logIfError(err, "mongodb datastore error")
 
-	dataBakerProducer, err := serviceList.GetProducer(cfg.Brokers, cfg.DatabakerImportTopic, initialise.DataBakerProducer, cfg.KafkaMaxBytes)
+	dataBakerProducer, err := serviceList.GetProducer(cfg.Brokers, cfg.DatabakerImportTopic, initialise.DataBaker, cfg.KafkaMaxBytes)
 	logIfError(err, "databaker kafka producer error")
 
-	directProducer, err := serviceList.GetProducer(cfg.Brokers, cfg.InputFileAvailableTopic, initialise.DirectProducer, cfg.KafkaMaxBytes)
+	directProducer, err := serviceList.GetProducer(cfg.Brokers, cfg.InputFileAvailableTopic, initialise.Direct, cfg.KafkaMaxBytes)
 	logIfError(err, "direct kafka producer error")
 
-	auditProducer, err := serviceList.GetProducer(cfg.Brokers, cfg.AuditEventsTopic, initialise.AuditProducer, cfg.KafkaMaxBytes)
+	auditProducer, err := serviceList.GetProducer(cfg.Brokers, cfg.AuditEventsTopic, initialise.Audit, cfg.KafkaMaxBytes)
 	logIfError(err, "direct kafka producer error")
 
 	urlBuilder := url.NewBuilder(cfg.Host, cfg.DatasetAPIURL)
