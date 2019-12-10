@@ -63,12 +63,32 @@ func main() {
 	api.CreateImportAPI(cfg.Host, cfg.BindAddr, cfg.ZebedeeURL, mongoDataStore, jobService, auditor)
 
 	go func() {
+		var databaKerProducerErrors, directProducerErrors, auditProducerErrors chan (error)
+
+		if serviceList.DataBakerProducer {
+			databaKerProducerErrors = dataBakerProducer.Errors()
+		} else {
+			databaKerProducerErrors = make(chan error, 1)
+		}
+
+		if serviceList.DirectProducer {
+			directProducerErrors = directProducer.Errors()
+		} else {
+			directProducerErrors = make(chan error, 1)
+		}
+
+		if serviceList.AuditProducer {
+			auditProducerErrors = auditProducer.Errors()
+		} else {
+			auditProducerErrors = make(chan error, 1)
+		}
+
 		select {
-		case err := <-dataBakerProducer.Errors():
+		case err := <-databaKerProducerErrors:
 			log.ErrorC("kafka databaker producer", err, nil)
-		case err := <-directProducer.Errors():
+		case err := <-directProducerErrors:
 			log.ErrorC("kafka direct producer", err, nil)
-		case err := <-auditProducer.Errors():
+		case err := <-auditProducerErrors:
 			log.ErrorC("kafka audit producer", err, nil)
 		}
 	}()
