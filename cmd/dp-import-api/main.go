@@ -62,6 +62,9 @@ func main() {
 
 	api.CreateImportAPI(cfg.Host, cfg.BindAddr, cfg.ZebedeeURL, mongoDataStore, jobService, auditor)
 
+	// TODO - Discussion on handling kafka channels and how we would implement reconnecting to kafka
+	// Function below is to handle errors received by kafka as gracefully as possible without panicing or
+	// continuously logging the same error messages - will likely be replaced when kafka reconnects are implemented
 	go func() {
 		var databaKerProducerErrors, directProducerErrors, auditProducerErrors chan (error)
 
