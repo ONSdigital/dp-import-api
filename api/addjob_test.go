@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,7 +16,6 @@ import (
 	"github.com/ONSdigital/go-ns/common"
 	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
-	"io"
 )
 
 var dummyJob = &models.Job{ID: "34534543543"}
@@ -30,7 +30,7 @@ func TestFailureToAddJob(t *testing.T) {
 			Convey("Then return status unauthorised (401)", func() {
 				auditorMock := testapi.NewAuditorMock()
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{ \"number_of_instances\": 1, \"recipe\":\"test\"}")
 				r, err := testapi.CreateRequestWithOutAuth("POST", "http://localhost:21800/jobs", reader)
@@ -60,7 +60,7 @@ func TestFailureToAddJob(t *testing.T) {
 			Convey("Then return status bad request (400)", func() {
 				mockJobService := &testapi.JobServiceMock{}
 				auditorMock := testapi.NewAuditorMock()
-				api := CreateImportAPI(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{")
 				r, err := testapi.CreateRequestWithAuth("POST", "http://localhost:21800/jobs", reader)
@@ -92,7 +92,7 @@ func TestFailureToAddJob(t *testing.T) {
 					},
 				}
 				auditorMock := testapi.NewAuditorMock()
-				api := CreateImportAPI(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{ \"number_of_instances\": 1}")
 				r, err := testapi.CreateRequestWithAuth("POST", "http://localhost:21800/jobs", reader)
@@ -124,7 +124,7 @@ func TestFailureToAddJob(t *testing.T) {
 					},
 				}
 				auditorMock := testapi.NewAuditorMock()
-				api := CreateImportAPI(mux.NewRouter(), &testapi.DstoreInternalError, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreInternalError, mockJobService, auditorMock)
 
 				reader := strings.NewReader(`{"recipe":"test"}`)
 				r, err := testapi.CreateRequestWithAuth("POST", "http://localhost:21800/jobs", reader)
@@ -160,7 +160,7 @@ func TestFailureToAddJob(t *testing.T) {
 						return dummyJob, nil
 					},
 				}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{ \"number_of_instances\": 1, \"recipe\":\"test\"}")
 				r, err := testapi.CreateRequestWithAuth("POST", "http://localhost:21800/jobs", reader)
@@ -204,7 +204,7 @@ func TestFailureToAddJob(t *testing.T) {
 				So(err, ShouldBeNil)
 				w := httptest.NewRecorder()
 
-				api := CreateImportAPI(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
 				api.router.ServeHTTP(w, r)
 				So(w.Code, ShouldEqual, http.StatusInternalServerError)
 				So(w.Body.String(), ShouldContainSubstring, errs.ErrInternalServer.Error())
@@ -244,7 +244,7 @@ func TestFailureToAddJob(t *testing.T) {
 					},
 				}
 
-				api := CreateImportAPI(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
 				api.router.ServeHTTP(w, r)
 				So(w.Code, ShouldEqual, http.StatusInternalServerError)
 				So(w.Body.String(), ShouldContainSubstring, errs.ErrInternalServer.Error())
@@ -277,7 +277,7 @@ func TestSuccessfullyAddJob(t *testing.T) {
 					},
 				}
 				auditorMock := testapi.NewAuditorMock()
-				api := CreateImportAPI(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{ \"number_of_instances\": 1, \"recipe\":\"test\"}")
 				r, err := testapi.CreateRequestWithAuth("POST", "http://localhost:21800/jobs", reader)
@@ -317,7 +317,7 @@ func TestSuccessfullyAddJob(t *testing.T) {
 						return dummyJob, nil
 					},
 				}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
 
 				reader := strings.NewReader("{ \"number_of_instances\": 1, \"recipe\":\"test\"}")
 				r, err := testapi.CreateRequestWithAuth("POST", "http://localhost:21800/jobs", reader)

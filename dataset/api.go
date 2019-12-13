@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 
+	rchttp "github.com/ONSdigital/dp-rchttp"
+
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/common"
 	"github.com/ONSdigital/go-ns/log"
@@ -16,7 +18,7 @@ import (
 
 // API aggregates a client and URL and other common data for accessing the API
 type API struct {
-	Client           common.RCHTTPClienter
+	Client           rchttp.Clienter
 	URL              string
 	ServiceAuthToken string
 }

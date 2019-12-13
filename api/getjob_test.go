@@ -25,7 +25,7 @@ func TestFailureToGetJob(t *testing.T) {
 			Convey("Then return status unauthorised (401)", func() {
 				auditorMock := testapi.NewAuditorMock()
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
 
 				r, err := testapi.CreateRequestWithOutAuth("GET", "http://localhost:21800/jobs/123", nil)
 				So(err, ShouldBeNil)
@@ -48,7 +48,7 @@ func TestFailureToGetJob(t *testing.T) {
 			Convey("Then return status not found (404)", func() {
 				auditorMock := testapi.NewAuditorMock()
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
 
 				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs/123", nil)
 				So(err, ShouldBeNil)
@@ -78,7 +78,7 @@ func TestFailureToGetJob(t *testing.T) {
 					},
 				}
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
 
 				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs/123", nil)
 				So(err, ShouldBeNil)
@@ -107,7 +107,7 @@ func TestFailureToGetJob(t *testing.T) {
 					},
 				}
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.DstoreInternalError, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreInternalError, mockJobService, auditorMock)
 
 				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs/123", nil)
 				So(err, ShouldBeNil)
@@ -138,7 +138,7 @@ func TestFailureToGetJob(t *testing.T) {
 					},
 				}
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
 
 				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs/123", nil)
 				So(err, ShouldBeNil)
@@ -169,7 +169,7 @@ func TestSuccessfullyGetJob(t *testing.T) {
 			Convey("Then return status ok (200)", func() {
 				auditorMock := testapi.NewAuditorMock()
 				mockJobService := &testapi.JobServiceMock{}
-				api := CreateImportAPI(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
 
 				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs/123", nil)
 				So(err, ShouldBeNil)
