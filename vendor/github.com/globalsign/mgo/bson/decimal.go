@@ -310,3 +310,17 @@ func muladd(h, l uint64, mul uint32, add uint32) (resh, resl uint64, overflow ui
 
 	return (d<<32 | c&(1<<32-1)), (b<<32 | a&(1<<32-1)), uint32(d >> 32)
 }
+
+// MarshalText returns a textual representation of decimal128. Satisfies
+// `encoding.TextMarshaler`.
+func (d Decimal128) MarshalText() (text []byte, err error) {
+	return []byte(d.String()), nil
+}
+
+// UnmarshalText unmarshals decimal128 from a textual representation. Satisfies
+// `encoding.TextUnmarshaler`.
+func (d *Decimal128) UnmarshalText(text []byte) error {
+	var err error
+	*d, err = ParseDecimal128(string(text))
+	return err
+}

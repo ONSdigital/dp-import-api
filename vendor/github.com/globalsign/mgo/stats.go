@@ -84,6 +84,8 @@ type Stats struct {
 	SentOps             int
 	ReceivedOps         int
 	ReceivedDocs        int
+	ShrunkConns         int
+	FailedConns         int
 	SocketsAlive        int
 	SocketsInUse        int
 	SocketRefs          int
@@ -91,6 +93,17 @@ type Stats struct {
 	TimesWaitedForPool  int
 	TotalPoolWaitTime   time.Duration
 	PoolTimeouts        int
+
+	PoolShrinkers int
+	Pingers       int
+
+	ServerCreates    int
+	ServerCloses     int
+	ServerCloseIdles int
+
+	SocketCreates    int
+	SocketCloses     int
+	SocketCloseIdles int
 }
 
 func (stats *Stats) cluster(delta int) {
@@ -161,6 +174,22 @@ func (stats *Stats) socketRefs(delta int) {
 	}
 }
 
+func (stats *Stats) shrunkConn(delta int) {
+	if stats != nil {
+		statsMutex.Lock()
+		stats.ShrunkConns += delta
+		statsMutex.Unlock()
+	}
+}
+
+func (stats *Stats) failedConn(delta int) {
+	if stats != nil {
+		statsMutex.Lock()
+		stats.FailedConns += delta
+		statsMutex.Unlock()
+	}
+}
+
 func (stats *Stats) noticeSocketAcquisition(waitTime time.Duration) {
 	if stats != nil {
 		statsMutex.Lock()
@@ -181,4 +210,92 @@ func (stats *Stats) noticePoolTimeout(waitTime time.Duration) {
 		stats.TotalPoolWaitTime += waitTime
 		statsMutex.Unlock()
 	}
+}
+
+func (stats *Stats) ServerCreated() {
+	if stats == nil {
+		return
+	}
+	statsMutex.Lock()
+	stats.ServerCreates += 1
+	statsMutex.Unlock()
+}
+
+func (stats *Stats) ServerClosed() {
+	if stats == nil {
+		return
+	}
+	statsMutex.Lock()
+	stats.ServerCloses += 1
+	statsMutex.Unlock()
+}
+
+func (stats *Stats) ServerClosedIdle() {
+	if stats == nil {
+		return
+	}
+	statsMutex.Lock()
+	stats.ServerCloseIdles += 1
+	statsMutex.Unlock()
+}
+
+func (stats *Stats) SocketCreated() {
+	if stats == nil {
+		return
+	}
+	statsMutex.Lock()
+	stats.SocketCreates += 1
+	statsMutex.Unlock()
+}
+
+func (stats *Stats) SocketClosed() {
+	if stats == nil {
+		return
+	}
+	statsMutex.Lock()
+	stats.SocketCloses += 1
+	statsMutex.Unlock()
+}
+
+func (stats *Stats) SocketClosedIdle() {
+	if stats == nil {
+		return
+	}
+	statsMutex.Lock()
+	stats.SocketCloseIdles += 1
+	statsMutex.Unlock()
+}
+
+func (stats *Stats) PingerCreated() {
+	stats.pinger(1)
+}
+
+func (stats *Stats) PingerExited() {
+	stats.pinger(-1)
+}
+
+func (stats *Stats) pinger(delta int) {
+	if stats == nil {
+		return
+	}
+	statsMutex.Lock()
+	stats.Pingers += delta
+	statsMutex.Unlock()
+}
+
+func (stats *Stats) PoolShrinkerCreated() {
+	stats.poolshrinker(1)
+}
+
+func (stats *Stats) PoolShrinkerExited() {
+	stats.poolshrinker(-1)
+}
+
+func (stats *Stats) poolshrinker(delta int) {
+	if stats == nil {
+		return
+	}
+	statsMutex.Lock()
+	stats.PoolShrinkers += delta
+	statsMutex.Unlock()
 }

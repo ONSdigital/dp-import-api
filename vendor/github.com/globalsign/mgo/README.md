@@ -6,6 +6,8 @@ The MongoDB driver for Go
 This fork has had a few improvements by ourselves as well as several PR's merged from the original mgo repo that are currently awaiting review.
 Changes are mostly geared towards performance improvements and bug fixes, though a few new features have been added.
 
+Only mongoDB versions from 3.0 onwards are supported.
+
 Further PR's (with tests) are welcome, but please maintain backwards compatibility.
 
 Detailed documentation of the API is available at
@@ -13,11 +15,17 @@ Detailed documentation of the API is available at
 
 A [sub-package](https://godoc.org/github.com/globalsign/mgo/bson) that implements the [BSON](http://bsonspec.org) specification is also included, and may be used independently of the driver.
 
+## Supported Versions
+
+`mgo` is known to work well on (and has integration tests against) MongoDB v3.0, 3.2, 3.4 and 3.6. 
+
+MongoDB 4.0 is currently experimental - we would happily accept PRs to help improve support!
+
 ## Changes
 * Fixes attempting to authenticate before every query ([details](https://github.com/go-mgo/mgo/issues/254))
 * Removes bulk update / delete batch size limitations ([details](https://github.com/go-mgo/mgo/issues/288))
 * Adds native support for `time.Duration` marshalling ([details](https://github.com/go-mgo/mgo/pull/373))
-* Reduce memory footprint / garbage collection pressure by reusing buffers ([details](https://github.com/go-mgo/mgo/pull/229), [more](https://github.com/globalsign/mgo/pull/56))
+* Reduce memory footprint / garbage collection pressure by reusing buffers ([details](https://github.com/go-mgo/mgo/pull/229), [more](https://github.com/globalsign/mgo/pull/56), [more](https://github.com/globalsign/mgo/pull/199))
 * Support majority read concerns ([details](https://github.com/globalsign/mgo/pull/2))
 * Improved connection handling ([details](https://github.com/globalsign/mgo/pull/5))
 * Hides SASL warnings ([details](https://github.com/globalsign/mgo/pull/7))
@@ -57,7 +65,9 @@ A [sub-package](https://godoc.org/github.com/globalsign/mgo/bson) that implement
 * Implement MongoTimestamp ([details](https://github.com/globalsign/mgo/pull/171))
 * Support setting `writeConcern` for `findAndModify` operations ([details](https://github.com/globalsign/mgo/pull/185))
 * Add `ssl` to the dial string options ([details](https://github.com/globalsign/mgo/pull/184))
-
+* Support connecting via Unix sockets ([details](https://github.com/globalsign/mgo/pull/129))
+* Support MongoDB User authenticationRestrictions ([details](https://github.com/globalsign/mgo/pull/229))
+* Drop support for old versions (< 3.0) ([details](https://github.com/globalsign/mgo/pull/232))
 
 ---
 
@@ -75,6 +85,7 @@ A [sub-package](https://godoc.org/github.com/globalsign/mgo/bson) that implement
 * @drichelson
 * @dvic
 * @eaglerayp
+* @eminano
 * @feliixx
 * @fmpwizard
 * @gazoon
@@ -91,6 +102,7 @@ A [sub-package](https://godoc.org/github.com/globalsign/mgo/bson) that implement
 * @mcspring
 * @Mei-Zhao
 * @peterdeka
+* @pzillmann
 * @Reenjii
 * @roobre
 * @smoya

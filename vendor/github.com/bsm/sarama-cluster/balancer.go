@@ -7,34 +7,8 @@ import (
 	"github.com/Shopify/sarama"
 )
 
-// NotificationType defines the type of notification
-type NotificationType uint8
-
-// String describes the notification type
-func (t NotificationType) String() string {
-	switch t {
-	case RebalanceStart:
-		return "rebalance start"
-	case RebalanceOK:
-		return "rebalance OK"
-	case RebalanceError:
-		return "rebalance error"
-	}
-	return "unknown"
-}
-
-const (
-	UnknownNotification NotificationType = iota
-	RebalanceStart
-	RebalanceOK
-	RebalanceError
-)
-
-// Notification are state events emitted by the consumers on rebalance
+// Notification events are emitted by the consumers on rebalancing
 type Notification struct {
-	// Type exposes the notification type
-	Type NotificationType
-
 	// Claimed contains topic/partitions that were claimed by this rebalance cycle
 	Claimed map[string][]int32
 
@@ -45,27 +19,23 @@ type Notification struct {
 	Current map[string][]int32
 }
 
-func newNotification(current map[string][]int32) *Notification {
+func newNotification(released map[string][]int32) *Notification {
 	return &Notification{
-		Type:    RebalanceStart,
-		Current: current,
+		Claimed:  make(map[string][]int32),
+		Released: released,
+		Current:  make(map[string][]int32),
 	}
 }
 
-func (n *Notification) success(current map[string][]int32) *Notification {
-	o := &Notification{
-		Type:     RebalanceOK,
-		Claimed:  make(map[string][]int32),
-		Released: make(map[string][]int32),
-		Current:  current,
-	}
+func (n *Notification) claim(current map[string][]int32) {
+	previous := n.Released
 	for topic, partitions := range current {
-		o.Claimed[topic] = int32Slice(partitions).Diff(int32Slice(n.Current[topic]))
+		n.Claimed[topic] = int32Slice(partitions).Diff(int32Slice(previous[topic]))
 	}
-	for topic, partitions := range n.Current {
-		o.Released[topic] = int32Slice(partitions).Diff(int32Slice(current[topic]))
+	for topic, partitions := range previous {
+		n.Released[topic] = int32Slice(partitions).Diff(int32Slice(current[topic]))
 	}
-	return o
+	n.Current = current
 }
 
 // --------------------------------------------------------------------
@@ -157,6 +127,10 @@ func (r *balancer) Topic(name string, memberID string) error {
 }
 
 func (r *balancer) Perform(s Strategy) map[string]map[string][]int32 {
+	if r == nil {
+		return nil
+	}
+
 	res := make(map[string]map[string][]int32, 1)
 	for topic, info := range r.topics {
 		for memberID, partitions := range info.Perform(s) {

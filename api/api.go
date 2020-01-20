@@ -8,9 +8,14 @@ import (
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/audit"
+	handlershealthcheck "github.com/ONSdigital/go-ns/handlers/healthcheck"
+	"github.com/ONSdigital/go-ns/handlers/requestID"
+	"github.com/ONSdigital/go-ns/healthcheck"
 	"github.com/ONSdigital/go-ns/identity"
 	"github.com/ONSdigital/go-ns/log"
+	"github.com/ONSdigital/go-ns/server"
 	"github.com/gorilla/mux"
+	"github.com/justinas/alice"
 	"github.com/pkg/errors"
 )
 
@@ -27,6 +32,8 @@ const (
 	jobIDKey      = "job_id"
 	notFoundError = "requested resource not found"
 )
+
+var httpServer *server.Server
 
 // ImportAPI is a restful API used to manage importing datasets to be published
 type ImportAPI struct {
@@ -45,19 +52,54 @@ type JobService interface {
 // Auditor provides auditor service
 type Auditor audit.AuditorService
 
-// CreateImportAPI returns the api with all the routes configured
-func CreateImportAPI(router *mux.Router, dataStore datastore.DataStorer, jobService JobService, auditor Auditor) *ImportAPI {
+// CreateImportAPI manages all the routes configured to API
+func CreateImportAPI(host, bindAddr, zebedeeURL string,
+	mongoDataStore datastore.DataStorer,
+	jobService JobService,
+	auditor audit.AuditorService) {
 
+	router := mux.NewRouter()
+	routes(router, mongoDataStore, jobService, auditor)
+
+	healthcheckHandler := healthcheck.NewMiddleware(handlershealthcheck.Handler)
+
+	identityHandler := identity.Handler(zebedeeURL)
+
+	// TODO how long should the ID be?
+	middleware := alice.New(requestID.Handler(16), healthcheckHandler, identityHandler).Then(router)
+	httpServer = server.New(bindAddr, middleware)
+	httpServer.HandleOSSignals = false
+
+	go func() {
+		log.Info("Starting api...", nil)
+		if err := httpServer.ListenAndServe(); err != nil {
+			log.ErrorC("api http server returned error", err, nil)
+		}
+	}()
+}
+
+// routes contain all endpoints for API
+func routes(router *mux.Router, dataStore datastore.DataStorer, jobService JobService, auditor Auditor) *ImportAPI {
 	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService, auditor: auditor}
 
 	// External API for florence
 	api.router.Path("/jobs").Methods("POST").HandlerFunc(identity.Check(auditor, addJobAction, api.addJobHandler))
-	api.router.Path("/jobs").Methods("GET").HandlerFunc(identity.Check(auditor, getJobsAction, api.getJobsHandler)).Queries()
+	api.router.Path("/jobs").Methods("GET").HandlerFunc(identity.Check(auditor, getJobsAction, api.getJobsHandler))
 	api.router.Path("/jobs/{id}").Methods("GET").HandlerFunc(identity.Check(auditor, getJobAction, api.getJobHandler))
 	api.router.Path("/jobs/{id}").Methods("PUT").HandlerFunc(identity.Check(auditor, updateJobAction, api.updateJobHandler))
 	api.router.Path("/jobs/{id}/files").Methods("PUT").HandlerFunc(identity.Check(auditor, uploadFileAction, api.addUploadedFileHandler))
 	api.router.NotFoundHandler = &api
 	return &api
+}
+
+// Close represents the graceful shutting down of the http server
+func Close(ctx context.Context) error {
+	if err := httpServer.Shutdown(ctx); err != nil {
+		return err
+	}
+
+	log.InfoCtx(ctx, "graceful shutdown of http server complete", nil)
+	return nil
 }
 
 func (api *ImportAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
