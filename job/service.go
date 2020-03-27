@@ -39,7 +39,7 @@ type Service struct {
 
 // Queue interface used to queue import jobs.
 type Queue interface {
-	Queue(job *models.ImportData) error
+	Queue(ctx context.Context, job *models.ImportData) error
 }
 
 // DatasetAPI interface to the dataset API.
@@ -130,7 +130,7 @@ func (service Service) UpdateJob(ctx context.Context, jobID string, job *models.
 			return err
 		}
 
-		err = service.queue.Queue(tasks)
+		err = service.queue.Queue(ctx, tasks)
 		if err != nil {
 			log.Error(err, log.Data{"tasks": tasks})
 			return err
