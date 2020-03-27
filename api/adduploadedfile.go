@@ -38,7 +38,7 @@ func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Requ
 	auditParams["fileAlias"] = uploadedFile.AliasName
 	auditParams["fileURL"] = uploadedFile.URL
 
-	if err := api.addUploadFile(ctx, uploadedFile, jobID, auditParams, logData); err != nil {
+	if err := api.addUploadFile(ctx, uploadedFile, jobID, logData); err != nil {
 		// record unsuccessful attempt to add uploaded file to job
 		if auditError := api.auditor.Record(ctx, uploadFileAction, audit.Unsuccessful, auditParams); auditError != nil {
 			err = auditError
@@ -54,7 +54,7 @@ func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Requ
 	log.Event(ctx, "added uxploaded file to job", logData)
 }
 
-func (api *ImportAPI) addUploadFile(ctx context.Context, uploadedFile *models.UploadedFile, jobID string, auditParams common.Params, logData log.Data) (err error) {
+func (api *ImportAPI) addUploadFile(ctx context.Context, uploadedFile *models.UploadedFile, jobID string, logData log.Data) (err error) {
 
 	if err = api.dataStore.AddUploadedFile(jobID, uploadedFile); err != nil {
 		log.Event(ctx, "addUploadFile endpoint: failed to store uploaded file resource", log.ERROR, log.Error(err), logData)

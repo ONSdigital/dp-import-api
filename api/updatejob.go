@@ -22,7 +22,7 @@ func (api *ImportAPI) updateJobHandler(w http.ResponseWriter, r *http.Request) {
 	logData := log.Data{jobIDKey: jobID}
 	auditParams := common.Params{jobIDKey: jobID}
 
-	if err := api.updateJob(ctx, r, jobID, auditParams, logData); err != nil {
+	if err := api.updateJob(ctx, r, jobID, logData); err != nil {
 		// record unsuccessful attempt to update job
 		if auditError := api.auditor.Record(ctx, updateJobAction, audit.Unsuccessful, auditParams); auditError != nil {
 			err = auditError
@@ -38,7 +38,7 @@ func (api *ImportAPI) updateJobHandler(w http.ResponseWriter, r *http.Request) {
 	log.Event(ctx, "job update completed successfully", log.INFO, logData)
 }
 
-func (api *ImportAPI) updateJob(ctx context.Context, r *http.Request, jobID string, auditParams common.Params, logData log.Data) (err error) {
+func (api *ImportAPI) updateJob(ctx context.Context, r *http.Request, jobID string, logData log.Data) (err error) {
 
 	job, err := models.CreateJob(r.Body)
 	if err != nil {
