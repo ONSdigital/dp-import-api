@@ -7,10 +7,9 @@ import (
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/audit"
 	"github.com/ONSdigital/go-ns/common"
-	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/request"
+	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 )
 
 func (api *ImportAPI) updateJobHandler(w http.ResponseWriter, r *http.Request) {
@@ -36,26 +35,26 @@ func (api *ImportAPI) updateJobHandler(w http.ResponseWriter, r *http.Request) {
 	// record successful attempt to update job
 	api.auditor.Record(ctx, updateJobAction, audit.Successful, auditParams)
 
-	audit.LogInfo(ctx, "job update completed successfully", logData)
+	log.Event(ctx, "job update completed successfully", log.INFO, logData)
 }
 
 func (api *ImportAPI) updateJob(ctx context.Context, r *http.Request, jobID string, auditParams common.Params, logData log.Data) (err error) {
 
 	job, err := models.CreateJob(r.Body)
 	if err != nil {
-		log.ErrorCtx(ctx, errors.WithMessage(err, "updateJob endpoint: failed to update job resource"), logData)
+		log.Event(ctx, "updateJob endpoint: failed to update job resource", log.ERROR, log.Error(err), logData)
 		return
 	}
 	logData["job"] = job
 
 	if err = job.ValidateState(); err != nil {
 		logData["state"] = job.State
-		log.ErrorCtx(ctx, errors.WithMessage(err, "updateJob endpoint: failed to store updated job resource"), logData)
+		log.Event(ctx, "updateJob endpoint: failed to store updated job resource", log.ERROR, log.Error(err), logData)
 		return
 	}
 
 	if err = api.jobService.UpdateJob(ctx, jobID, job); err != nil {
-		log.ErrorCtx(ctx, errors.WithMessage(err, "updateJob endpoint: failed to store updated job resource"), logData)
+		log.Event(ctx, "updateJob endpoint: failed to store updated job resource", log.ERROR, log.Error(err), logData)
 	}
 
 	return

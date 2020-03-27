@@ -61,7 +61,7 @@ func main() {
 	jobService := job.NewService(mongoDataStore, jobQueue, &datasetAPI, &recipeAPI, urlBuilder)
 	auditor := audit.New(auditProducer, serviceNamespace)
 
-	api.CreateImportAPI(cfg.Host, cfg.BindAddr, cfg.ZebedeeURL, mongoDataStore, jobService, auditor)
+	api.CreateImportAPI(ctx, cfg.BindAddr, cfg.ZebedeeURL, mongoDataStore, jobService, auditor)
 
 	// TODO - Discussion on handling kafka channels and how we would implement reconnecting to kafka
 	// Function below is to handle errors received by kafka as gracefully as possible without panicing or

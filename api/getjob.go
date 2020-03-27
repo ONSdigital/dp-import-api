@@ -7,9 +7,8 @@ import (
 
 	"github.com/ONSdigital/go-ns/audit"
 	"github.com/ONSdigital/go-ns/common"
-	"github.com/ONSdigital/go-ns/log"
+	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 )
 
 func (api *ImportAPI) getJobHandler(w http.ResponseWriter, r *http.Request) {
@@ -38,13 +37,13 @@ func (api *ImportAPI) getJobHandler(w http.ResponseWriter, r *http.Request) {
 
 	writeResponse(ctx, w, http.StatusOK, b, "getJob", logData)
 
-	log.InfoCtx(ctx, "getJob endpoint: request successful", logData)
+	log.Event(ctx, "getJob endpoint: request successful", logData)
 }
 
 func (api *ImportAPI) getJob(ctx context.Context, jobID string, auditParams common.Params, logData log.Data) (b []byte, err error) {
 	job, err := api.dataStore.GetJob(jobID)
 	if err != nil {
-		log.ErrorCtx(ctx, errors.WithMessage(err, "getJob endpoint: failed to find job"), logData)
+		log.Event(ctx, "getJob endpoint: failed to find job", log.ERROR, log.Error(err), logData)
 		return
 	}
 
@@ -52,7 +51,7 @@ func (api *ImportAPI) getJob(ctx context.Context, jobID string, auditParams comm
 
 	b, err = json.Marshal(job)
 	if err != nil {
-		log.ErrorCtx(ctx, errors.WithMessage(err, "getJob endpoint: failed to marshal jobs resource into bytes"), logData)
+		log.Event(ctx, "getJob endpoint: failed to marshal jobs resource into bytes", log.ERROR, log.Error(err), logData)
 	}
 	return
 }
