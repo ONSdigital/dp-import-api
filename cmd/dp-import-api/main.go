@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-import-api/kafkaadapter"
 	"os"
 	"os/signal"
 	"syscall"
@@ -42,60 +43,31 @@ func main() {
 	mongoDataStore, err := serviceList.GetMongoDataStore(cfg)
 	logIfError(ctx, err, "mongodb datastore error")
 
-	dataBakerProducer, err := serviceList.GetProducer(cfg.Brokers, cfg.DatabakerImportTopic, initialise.DataBaker, cfg.KafkaMaxBytes)
+	dataBakerProducer, err := serviceList.GetProducer(ctx, cfg.Brokers, cfg.DatabakerImportTopic, initialise.DataBaker, cfg.KafkaMaxBytes)
 	logIfError(ctx, err, "databaker kafka producer error")
+	dataBakerProducer.Channels().LogErrors(ctx, "error received from kafka data baker producer, topic: "+cfg.DatabakerImportTopic)
 
-	directProducer, err := serviceList.GetProducer(cfg.Brokers, cfg.InputFileAvailableTopic, initialise.Direct, cfg.KafkaMaxBytes)
+	directProducer, err := serviceList.GetProducer(ctx, cfg.Brokers, cfg.InputFileAvailableTopic, initialise.Direct, cfg.KafkaMaxBytes)
 	logIfError(ctx, err, "direct kafka producer error")
+	directProducer.Channels().LogErrors(ctx, "error received from kafka input file available producer, topic: "+cfg.InputFileAvailableTopic)
 
-	auditProducer, err := serviceList.GetProducer(cfg.Brokers, cfg.AuditEventsTopic, initialise.Audit, cfg.KafkaMaxBytes)
+	auditProducer, err := serviceList.GetProducer(ctx, cfg.Brokers, cfg.AuditEventsTopic, initialise.Audit, cfg.KafkaMaxBytes)
 	logIfError(ctx, err, "direct kafka producer error")
+	auditProducer.Channels().LogErrors(ctx, "error received from kafka audit producer, topic: "+cfg.AuditEventsTopic)
 
 	urlBuilder := url.NewBuilder(cfg.Host, cfg.DatasetAPIURL)
-	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Output(), directProducer.Output())
+	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Channels().Output, directProducer.Channels().Output)
 
 	client := rchttp.NewClient()
 	datasetAPI := dataset.API{Client: client, URL: cfg.DatasetAPIURL, ServiceAuthToken: cfg.ServiceAuthToken}
 	recipeAPI := recipe.API{Client: client, URL: cfg.RecipeAPIURL}
 
 	jobService := job.NewService(mongoDataStore, jobQueue, &datasetAPI, &recipeAPI, urlBuilder)
-	auditor := audit.New(auditProducer, serviceNamespace)
+
+	auditProducerAdapter := kafkaadapter.NewProducerAdapter(auditProducer)
+	auditor := audit.New(auditProducerAdapter, serviceNamespace)
 
 	api.CreateImportAPI(ctx, cfg.BindAddr, cfg.ZebedeeURL, mongoDataStore, jobService, auditor)
-
-	// TODO - Discussion on handling kafka channels and how we would implement reconnecting to kafka
-	// Function below is to handle errors received by kafka as gracefully as possible without panicing or
-	// continuously logging the same error messages - will likely be replaced when kafka reconnects are implemented
-	go func() {
-		var databaKerProducerErrors, directProducerErrors, auditProducerErrors chan (error)
-
-		if serviceList.DataBakerProducer {
-			databaKerProducerErrors = dataBakerProducer.Errors()
-		} else {
-			databaKerProducerErrors = make(chan error, 1)
-		}
-
-		if serviceList.DirectProducer {
-			directProducerErrors = directProducer.Errors()
-		} else {
-			directProducerErrors = make(chan error, 1)
-		}
-
-		if serviceList.AuditProducer {
-			auditProducerErrors = auditProducer.Errors()
-		} else {
-			auditProducerErrors = make(chan error, 1)
-		}
-
-		select {
-		case err := <-databaKerProducerErrors:
-			log.Event(ctx, "kafka databaker producer", log.ERROR, log.Error(err))
-		case err := <-directProducerErrors:
-			log.Event(ctx, "kafka direct producer", log.ERROR, log.Error(err))
-		case err := <-auditProducerErrors:
-			log.Event(ctx, "kafka audit producer", log.ERROR, log.Error(err))
-		}
-	}()
 
 	// block until a fatal error occurs
 	select {

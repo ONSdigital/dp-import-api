@@ -1,11 +1,12 @@
 package initialise
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/ONSdigital/dp-import-api/config"
 	"github.com/ONSdigital/dp-import-api/mongo"
-	"github.com/ONSdigital/go-ns/kafka"
+	kafka "github.com/ONSdigital/dp-kafka"
 )
 
 // ExternalServiceList represents a list of services
@@ -19,7 +20,7 @@ type ExternalServiceList struct {
 // KafkaProducerName represents a type for kafka producer name used by iota constants
 type KafkaProducerName int
 
-// Possible names of Kafa Producsers
+// Possible names of Kafka Producers
 const (
 	Audit = iota
 	DataBaker
@@ -45,8 +46,11 @@ func (e *ExternalServiceList) GetMongoDataStore(cfg *config.Configuration) (data
 }
 
 // GetProducer returns a kafka producer
-func (e *ExternalServiceList) GetProducer(kafkaBrokers []string, topic string, name KafkaProducerName, envMax int) (kafkaProducer kafka.Producer, err error) {
-	kafkaProducer, err = kafka.NewProducer(kafkaBrokers, topic, envMax)
+func (e *ExternalServiceList) GetProducer(ctx context.Context, kafkaBrokers []string, topic string, name KafkaProducerName, envMax int) (kafkaProducer *kafka.Producer, err error) {
+
+	producerChannels := kafka.CreateProducerChannels()
+	kafkaProducer, err = kafka.NewProducer(ctx, kafkaBrokers, topic, envMax, producerChannels)
+
 	if err != nil {
 		return
 	}
@@ -59,7 +63,7 @@ func (e *ExternalServiceList) GetProducer(kafkaBrokers []string, topic string, n
 	case name == Direct:
 		e.DirectProducer = true
 	default:
-		err = fmt.Errorf("Kafka producer name not recognised: '%s'. Valid names: %v", name.String(), kafkaProducerNames)
+		err = fmt.Errorf("kafka producer name not recognised: '%s'. Valid names: %v", name.String(), kafkaProducerNames)
 	}
 
 	return
