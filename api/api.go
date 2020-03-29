@@ -3,15 +3,14 @@ package api
 import (
 	"context"
 	"fmt"
+	healthcheck "github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"net/http"
 
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/audit"
-	handlershealthcheck "github.com/ONSdigital/go-ns/handlers/healthcheck"
 	"github.com/ONSdigital/go-ns/handlers/requestID"
-	"github.com/ONSdigital/go-ns/healthcheck"
 	"github.com/ONSdigital/go-ns/identity"
 	"github.com/ONSdigital/go-ns/server"
 	"github.com/ONSdigital/log.go/log"
@@ -53,20 +52,20 @@ type JobService interface {
 type Auditor audit.AuditorService
 
 // CreateImportAPI manages all the routes configured to API
-func CreateImportAPI(ctx context.Context, bindAddr, zebedeeURL string,
+func CreateImportAPI(ctx context.Context,
+	bindAddr, zebedeeURL string,
 	mongoDataStore datastore.DataStorer,
 	jobService JobService,
-	auditor audit.AuditorService) {
+	auditor audit.AuditorService,
+	hc *healthcheck.HealthCheck) {
 
 	router := mux.NewRouter()
-	routes(router, mongoDataStore, jobService, auditor)
-
-	healthcheckHandler := healthcheck.NewMiddleware(handlershealthcheck.Handler)
+	routes(router, mongoDataStore, jobService, auditor, hc)
 
 	identityHandler := identity.Handler(zebedeeURL)
 
 	// TODO how long should the ID be?
-	middleware := alice.New(requestID.Handler(16), healthcheckHandler, identityHandler).Then(router)
+	middleware := alice.New(requestID.Handler(16), identityHandler).Then(router)
 	httpServer = server.New(bindAddr, middleware)
 	httpServer.HandleOSSignals = false
 
@@ -79,7 +78,7 @@ func CreateImportAPI(ctx context.Context, bindAddr, zebedeeURL string,
 }
 
 // routes contain all endpoints for API
-func routes(router *mux.Router, dataStore datastore.DataStorer, jobService JobService, auditor Auditor) *ImportAPI {
+func routes(router *mux.Router, dataStore datastore.DataStorer, jobService JobService, auditor Auditor, hc *healthcheck.HealthCheck) *ImportAPI {
 	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService, auditor: auditor}
 
 	// External API for florence

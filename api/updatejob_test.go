@@ -33,7 +33,7 @@ func TestFailureToUpdateJobState(t *testing.T) {
 						return nil
 					},
 				}
-				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock, nil)
 
 				reader := strings.NewReader("{\"state\":\"created\"}")
 				r, err := testapi.CreateRequestWithOutAuth("PUT", "http://localhost:21800/jobs/12345", reader)
@@ -71,7 +71,7 @@ func TestFailureToUpdateJobState(t *testing.T) {
 					},
 				}
 
-				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock, nil)
 				api.router.ServeHTTP(w, r)
 
 				So(w.Code, ShouldEqual, http.StatusBadRequest)
@@ -103,7 +103,7 @@ func TestFailureToUpdateJobState(t *testing.T) {
 					},
 				}
 
-				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock, nil)
 				api.router.ServeHTTP(w, r)
 
 				So(w.Code, ShouldEqual, http.StatusBadRequest)
@@ -135,7 +135,7 @@ func TestFailureToUpdateJobState(t *testing.T) {
 					},
 				}
 
-				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService, auditorMock, nil)
 				api.router.ServeHTTP(w, r)
 
 				So(w.Code, ShouldEqual, http.StatusNotFound)
@@ -161,7 +161,7 @@ func TestFailureToUpdateJobState(t *testing.T) {
 						return errs.ErrInternalServer
 					},
 				}
-				api := routes(mux.NewRouter(), &testapi.DstoreInternalError, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.DstoreInternalError, mockJobService, auditorMock, nil)
 
 				reader := strings.NewReader("{\"state\":\"created\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345", reader)
@@ -198,7 +198,7 @@ func TestFailureToUpdateJobState(t *testing.T) {
 						return nil
 					},
 				}
-				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, newAuditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, newAuditorMock, nil)
 
 				reader := strings.NewReader("{\"state\":\"created\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345", reader)
@@ -240,7 +240,7 @@ func TestFailureToUpdateJobState(t *testing.T) {
 						return errors.New("update job error")
 					},
 				}
-				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, newAuditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, newAuditorMock, nil)
 
 				reader := strings.NewReader("{\"state\":\"created\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345", reader)
@@ -281,7 +281,7 @@ func TestSuccessfullyUpdateJobState(t *testing.T) {
 						return nil
 					},
 				}
-				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock, nil)
 
 				reader := strings.NewReader("{ \"state\":\"completed\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345", reader)
@@ -320,7 +320,7 @@ func TestSuccessfullyUpdateJobState(t *testing.T) {
 						return nil
 					},
 				}
-				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock)
+				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, auditorMock, nil)
 
 				reader := strings.NewReader("{ \"state\":\"submitted\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345", reader)

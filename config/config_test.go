@@ -2,6 +2,7 @@ package config
 
 import (
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -16,5 +17,7 @@ func TestGetReturnsDefaultValues(t *testing.T) {
 		So(configuration.ZebedeeURL, ShouldEqual, "http://localhost:8082")
 		So(configuration.KafkaMaxBytes, ShouldEqual, 2000000)
 		So(configuration.AuditEventsTopic, ShouldEqual, "audit-events")
+		So(configuration.HealthCheckInterval, ShouldEqual, time.Second*10)
+		So(configuration.HealthCheckCriticalTimeout, ShouldEqual, time.Minute)
 	})
 }

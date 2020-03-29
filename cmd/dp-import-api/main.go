@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-api/kafkaadapter"
 	"os"
 	"os/signal"
@@ -18,6 +19,15 @@ import (
 	rchttp "github.com/ONSdigital/dp-rchttp"
 	"github.com/ONSdigital/go-ns/audit"
 	"github.com/ONSdigital/log.go/log"
+)
+
+var (
+	// BuildTime represents the time in which the service was built
+	BuildTime string
+	// GitCommit represents the commit (SHA-1) hash of the service that is running
+	GitCommit string
+	// Version represents the version of the service that is running
+	Version string
 )
 
 const serviceNamespace = "dp-import-api"
@@ -47,16 +57,16 @@ func main() {
 	logIfError(ctx, err, "databaker kafka producer error")
 	dataBakerProducer.Channels().LogErrors(ctx, "error received from kafka data baker producer, topic: "+cfg.DatabakerImportTopic)
 
-	directProducer, err := serviceList.GetProducer(ctx, cfg.Brokers, cfg.InputFileAvailableTopic, initialise.Direct, cfg.KafkaMaxBytes)
+	inputFileAvailableProducer, err := serviceList.GetProducer(ctx, cfg.Brokers, cfg.InputFileAvailableTopic, initialise.Direct, cfg.KafkaMaxBytes)
 	logIfError(ctx, err, "direct kafka producer error")
-	directProducer.Channels().LogErrors(ctx, "error received from kafka input file available producer, topic: "+cfg.InputFileAvailableTopic)
+	inputFileAvailableProducer.Channels().LogErrors(ctx, "error received from kafka input file available producer, topic: "+cfg.InputFileAvailableTopic)
 
 	auditProducer, err := serviceList.GetProducer(ctx, cfg.Brokers, cfg.AuditEventsTopic, initialise.Audit, cfg.KafkaMaxBytes)
 	logIfError(ctx, err, "direct kafka producer error")
 	auditProducer.Channels().LogErrors(ctx, "error received from kafka audit producer, topic: "+cfg.AuditEventsTopic)
 
 	urlBuilder := url.NewBuilder(cfg.Host, cfg.DatasetAPIURL)
-	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Channels().Output, directProducer.Channels().Output)
+	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Channels().Output, inputFileAvailableProducer.Channels().Output)
 
 	client := rchttp.NewClient()
 	datasetAPI := dataset.API{Client: client, URL: cfg.DatasetAPIURL, ServiceAuthToken: cfg.ServiceAuthToken}
@@ -67,7 +77,37 @@ func main() {
 	auditProducerAdapter := kafkaadapter.NewProducerAdapter(auditProducer)
 	auditor := audit.New(auditProducerAdapter, serviceNamespace)
 
-	api.CreateImportAPI(ctx, cfg.BindAddr, cfg.ZebedeeURL, mongoDataStore, jobService, auditor)
+	hasErrors := false
+	versionInfo, err := healthcheck.NewVersionInfo(BuildTime, GitCommit, Version)
+	if err != nil {
+		log.Event(ctx, "error creating version info", log.FATAL, log.Error(err))
+		hasErrors = true
+	}
+
+	hc := healthcheck.New(versionInfo, cfg.HealthCheckCriticalTimeout, cfg.HealthCheckInterval)
+
+	if err = hc.AddCheck("Kafka Data Baker Producer", dataBakerProducer.Checker); err != nil {
+		log.Event(ctx, "error adding check for kafka data baker producer", log.ERROR, log.Error(err))
+		hasErrors = true
+	}
+
+	if err = hc.AddCheck("Kafka Input File Available Producer", inputFileAvailableProducer.Checker); err != nil {
+		log.Event(ctx, "error adding check for kafka input file available producer", log.ERROR, log.Error(err))
+		hasErrors = true
+	}
+
+	if err = hc.AddCheck("Kafka Audit Producer", auditProducer.Checker); err != nil {
+		log.Event(ctx, "error adding check for kafka audit producer", log.ERROR, log.Error(err))
+		hasErrors = true
+	}
+
+	if hasErrors {
+		os.Exit(1)
+	}
+
+	hc.Start(ctx)
+
+	api.CreateImportAPI(ctx, cfg.BindAddr, cfg.ZebedeeURL, mongoDataStore, jobService, auditor, &hc)
 
 	// block until a fatal error occurs
 	select {
@@ -87,6 +127,8 @@ func main() {
 			logIfError(ctx, err, "unable to close api server")
 		}
 
+		hc.Stop()
+
 		if serviceList.MongoDataStore {
 			log.Event(ctx, "closing mongo data store", log.INFO)
 			// mongo.Close() may use all remaining time in the context
@@ -100,7 +142,7 @@ func main() {
 
 		if serviceList.DirectProducer {
 			log.Event(ctx, "closing direct producer", log.INFO)
-			logIfError(ctx, directProducer.Close(ctx), "unable to close direct producer")
+			logIfError(ctx, inputFileAvailableProducer.Close(ctx), "unable to close direct producer")
 		}
 
 		// Close audit producer last, to maximise capturing all events
