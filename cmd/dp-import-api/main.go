@@ -7,6 +7,8 @@ import (
 	"github.com/ONSdigital/dp-api-clients-go/zebedee"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-api/kafkaadapter"
+	"github.com/ONSdigital/dp-import-api/mongo"
+	"github.com/ONSdigital/dp-kafka"
 	"os"
 	"os/signal"
 	"syscall"
@@ -80,6 +82,67 @@ func main() {
 	auditProducerAdapter := kafkaadapter.NewProducerAdapter(auditProducer)
 	auditor := audit.New(auditProducerAdapter, serviceNamespace)
 
+	hc := startHealthChecks(ctx, cfg, dataBakerProducer, inputFileAvailableProducer, auditProducer, mongoDataStore)
+
+	api.CreateImportAPI(ctx, cfg.BindAddr, cfg.ZebedeeURL, mongoDataStore, jobService, auditor, hc)
+
+	// block until a fatal error occurs
+	select {
+	case sig := <-signals:
+		log.Event(ctx, "os signal received", log.INFO, log.Data{"signal": sig.String()})
+	}
+
+	log.Event(ctx, "Shutdown service", log.INFO, log.Data{"timeout": cfg.GracefulShutdownTimeout})
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
+
+	// Gracefully shutdown the application closing any open resources.
+	go func() {
+		defer cancel()
+
+		log.Event(ctx, "closing http server for healthcheck", log.INFO)
+		if err = api.Close(ctx); err != nil {
+			logIfError(ctx, err, "unable to close api server")
+		}
+
+		hc.Stop()
+
+		if serviceList.MongoDataStore {
+			log.Event(ctx, "closing mongo data store", log.INFO)
+			// mongo.Close() may use all remaining time in the context
+			logIfError(ctx, mongoDataStore.Close(ctx), "unable to close mongo data store")
+		}
+
+		if serviceList.DataBakerProducer {
+			log.Event(ctx, "closing data baker producer", log.INFO)
+			logIfError(ctx, dataBakerProducer.Close(ctx), "unable to close data baker producer")
+		}
+
+		if serviceList.DirectProducer {
+			log.Event(ctx, "closing direct producer", log.INFO)
+			logIfError(ctx, inputFileAvailableProducer.Close(ctx), "unable to close direct producer")
+		}
+
+		// Close audit producer last, to maximise capturing all events
+		if serviceList.AuditProducer {
+			log.Event(ctx, "closing audit producer", log.INFO)
+			logIfError(ctx, auditProducer.Close(ctx), "unable to close audit producer")
+		}
+	}()
+
+	// wait for shutdown success (via cancel) or failure (timeout)
+	<-ctx.Done()
+
+	log.Event(ctx, "Shutdown complete", log.INFO)
+	os.Exit(1)
+}
+
+func startHealthChecks(ctx context.Context,
+	cfg *config.Configuration,
+	dataBakerProducer *kafka.Producer,
+	inputFileAvailableProducer *kafka.Producer,
+	auditProducer *kafka.Producer,
+	mongoDataStore *mongo.Mongo) *healthcheck.HealthCheck {
+
 	hasErrors := false
 	versionInfo, err := healthcheck.NewVersionInfo(BuildTime, GitCommit, Version)
 	if err != nil {
@@ -134,56 +197,7 @@ func main() {
 
 	hc.Start(ctx)
 
-	api.CreateImportAPI(ctx, cfg.BindAddr, cfg.ZebedeeURL, mongoDataStore, jobService, auditor, &hc)
-
-	// block until a fatal error occurs
-	select {
-	case sig := <-signals:
-		log.Event(ctx, "os signal received", log.INFO, log.Data{"signal": sig.String()})
-	}
-
-	log.Event(ctx, "Shutdown service", log.INFO, log.Data{"timeout": cfg.GracefulShutdownTimeout})
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.GracefulShutdownTimeout)
-
-	// Gracefully shutdown the application closing any open resources.
-	go func() {
-		defer cancel()
-
-		log.Event(ctx, "closing http server for healthcheck", log.INFO)
-		if err = api.Close(ctx); err != nil {
-			logIfError(ctx, err, "unable to close api server")
-		}
-
-		hc.Stop()
-
-		if serviceList.MongoDataStore {
-			log.Event(ctx, "closing mongo data store", log.INFO)
-			// mongo.Close() may use all remaining time in the context
-			logIfError(ctx, mongoDataStore.Close(ctx), "unable to close mongo data store")
-		}
-
-		if serviceList.DataBakerProducer {
-			log.Event(ctx, "closing data baker producer", log.INFO)
-			logIfError(ctx, dataBakerProducer.Close(ctx), "unable to close data baker producer")
-		}
-
-		if serviceList.DirectProducer {
-			log.Event(ctx, "closing direct producer", log.INFO)
-			logIfError(ctx, inputFileAvailableProducer.Close(ctx), "unable to close direct producer")
-		}
-
-		// Close audit producer last, to maximise capturing all events
-		if serviceList.AuditProducer {
-			log.Event(ctx, "closing audit producer", log.INFO)
-			logIfError(ctx, auditProducer.Close(ctx), "unable to close audit producer")
-		}
-	}()
-
-	// wait for shutdown success (via cancel) or failure (timeout)
-	<-ctx.Done()
-
-	log.Event(ctx, "Shutdown complete", log.INFO)
-	os.Exit(1)
+	return &hc
 }
 
 func exitIfError(ctx context.Context, err error, message string) {
