@@ -3,15 +3,17 @@ package api
 import (
 	"context"
 	"fmt"
-	healthcheck "github.com/ONSdigital/dp-healthcheck/healthcheck"
+	"github.com/ONSdigital/dp-healthcheck/healthcheck"
+	rchttp "github.com/ONSdigital/dp-rchttp"
+	"github.com/ONSdigital/go-ns/identity"
 	"net/http"
 
+	identityclient "github.com/ONSdigital/dp-api-clients-go/identity"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/audit"
 	"github.com/ONSdigital/go-ns/handlers/requestID"
-	"github.com/ONSdigital/go-ns/identity"
 	"github.com/ONSdigital/go-ns/server"
 	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/mux"
@@ -62,7 +64,9 @@ func CreateImportAPI(ctx context.Context,
 	router := mux.NewRouter()
 	routes(router, mongoDataStore, jobService, auditor, hc)
 
-	identityHandler := identity.Handler(zebedeeURL)
+	identityHTTPClient := rchttp.NewClient()
+	identityClient := identityclient.NewAPIClient(identityHTTPClient, zebedeeURL)
+	identityHandler := identity.HandlerForHTTPClient(identityClient)
 
 	// TODO how long should the ID be?
 	middleware := alice.New(requestID.Handler(16), identityHandler).Then(router)
