@@ -108,6 +108,11 @@ func main() {
 		hasErrors = true
 	}
 
+	if err = hc.AddCheck("MongoDB", mongoDataStore.HealthCheckClient().Checker); err != nil {
+		log.Event(ctx, "error creating mongodb health check", log.ERROR, log.Error(err))
+		hasErrors = true
+	}
+
 	if hasErrors {
 		os.Exit(1)
 	}
