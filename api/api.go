@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/ONSdigital/dp-api-clients-go/middleware"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	rchttp "github.com/ONSdigital/dp-rchttp"
 	"github.com/ONSdigital/go-ns/identity"
@@ -68,8 +69,12 @@ func CreateImportAPI(ctx context.Context,
 	identityClient := identityclient.NewAPIClient(identityHTTPClient, zebedeeURL)
 	identityHandler := identity.HandlerForHTTPClient(identityClient)
 
-	// TODO how long should the ID be?
-	middleware := alice.New(requestID.Handler(16), identityHandler).Then(router)
+	middleware := alice.New(
+		middleware.Whitelist(middleware.HealthcheckFilter(hc.Handler)),
+		requestID.Handler(16),
+		identityHandler,
+	).Then(router)
+
 	httpServer = server.New(bindAddr, middleware)
 	httpServer.HandleOSSignals = false
 
