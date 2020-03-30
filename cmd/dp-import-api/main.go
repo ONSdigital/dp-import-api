@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	datasetclient "github.com/ONSdigital/dp-api-clients-go/dataset"
+	"github.com/ONSdigital/dp-api-clients-go/health"
 	"github.com/ONSdigital/dp-api-clients-go/zebedee"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-api/kafkaadapter"
@@ -118,6 +119,12 @@ func main() {
 	datasetAPIClient := datasetclient.NewAPIClient(cfg.DatasetAPIURL)
 	if err = hc.AddCheck("Dataset API", datasetAPIClient.Checker); err != nil {
 		log.Event(ctx, "error creating dataset API health check", log.Error(err))
+		hasErrors = true
+	}
+
+	recipeAPIHealthCheckClient := health.NewClient("Recipe API", cfg.RecipeAPIURL)
+	if err = hc.AddCheck("Recipe API", recipeAPIHealthCheckClient.Checker); err != nil {
+		log.Event(ctx, "error creating recipe API health check", log.Error(err))
 		hasErrors = true
 	}
 
