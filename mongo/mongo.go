@@ -7,10 +7,11 @@ import (
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
-	"github.com/ONSdigital/go-ns/mongo"
 
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+
+	mongo "github.com/ONSdigital/dp-mongodb"
 )
 
 var _ datastore.DataStorer = (*Mongo)(nil)

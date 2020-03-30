@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-api-clients-go/zebedee"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-api/kafkaadapter"
 	"os"
@@ -98,6 +99,12 @@ func main() {
 
 	if err = hc.AddCheck("Kafka Audit Producer", auditProducer.Checker); err != nil {
 		log.Event(ctx, "error adding check for kafka audit producer", log.ERROR, log.Error(err))
+		hasErrors = true
+	}
+
+	zebedeeClient := zebedee.New(cfg.ZebedeeURL)
+	if err = hc.AddCheck("Zebedee", zebedeeClient.Checker); err != nil {
+		log.Event(ctx, "error creating zebedee health check", log.ERROR, log.Error(err))
 		hasErrors = true
 	}
 
