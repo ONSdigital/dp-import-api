@@ -32,7 +32,7 @@ func (api *API) GetRecipe(ctx context.Context, ID string) (*models.Recipe, error
 
 	if err == nil && httpCode != http.StatusOK {
 		recipeErr := errors.New("bad response")
-		log.Event(ctx, "GetRecipe: failed to retrieve recipe", log.ERROR, log.Error(err), logData)
+		log.Event(ctx, "GetRecipe: failed to retrieve recipe", log.ERROR, log.Error(recipeErr), logData)
 		return nil, recipeErr
 	}
 
