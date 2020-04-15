@@ -55,8 +55,8 @@ func Get() (*Configuration, error) {
 		GracefulShutdownTimeout:    time.Second * 5,
 		ZebedeeURL:                 "http://localhost:8082",
 		AuditEventsTopic:           "audit-events",
-		HealthCheckInterval:        10 * time.Second,
-		HealthCheckCriticalTimeout: 1 * time.Minute,
+		HealthCheckInterval:        30 * time.Second,
+		HealthCheckCriticalTimeout: 90 * time.Second,
 	}
 
 	err := envconfig.Process("", cfg)
