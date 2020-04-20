@@ -8,7 +8,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/dp-import-api/url"
-	"github.com/ONSdigital/go-ns/log"
+	"github.com/ONSdigital/log.go/log"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 )
@@ -39,7 +39,7 @@ type Service struct {
 
 // Queue interface used to queue import jobs.
 type Queue interface {
-	Queue(job *models.ImportData) error
+	Queue(ctx context.Context, job *models.ImportData) error
 }
 
 // DatasetAPI interface to the dataset API.
@@ -69,20 +69,20 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 	logData := log.Data{"job": job}
 
 	if err := job.Validate(); err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "CreateJob: failed validation"), logData)
+		log.Event(ctx, "CreateJob: failed validation", log.ERROR, log.Error(err), logData)
 		return nil, errs.ErrInvalidJob
 	}
 
 	//Get details needed for instances from Recipe API
 	recipe, err := service.recipeAPI.GetRecipe(ctx, job.RecipeID)
 	if err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "CreateJob: failed to get recipe details"), logData)
+		log.Event(ctx, "CreateJob: failed to get recipe details", log.ERROR, log.Error(err), logData)
 		return nil, ErrGetRecipeFailed
 	}
 
 	jobID, err := uuid.NewV4()
 	if err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "CreateJob: failed to get UUID"), logData)
+		log.Event(ctx, "CreateJob: failed to get UUID", log.ERROR, log.Error(err), logData)
 		return nil, err
 	}
 	job.ID = jobID.String()
@@ -93,7 +93,7 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 		instance, instanceErr := service.datasetAPI.CreateInstance(ctx, job, &oi)
 		if instanceErr != nil {
 			logData["instance"] = oi
-			log.ErrorCtx(ctx, errors.Wrap(instanceErr, "CreateJob: failed to create instance in datastore"), logData)
+			log.Event(ctx, "CreateJob: failed to create instance in datastore", log.ERROR, log.Error(instanceErr), logData)
 			return nil, ErrCreateInstanceFailed(oi.DatasetID)
 		}
 
@@ -107,7 +107,7 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 
 	createdJob, err := service.dataStore.AddJob(job)
 	if err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "CreateJob: failed to create job in datastore"), logData)
+		log.Event(ctx, "CreateJob: failed to create job in datastore", log.ERROR, log.Error(err), logData)
 		return nil, ErrSaveJobFailed
 	}
 
@@ -122,21 +122,21 @@ func (service Service) UpdateJob(ctx context.Context, jobID string, job *models.
 		return err
 	}
 
-	log.Info("job updated", log.Data{"job": job, "job_id": jobID})
+	log.Event(ctx, "job updated", log.INFO, log.Data{"job": job, "job_id": jobID})
 	if job.State == "submitted" {
 		tasks, err := service.prepareJob(ctx, jobID)
 		if err != nil {
-			log.Error(err, log.Data{"jobState": job, "job_id": jobID})
+			log.Event(ctx, "error preparing job", log.ERROR, log.Error(err), log.Data{"jobState": job, "job_id": jobID})
 			return err
 		}
 
-		err = service.queue.Queue(tasks)
+		err = service.queue.Queue(ctx, tasks)
 		if err != nil {
-			log.Error(err, log.Data{"tasks": tasks})
+			log.Event(ctx, "error queueing tasks", log.ERROR, log.Error(err), log.Data{"tasks": tasks})
 			return err
 		}
 
-		log.Info("import job was queued", log.Data{"job": job, "job_id": jobID})
+		log.Event(ctx, "import job was queued", log.INFO, log.Data{"job": job, "job_id": jobID})
 	}
 
 	return nil

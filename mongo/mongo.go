@@ -7,10 +7,12 @@ import (
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
-	"github.com/ONSdigital/go-ns/mongo"
 
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
+
+	mongo "github.com/ONSdigital/dp-mongodb"
+	mongohealth "github.com/ONSdigital/dp-mongodb/health"
 )
 
 var _ datastore.DataStorer = (*Mongo)(nil)
@@ -177,6 +179,15 @@ func (m *Mongo) UpdateJobState(id, newState string) (err error) {
 	// mongo.WithUpdates(bson.M{"$set": bson.M{"state": newState}})
 	_, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update)
 	return
+}
+
+func (m *Mongo) HealthCheckClient() *mongohealth.CheckMongoClient {
+	client := mongohealth.NewClient(session)
+
+	return &mongohealth.CheckMongoClient{
+		Client:      *client,
+		Healthcheck: client.Healthcheck,
+	}
 }
 
 // Close disconnects the mongo session

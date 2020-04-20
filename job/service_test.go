@@ -212,7 +212,7 @@ func TestService_UpdateJob(t *testing.T) {
 
 		mockDataStore := &mongo.DataStorer{}
 		mockedQueue := &testjob.QueueMock{
-			QueueFunc: func(job *models.ImportData) error {
+			QueueFunc: func(ctx context.Context, job *models.ImportData) error {
 				return nil
 			},
 		}
@@ -249,7 +249,7 @@ func TestService_UpdateJob_SaveFails(t *testing.T) {
 
 		mockDataStore := &mongo.DataStorer{InternalError: true}
 		mockedQueue := &testjob.QueueMock{
-			QueueFunc: func(job *models.ImportData) error {
+			QueueFunc: func(ctx context.Context, job *models.ImportData) error {
 				return nil
 			},
 		}
@@ -285,7 +285,7 @@ func TestService_UpdateJob_QueuesWhenSubmitted(t *testing.T) {
 
 		mockDataStore := &mongo.DataStorer{}
 		mockedQueue := &testjob.QueueMock{
-			QueueFunc: func(job *models.ImportData) error {
+			QueueFunc: func(ctx context.Context, job *models.ImportData) error {
 				return nil
 			},
 		}

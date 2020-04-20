@@ -1,6 +1,7 @@
 package importqueue
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ONSdigital/dp-import-api/models"
@@ -10,6 +11,8 @@ import (
 
 func TestQueueV4File(t *testing.T) {
 	Convey("When a job is imported with a `v4` recipe it is sent directly to the import process", t, func() {
+
+		ctx := context.Background()
 
 		v4Queue := make(chan []byte, 1)
 		dataBakerQueue := make(chan []byte, 1)
@@ -21,7 +24,7 @@ func TestQueueV4File(t *testing.T) {
 			Format:        "v4",
 			UploadedFiles: &[]models.UploadedFile{{AliasName: "v4", URL: "s3//aws/000/v4.csv"}}}
 
-		importError := importer.Queue(&job)
+		importError := importer.Queue(ctx, &job)
 		So(importError, ShouldBeNil)
 
 		bytes := <-v4Queue

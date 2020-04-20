@@ -7,10 +7,9 @@ import (
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/audit"
 	"github.com/ONSdigital/go-ns/common"
-	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/request"
+	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 )
 
 func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Request) {
@@ -25,8 +24,7 @@ func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Requ
 
 	uploadedFile, err := models.CreateUploadedFile(r.Body)
 	if err != nil {
-		log.ErrorCtx(ctx, errors.WithMessage(err, "addUploadFile endpoint: failed to create uploaded file resource"), logData)
-
+		log.Event(ctx, "addUploadFile endpoint: failed to create uploaded file resource", log.ERROR, log.Error(err), logData)
 		// record failure to add uploaded file
 		if auditError := api.auditor.Record(ctx, uploadFileAction, audit.Unsuccessful, auditParams); auditError != nil {
 			err = auditError
@@ -40,7 +38,7 @@ func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Requ
 	auditParams["fileAlias"] = uploadedFile.AliasName
 	auditParams["fileURL"] = uploadedFile.URL
 
-	if err := api.addUploadFile(ctx, uploadedFile, jobID, auditParams, logData); err != nil {
+	if err := api.addUploadFile(ctx, uploadedFile, jobID, logData); err != nil {
 		// record unsuccessful attempt to add uploaded file to job
 		if auditError := api.auditor.Record(ctx, uploadFileAction, audit.Unsuccessful, auditParams); auditError != nil {
 			err = auditError
@@ -53,13 +51,13 @@ func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Requ
 	// record successful attempt to add uploaded file to job
 	api.auditor.Record(ctx, uploadFileAction, audit.Successful, auditParams)
 
-	log.InfoCtx(ctx, "added uxploaded file to job", logData)
+	log.Event(ctx, "added uxploaded file to job", logData)
 }
 
-func (api *ImportAPI) addUploadFile(ctx context.Context, uploadedFile *models.UploadedFile, jobID string, auditParams common.Params, logData log.Data) (err error) {
+func (api *ImportAPI) addUploadFile(ctx context.Context, uploadedFile *models.UploadedFile, jobID string, logData log.Data) (err error) {
 
 	if err = api.dataStore.AddUploadedFile(jobID, uploadedFile); err != nil {
-		log.ErrorCtx(ctx, errors.WithMessage(err, "addUploadFile endpoint: failed to store uploaded file resource"), logData)
+		log.Event(ctx, "addUploadFile endpoint: failed to store uploaded file resource", log.ERROR, log.Error(err), logData)
 	}
 
 	return

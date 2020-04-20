@@ -12,7 +12,7 @@ import (
 
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/common"
-	"github.com/ONSdigital/go-ns/log"
+	"github.com/ONSdigital/log.go/log"
 	"github.com/pkg/errors"
 )
 
@@ -33,12 +33,12 @@ func (api *API) CreateInstance(ctx context.Context, job *models.Job, recipeInst 
 	newInstance := models.CreateInstance(job, recipeInst.DatasetID, datasetPath, recipeInst.CodeLists)
 
 	if jsonUpload, err = json.Marshal(newInstance); err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "CreateInstance: failed to marshal new instance into json"), logData)
+		log.Event(ctx, "CreateInstance: failed to marshal new instance into json", log.ERROR, log.Error(err), logData)
 		return
 	}
 
 	logData["json_request"] = string(jsonUpload)
-	log.InfoCtx(ctx, "CreateInstance: create instance request", logData)
+	log.Event(ctx, "CreateInstance: create instance request", log.INFO, logData)
 
 	jsonResult, httpCode, err := api.post(ctx, path, jsonUpload)
 	logData["http_code"] = httpCode
@@ -49,13 +49,13 @@ func (api *API) CreateInstance(ctx context.Context, job *models.Job, recipeInst 
 	}
 
 	if err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "CreateInstance: failed to create instance"), logData)
+		log.Event(ctx, "CreateInstance: failed to create instance", log.ERROR, log.Error(err), logData)
 		return
 	}
 
 	instance = &models.Instance{}
 	if err = json.Unmarshal(jsonResult, instance); err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "CreateInstance: failed to marshal response to json"), logData)
+		log.Event(ctx, "CreateInstance: failed to marshal response to json", log.ERROR, log.Error(err), logData)
 		return
 	}
 
@@ -69,7 +69,7 @@ func (api *API) UpdateInstanceState(ctx context.Context, instanceID string, newS
 
 	jsonUpload, err := json.Marshal(models.Instance{State: newState})
 	if err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "UpdateInstanceState: failed to marshal instance to json"), logData)
+		log.Event(ctx, "UpdateInstanceState: failed to marshal instance to json", log.ERROR, log.Error(err), logData)
 		return err
 	}
 
@@ -83,7 +83,7 @@ func (api *API) UpdateInstanceState(ctx context.Context, instanceID string, newS
 	}
 
 	if err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "UpdateInstanceState: failed to update instance"), logData)
+		log.Event(ctx, "UpdateInstanceState: failed to update instance", log.ERROR, log.Error(err), logData)
 		return err
 	}
 
@@ -108,7 +108,7 @@ func (api *API) callDatasetAPI(ctx context.Context, method, path string, payload
 
 	URL, err := url.Parse(path)
 	if err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "callDatasetAPI: failed to create url for dataset api call"), logData)
+		log.Event(ctx, "callDatasetAPI: failed to create url for dataset api call", log.ERROR, log.Error(err), logData)
 		return nil, 0, err
 	}
 
@@ -132,7 +132,7 @@ func (api *API) callDatasetAPI(ctx context.Context, method, path string, payload
 
 	// check req, above, didn't error
 	if err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "callDatasetAPI: failed to create request for dataset api"), logData)
+		log.Event(ctx, "callDatasetAPI: failed to create request for dataset api", log.ERROR, log.Error(err), logData)
 		return nil, 0, err
 	}
 
@@ -140,19 +140,19 @@ func (api *API) callDatasetAPI(ctx context.Context, method, path string, payload
 
 	resp, err := api.Client.Do(ctx, req)
 	if err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "callDatasetAPI: failed to action dataset api"), logData)
+		log.Event(ctx, "callDatasetAPI: failed to action dataset api", log.ERROR, log.Error(err), logData)
 		return nil, 0, err
 	}
 
 	logData["http_code"] = resp.StatusCode
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= 300 {
-		log.InfoCtx(ctx, "callDatasetAPI: unexpected status code from api", logData)
+		log.Event(ctx, "callDatasetAPI: unexpected status code from api", log.INFO, logData)
 	}
 
 	defer resp.Body.Close()
 	jsonBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.ErrorCtx(ctx, errors.Wrap(err, "callDatasetAPI: failed to read body from dataset api"), logData)
+		log.Event(ctx, "callDatasetAPI: failed to read body from dataset api", log.ERROR, log.Error(err), logData)
 		return nil, resp.StatusCode, err
 	}
 

@@ -2,21 +2,23 @@ package api
 
 import (
 	"context"
+	"fmt"
+	"github.com/ONSdigital/dp-api-clients-go/middleware"
+	"github.com/ONSdigital/dp-healthcheck/healthcheck"
+	rchttp "github.com/ONSdigital/dp-rchttp"
+	"github.com/ONSdigital/go-ns/identity"
 	"net/http"
 
+	identityclient "github.com/ONSdigital/dp-api-clients-go/identity"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/go-ns/audit"
-	handlershealthcheck "github.com/ONSdigital/go-ns/handlers/healthcheck"
 	"github.com/ONSdigital/go-ns/handlers/requestID"
-	"github.com/ONSdigital/go-ns/healthcheck"
-	"github.com/ONSdigital/go-ns/identity"
-	"github.com/ONSdigital/go-ns/log"
 	"github.com/ONSdigital/go-ns/server"
+	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
-	"github.com/pkg/errors"
 )
 
 //go:generate moq -out testapi/job_service.go -pkg testapi . JobService
@@ -53,33 +55,39 @@ type JobService interface {
 type Auditor audit.AuditorService
 
 // CreateImportAPI manages all the routes configured to API
-func CreateImportAPI(host, bindAddr, zebedeeURL string,
+func CreateImportAPI(ctx context.Context,
+	bindAddr, zebedeeURL string,
 	mongoDataStore datastore.DataStorer,
 	jobService JobService,
-	auditor audit.AuditorService) {
+	auditor audit.AuditorService,
+	hc *healthcheck.HealthCheck) {
 
 	router := mux.NewRouter()
-	routes(router, mongoDataStore, jobService, auditor)
+	routes(router, mongoDataStore, jobService, auditor, hc)
 
-	healthcheckHandler := healthcheck.NewMiddleware(handlershealthcheck.Handler)
+	identityHTTPClient := rchttp.NewClient()
+	identityClient := identityclient.NewAPIClient(identityHTTPClient, zebedeeURL)
+	identityHandler := identity.HandlerForHTTPClient(identityClient)
 
-	identityHandler := identity.Handler(zebedeeURL)
+	middleware := alice.New(
+		middleware.Whitelist(middleware.HealthcheckFilter(hc.Handler)),
+		requestID.Handler(16),
+		identityHandler,
+	).Then(router)
 
-	// TODO how long should the ID be?
-	middleware := alice.New(requestID.Handler(16), healthcheckHandler, identityHandler).Then(router)
 	httpServer = server.New(bindAddr, middleware)
 	httpServer.HandleOSSignals = false
 
 	go func() {
-		log.Info("Starting api...", nil)
+		log.Event(ctx, "Starting api...", log.INFO)
 		if err := httpServer.ListenAndServe(); err != nil {
-			log.ErrorC("api http server returned error", err, nil)
+			log.Event(ctx, "api http server returned error", log.ERROR, log.Error(err))
 		}
 	}()
 }
 
 // routes contain all endpoints for API
-func routes(router *mux.Router, dataStore datastore.DataStorer, jobService JobService, auditor Auditor) *ImportAPI {
+func routes(router *mux.Router, dataStore datastore.DataStorer, jobService JobService, auditor Auditor, hc *healthcheck.HealthCheck) *ImportAPI {
 	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService, auditor: auditor}
 
 	// External API for florence
@@ -98,7 +106,7 @@ func Close(ctx context.Context) error {
 		return err
 	}
 
-	log.InfoCtx(ctx, "graceful shutdown of http server complete", nil)
+	log.Event(ctx, "graceful shutdown of http server complete", log.INFO)
 	return nil
 }
 
@@ -106,17 +114,17 @@ func (api *ImportAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, notFoundError, http.StatusNotFound)
 }
 
-func writeResponse(ctx context.Context, w http.ResponseWriter, statusCode int, b []byte, action string, data log.Data) {
+func writeResponse(ctx context.Context, w http.ResponseWriter, statusCode int, b []byte, action string, logData log.Data) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	if _, err := w.Write(b); err != nil {
-		log.ErrorCtx(ctx, errors.Wrapf(err, "%s endpoint: failed to write response body", action), data)
+		log.Event(ctx, fmt.Sprintf("%s endpoint: failed to write response body", action), log.ERROR, log.Error(err), logData)
 	}
 }
 
-func handleErr(ctx context.Context, w http.ResponseWriter, err error, data log.Data) {
-	if data == nil {
-		data = log.Data{}
+func handleErr(ctx context.Context, w http.ResponseWriter, err error, logData log.Data) {
+	if logData == nil {
+		logData = log.Data{}
 	}
 
 	var status int
@@ -132,8 +140,7 @@ func handleErr(ctx context.Context, w http.ResponseWriter, err error, data log.D
 		response = errs.ErrInternalServer
 	}
 
-	data["responseStatus"] = status
-	audit.LogError(ctx, errors.WithMessage(err, "request unsuccessful"), data)
-
+	logData["responseStatus"] = status
+	log.Event(ctx, "request unsuccessful", log.ERROR, log.Error(err), logData)
 	http.Error(w, response.Error(), status)
 }

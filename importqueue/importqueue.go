@@ -1,11 +1,12 @@
 package importqueue
 
 import (
+	"context"
 	"errors"
 
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/dp-import/events"
-	"github.com/ONSdigital/go-ns/log"
+	"github.com/ONSdigital/log.go/log"
 )
 
 // ImportQueue used to send import jobs via kafka topic
@@ -20,7 +21,7 @@ func CreateImportQueue(databakerQueue, v4Queue chan []byte) *ImportQueue {
 }
 
 // Queue an import event
-func (q *ImportQueue) Queue(job *models.ImportData) error {
+func (q *ImportQueue) Queue(ctx context.Context, job *models.ImportData) error {
 
 	if job.Format == "v4" {
 		if len(job.InstanceIDs) != 1 && len(*job.UploadedFiles) != 1 {
@@ -32,7 +33,7 @@ func (q *ImportQueue) Queue(job *models.ImportData) error {
 			InstanceID: job.InstanceIDs[0],
 			URL:        (*job.UploadedFiles)[0].URL}
 
-		log.Debug("producing new input file available event.", log.Data{"event": inputFileAvailableEvent})
+		log.Event(ctx, "producing new input file available event", log.INFO, log.Data{"event": inputFileAvailableEvent})
 
 		bytes, avroError := events.InputFileAvailableSchema.Marshal(inputFileAvailableEvent)
 		if avroError != nil {

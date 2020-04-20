@@ -6,11 +6,10 @@ image_resource:
   type: docker-image
   source:
     repository: golang
-    tag: 1.10.2
+    tag: 1.13.8
 
 inputs:
   - name: dp-import-api
-    path: go/src/github.com/ONSdigital/dp-import-api
 
 run:
-  path: go/src/github.com/ONSdigital/dp-import-api/ci/scripts/unit.sh
+  path: dp-import-api/ci/scripts/unit.sh
