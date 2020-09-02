@@ -8,7 +8,7 @@ require (
 	github.com/ONSdigital/dp-import v0.0.0-20180202121531-d3cc28e452c3
 	github.com/ONSdigital/dp-kafka v1.1.7
 	github.com/ONSdigital/dp-mongodb v1.4.0
-	github.com/ONSdigital/dp-net v1.0.8-0.20200901091958-2df9a102ca3d
+	github.com/ONSdigital/dp-net v1.0.8
 	github.com/ONSdigital/go-ns v0.0.0-20200205115900-a11716f93bad
 	github.com/ONSdigital/log.go v1.0.1
 	github.com/Shopify/sarama v1.26.1 // indirect
