@@ -18,7 +18,7 @@ func TestFailureToGetJobs(t *testing.T) {
 		Convey("When no auth token is provided", func() {
 			Convey("Then return status unauthorised (401)", func() {
 				mockJobService := &testapi.JobServiceMock{}
-				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, nil)
+				api := Setup(mux.NewRouter(), &testapi.Dstore, mockJobService)
 
 				r, err := testapi.CreateRequestWithOutAuth("GET", "http://localhost:21800/jobs", nil)
 				So(err, ShouldBeNil)
@@ -35,7 +35,7 @@ func TestFailureToGetJobs(t *testing.T) {
 			Convey("Then return status internal error (500)", func() {
 				mockJobService := &testapi.JobServiceMock{}
 
-				api := routes(mux.NewRouter(), &testapi.DstoreInternalError, mockJobService, nil)
+				api := Setup(mux.NewRouter(), &testapi.DstoreInternalError, mockJobService)
 
 				w := httptest.NewRecorder()
 				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs", nil)
@@ -57,7 +57,7 @@ func TestGetJobs(t *testing.T) {
 			Convey("Then return status ok (200)", func() {
 				mockJobService := &testapi.JobServiceMock{}
 
-				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, nil)
+				api := Setup(mux.NewRouter(), &testapi.Dstore, mockJobService)
 
 				w := httptest.NewRecorder()
 				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs", nil)
@@ -75,7 +75,7 @@ func TestGetJobs(t *testing.T) {
 			Convey("Then return status ok (200)", func() {
 				mockJobService := &testapi.JobServiceMock{}
 
-				api := routes(mux.NewRouter(), &testapi.Dstore, mockJobService, nil)
+				api := Setup(mux.NewRouter(), &testapi.Dstore, mockJobService)
 
 				w := httptest.NewRecorder()
 				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs?state=completed", nil)

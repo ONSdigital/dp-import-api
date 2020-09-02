@@ -5,18 +5,13 @@ import (
 	"fmt"
 	"net/http"
 
-	identityclient "github.com/ONSdigital/dp-api-clients-go/identity"
-	"github.com/ONSdigital/dp-api-clients-go/middleware"
-	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/dp-net/handlers"
 	dphttp "github.com/ONSdigital/dp-net/http"
-	dprequest "github.com/ONSdigital/dp-net/request"
 	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/mux"
-	"github.com/justinas/alice"
 )
 
 //go:generate moq -out testapi/job_service.go -pkg testapi . JobService
@@ -48,39 +43,12 @@ type JobService interface {
 	UpdateJob(ctx context.Context, jobID string, job *models.Job) error
 }
 
-// CreateImportAPI manages all the routes configured to API
-func CreateImportAPI(ctx context.Context,
-	bindAddr, zebedeeURL string,
-	mongoDataStore datastore.DataStorer,
-	jobService JobService,
-	hc *healthcheck.HealthCheck) {
+// Setup manages all the routes configured to API
+func Setup(router *mux.Router,
+	dataStore datastore.DataStorer,
+	jobService JobService) *ImportAPI {
 
-	router := mux.NewRouter()
-	routes(router, mongoDataStore, jobService, hc)
-
-	identityClient := identityclient.New(zebedeeURL)
-	identityHandler := handlers.IdentityWithHTTPClient(identityClient)
-
-	middleware := alice.New(
-		middleware.Whitelist(middleware.HealthcheckFilter(hc.Handler)),
-		dprequest.HandlerRequestID(16),
-		identityHandler,
-	).Then(router)
-
-	httpServer = dphttp.NewServer(bindAddr, middleware)
-	httpServer.HandleOSSignals = false
-
-	go func() {
-		log.Event(ctx, "Starting api...", log.INFO)
-		if err := httpServer.ListenAndServe(); err != nil {
-			log.Event(ctx, "api http server returned error", log.ERROR, log.Error(err))
-		}
-	}()
-}
-
-// routes contain all endpoints for API
-func routes(router *mux.Router, dataStore datastore.DataStorer, jobService JobService, hc *healthcheck.HealthCheck) *ImportAPI {
-	api := ImportAPI{dataStore: dataStore, router: router, jobService: jobService}
+	api := &ImportAPI{dataStore: dataStore, router: router, jobService: jobService}
 
 	// External API for florence
 	api.router.Path("/jobs").Methods("POST").HandlerFunc(handlers.CheckIdentity(api.addJobHandler))
@@ -88,22 +56,13 @@ func routes(router *mux.Router, dataStore datastore.DataStorer, jobService JobSe
 	api.router.Path("/jobs/{id}").Methods("GET").HandlerFunc(handlers.CheckIdentity(api.getJobHandler))
 	api.router.Path("/jobs/{id}").Methods("PUT").HandlerFunc(handlers.CheckIdentity(api.updateJobHandler))
 	api.router.Path("/jobs/{id}/files").Methods("PUT").HandlerFunc(handlers.CheckIdentity(api.addUploadedFileHandler))
-	api.router.NotFoundHandler = &api
-	return &api
+	return api
 }
 
-// Close represents the graceful shutting down of the http server
-func Close(ctx context.Context) error {
-	if err := httpServer.Shutdown(ctx); err != nil {
-		return err
-	}
-
-	log.Event(ctx, "graceful shutdown of http server complete", log.INFO)
+// Close is called during graceful shutdown to give the API an opportunity to perform any required disposal task
+func (api *ImportAPI) Close(ctx context.Context) error {
+	log.Event(ctx, "graceful shutdown of api complete", log.INFO)
 	return nil
-}
-
-func (api *ImportAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, notFoundError, http.StatusNotFound)
 }
 
 func writeResponse(ctx context.Context, w http.ResponseWriter, statusCode int, b []byte, action string, logData log.Data) {
