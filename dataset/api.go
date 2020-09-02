@@ -8,17 +8,16 @@ import (
 	"net/http"
 	"net/url"
 
-	rchttp "github.com/ONSdigital/dp-rchttp"
-
 	"github.com/ONSdigital/dp-import-api/models"
-	"github.com/ONSdigital/go-ns/common"
+	dphttp "github.com/ONSdigital/dp-net/http"
+	dprequest "github.com/ONSdigital/dp-net/request"
 	"github.com/ONSdigital/log.go/log"
 	"github.com/pkg/errors"
 )
 
 // API aggregates a client and URL and other common data for accessing the API
 type API struct {
-	Client           rchttp.Clienter
+	Client           dphttp.Clienter
 	URL              string
 	ServiceAuthToken string
 }
@@ -136,7 +135,7 @@ func (api *API) callDatasetAPI(ctx context.Context, method, path string, payload
 		return nil, 0, err
 	}
 
-	common.AddAuthHeaders(req.Context(), req, api.ServiceAuthToken)
+	dprequest.AddAuthHeaders(req.Context(), req, api.ServiceAuthToken)
 
 	resp, err := api.Client.Do(ctx, req)
 	if err != nil {

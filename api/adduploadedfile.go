@@ -5,51 +5,33 @@ import (
 	"net/http"
 
 	"github.com/ONSdigital/dp-import-api/models"
-	"github.com/ONSdigital/go-ns/audit"
-	"github.com/ONSdigital/go-ns/common"
-	"github.com/ONSdigital/go-ns/request"
+	dphttp "github.com/ONSdigital/dp-net/http"
 	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/mux"
 )
 
 func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Request) {
 
-	defer request.DrainBody(r)
+	defer dphttp.DrainBody(r)
 
 	ctx := r.Context()
 	vars := mux.Vars(r)
 	jobID := vars["id"]
 	logData := log.Data{jobIDKey: jobID}
-	auditParams := common.Params{jobIDKey: jobID}
 
 	uploadedFile, err := models.CreateUploadedFile(r.Body)
 	if err != nil {
 		log.Event(ctx, "addUploadFile endpoint: failed to create uploaded file resource", log.ERROR, log.Error(err), logData)
-		// record failure to add uploaded file
-		if auditError := api.auditor.Record(ctx, uploadFileAction, audit.Unsuccessful, auditParams); auditError != nil {
-			err = auditError
-		}
-
 		handleErr(ctx, w, err, nil)
 		return
 	}
 
 	logData["file"] = uploadedFile
-	auditParams["fileAlias"] = uploadedFile.AliasName
-	auditParams["fileURL"] = uploadedFile.URL
 
 	if err := api.addUploadFile(ctx, uploadedFile, jobID, logData); err != nil {
-		// record unsuccessful attempt to add uploaded file to job
-		if auditError := api.auditor.Record(ctx, uploadFileAction, audit.Unsuccessful, auditParams); auditError != nil {
-			err = auditError
-		}
-
 		handleErr(ctx, w, err, logData)
 		return
 	}
-
-	// record successful attempt to add uploaded file to job
-	api.auditor.Record(ctx, uploadFileAction, audit.Successful, auditParams)
 
 	log.Event(ctx, "added uxploaded file to job", logData)
 }

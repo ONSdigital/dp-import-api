@@ -24,7 +24,6 @@ type Configuration struct {
 	RecipeAPIURL               string        `envconfig:"RECIPE_API_URL"`
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	ZebedeeURL                 string        `envconfig:"ZEBEDEE_URL"`
-	AuditEventsTopic           string        `envconfig:"AUDIT_EVENTS_TOPIC"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
 }
@@ -54,7 +53,6 @@ func Get() (*Configuration, error) {
 		RecipeAPIURL:               "http://localhost:22300",
 		GracefulShutdownTimeout:    time.Second * 5,
 		ZebedeeURL:                 "http://localhost:8082",
-		AuditEventsTopic:           "audit-events",
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
 	}

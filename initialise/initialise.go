@@ -22,12 +22,11 @@ type KafkaProducerName int
 
 // Possible names of Kafka Producers
 const (
-	Audit = iota
-	DataBaker
+	DataBaker = iota
 	Direct
 )
 
-var kafkaProducerNames = []string{"Audit", "DataBaker", "Direct"}
+var kafkaProducerNames = []string{"DataBaker", "Direct"}
 
 // Values of the kafka producers names
 func (k KafkaProducerName) String() string {
@@ -56,8 +55,6 @@ func (e *ExternalServiceList) GetProducer(ctx context.Context, kafkaBrokers []st
 	}
 
 	switch {
-	case name == Audit:
-		e.AuditProducer = true
 	case name == DataBaker:
 		e.DataBakerProducer = true
 	case name == Direct:

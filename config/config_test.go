@@ -26,7 +26,6 @@ func TestGetReturnsDefaultValues(t *testing.T) {
 			RecipeAPIURL:               "http://localhost:22300",
 			GracefulShutdownTimeout:    time.Second * 5,
 			ZebedeeURL:                 "http://localhost:8082",
-			AuditEventsTopic:           "audit-events",
 			HealthCheckInterval:        30 * time.Second,
 			HealthCheckCriticalTimeout: 90 * time.Second,
 		})

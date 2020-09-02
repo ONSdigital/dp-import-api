@@ -2,16 +2,16 @@ package main
 
 import (
 	"context"
+	"os"
+	"os/signal"
+	"syscall"
+
 	datasetclient "github.com/ONSdigital/dp-api-clients-go/dataset"
 	"github.com/ONSdigital/dp-api-clients-go/health"
 	"github.com/ONSdigital/dp-api-clients-go/zebedee"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	"github.com/ONSdigital/dp-import-api/kafkaadapter"
 	"github.com/ONSdigital/dp-import-api/mongo"
-	"github.com/ONSdigital/dp-kafka"
-	"os"
-	"os/signal"
-	"syscall"
+	kafka "github.com/ONSdigital/dp-kafka"
 
 	"github.com/ONSdigital/dp-import-api/api"
 	"github.com/ONSdigital/dp-import-api/config"
@@ -21,8 +21,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/recipe"
 	"github.com/ONSdigital/dp-import-api/url"
-	rchttp "github.com/ONSdigital/dp-rchttp"
-	"github.com/ONSdigital/go-ns/audit"
+	dphttp "github.com/ONSdigital/dp-net/http"
 	"github.com/ONSdigital/log.go/log"
 )
 
@@ -66,25 +65,18 @@ func main() {
 	logIfError(ctx, err, "direct kafka producer error")
 	inputFileAvailableProducer.Channels().LogErrors(ctx, "error received from kafka input file available producer, topic: "+cfg.InputFileAvailableTopic)
 
-	auditProducer, err := serviceList.GetProducer(ctx, cfg.Brokers, cfg.AuditEventsTopic, initialise.Audit, cfg.KafkaMaxBytes)
-	logIfError(ctx, err, "direct kafka producer error")
-	auditProducer.Channels().LogErrors(ctx, "error received from kafka audit producer, topic: "+cfg.AuditEventsTopic)
-
 	urlBuilder := url.NewBuilder(cfg.Host, cfg.DatasetAPIURL)
 	jobQueue := importqueue.CreateImportQueue(dataBakerProducer.Channels().Output, inputFileAvailableProducer.Channels().Output)
 
-	client := rchttp.NewClient()
+	client := dphttp.NewClient()
 	datasetAPI := dataset.API{Client: client, URL: cfg.DatasetAPIURL, ServiceAuthToken: cfg.ServiceAuthToken}
 	recipeAPI := recipe.API{Client: client, URL: cfg.RecipeAPIURL}
 
 	jobService := job.NewService(mongoDataStore, jobQueue, &datasetAPI, &recipeAPI, urlBuilder)
 
-	auditProducerAdapter := kafkaadapter.NewProducerAdapter(auditProducer)
-	auditor := audit.New(auditProducerAdapter, serviceNamespace)
+	hc := startHealthChecks(ctx, cfg, dataBakerProducer, inputFileAvailableProducer, mongoDataStore)
 
-	hc := startHealthChecks(ctx, cfg, dataBakerProducer, inputFileAvailableProducer, auditProducer, mongoDataStore)
-
-	api.CreateImportAPI(ctx, cfg.BindAddr, cfg.ZebedeeURL, mongoDataStore, jobService, auditor, hc)
+	api.CreateImportAPI(ctx, cfg.BindAddr, cfg.ZebedeeURL, mongoDataStore, jobService, hc)
 
 	// block until a fatal error occurs
 	select {
@@ -121,12 +113,6 @@ func main() {
 			log.Event(ctx, "closing direct producer", log.INFO)
 			logIfError(ctx, inputFileAvailableProducer.Close(ctx), "unable to close direct producer")
 		}
-
-		// Close audit producer last, to maximise capturing all events
-		if serviceList.AuditProducer {
-			log.Event(ctx, "closing audit producer", log.INFO)
-			logIfError(ctx, auditProducer.Close(ctx), "unable to close audit producer")
-		}
 	}()
 
 	// wait for shutdown success (via cancel) or failure (timeout)
@@ -140,7 +126,6 @@ func startHealthChecks(ctx context.Context,
 	cfg *config.Configuration,
 	dataBakerProducer *kafka.Producer,
 	inputFileAvailableProducer *kafka.Producer,
-	auditProducer *kafka.Producer,
 	mongoDataStore *mongo.Mongo) *healthcheck.HealthCheck {
 
 	hasErrors := false
@@ -159,11 +144,6 @@ func startHealthChecks(ctx context.Context,
 
 	if err = hc.AddCheck("Kafka Input File Available Producer", inputFileAvailableProducer.Checker); err != nil {
 		log.Event(ctx, "error adding check for kafka input file available producer", log.ERROR, log.Error(err))
-		hasErrors = true
-	}
-
-	if err = hc.AddCheck("Kafka Audit Producer", auditProducer.Checker); err != nil {
-		log.Event(ctx, "error adding check for kafka audit producer", log.ERROR, log.Error(err))
 		hasErrors = true
 	}
 
