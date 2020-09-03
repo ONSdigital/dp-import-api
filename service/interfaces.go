@@ -6,7 +6,7 @@ import (
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-api/config"
-	"github.com/ONSdigital/dp-import-api/mongo"
+	"github.com/ONSdigital/dp-import-api/datastore"
 	kafka "github.com/ONSdigital/dp-kafka"
 )
 
@@ -17,7 +17,7 @@ import (
 // Initialiser defines the methods to initialise external services
 type Initialiser interface {
 	DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer
-	DoGetMongoDataStore(cfg *config.Configuration) (*mongo.Mongo, error)
+	DoGetMongoDataStore(cfg *config.Configuration) (datastore.DataStorer, error)
 	DoGetKafkaProducer(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error)
 	DoGetHealthCheck(cfg *config.Configuration, buildTime, gitCommit, version string) (HealthChecker, error)
 }

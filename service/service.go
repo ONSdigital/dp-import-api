@@ -9,9 +9,9 @@ import (
 	"github.com/ONSdigital/dp-import-api/api"
 	"github.com/ONSdigital/dp-import-api/config"
 	"github.com/ONSdigital/dp-import-api/dataset"
+	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/importqueue"
 	"github.com/ONSdigital/dp-import-api/job"
-	"github.com/ONSdigital/dp-import-api/mongo"
 	"github.com/ONSdigital/dp-import-api/recipe"
 	"github.com/ONSdigital/dp-import-api/url"
 	kafka "github.com/ONSdigital/dp-kafka"
@@ -28,7 +28,7 @@ import (
 type Service struct {
 	cfg                        *config.Configuration
 	serviceList                *ExternalServiceList
-	mongoDataStore             *mongo.Mongo
+	mongoDataStore             datastore.DataStorer
 	dataBakerProducer          kafka.IProducer
 	inputFileAvailableProducer kafka.IProducer
 	server                     HTTPServer
@@ -48,6 +48,31 @@ func New(cfg *config.Configuration, serviceList *ExternalServiceList) *Service {
 	return svc
 }
 
+// SetServer sets the http server for a service
+func (svc *Service) SetServer(server HTTPServer) {
+	svc.server = server
+}
+
+// SetHealthCheck sets the healthchecker for a service
+func (svc *Service) SetHealthCheck(healthCheck HealthChecker) {
+	svc.healthCheck = healthCheck
+}
+
+// SetMongoDataStore sets the data store for a service
+func (svc *Service) SetMongoDataStore(ds datastore.DataStorer) {
+	svc.mongoDataStore = ds
+}
+
+// SetDataBakerProducer sets the data baker kafka producer for a service
+func (svc *Service) SetDataBakerProducer(dataBakerProducer kafka.IProducer) {
+	svc.dataBakerProducer = dataBakerProducer
+}
+
+// SetInputFileAvailableProducer ses the input file available kafka producer for a service
+func (svc *Service) SetInputFileAvailableProducer(inputFileAvailableProducer kafka.IProducer) {
+	svc.inputFileAvailableProducer = inputFileAvailableProducer
+}
+
 // Run the service
 func (svc *Service) Run(ctx context.Context, buildTime, gitCommit, version string, svcErrors chan error) (err error) {
 
@@ -57,11 +82,17 @@ func (svc *Service) Run(ctx context.Context, buildTime, gitCommit, version strin
 
 	// Get data baker kafka producer
 	svc.dataBakerProducer, err = svc.serviceList.GetProducer(ctx, svc.cfg.Brokers, svc.cfg.DatabakerImportTopic, DataBaker, svc.cfg.KafkaMaxBytes)
-	logIfError(ctx, err, "databaker kafka producer error")
+	if err != nil {
+		log.Event(ctx, "databaker kafka producer error", log.FATAL, log.Error(err))
+		return err
+	}
 
 	// Get input file available kafka producer
 	svc.inputFileAvailableProducer, err = svc.serviceList.GetProducer(ctx, svc.cfg.Brokers, svc.cfg.InputFileAvailableTopic, Direct, svc.cfg.KafkaMaxBytes)
-	logIfError(ctx, err, "direct kafka producer error")
+	if err != nil {
+		log.Event(ctx, "direct kafka producer error", log.FATAL, log.Error(err))
+		return err
+	}
 
 	// Create Identity Client
 	svc.identityClient = clientsidentity.New(svc.cfg.ZebedeeURL)
@@ -84,7 +115,7 @@ func (svc *Service) Run(ctx context.Context, buildTime, gitCommit, version strin
 
 	// Get HTTP router and server with middleware
 	r := mux.NewRouter()
-	m := svc.createMiddleware(svc.cfg) // TODO implement
+	m := svc.createMiddleware(svc.cfg)
 	svc.server = svc.serviceList.GetHTTPServer(svc.cfg.BindAddr, m.Then(r))
 
 	// Create API with job service
@@ -111,7 +142,6 @@ func (svc *Service) Run(ctx context.Context, buildTime, gitCommit, version strin
 }
 
 // CreateMiddleware creates an Alice middleware chain of handlers
-// to forward collectionID from cookie from header
 func (svc *Service) createMiddleware(cfg *config.Configuration) alice.Chain {
 	identityHandler := dphandlers.IdentityWithHTTPClient(svc.identityClient)
 	return alice.New(
@@ -211,10 +241,11 @@ func (svc *Service) registerCheckers(ctx context.Context) (err error) {
 		hasErrors = true
 	}
 
-	checkMongoClient := svc.mongoDataStore.HealthCheckClient()
-	if err = svc.healthCheck.AddCheck("MongoDB", checkMongoClient.Checker); err != nil {
-		log.Event(ctx, "error creating mongodb health check", log.ERROR, log.Error(err))
-		hasErrors = true
+	if svc.serviceList.MongoDataStore {
+		if err = svc.healthCheck.AddCheck("Mongo DB", svc.mongoDataStore.Checker); err != nil {
+			log.Event(ctx, "error creating mongodb health check", log.ERROR, log.Error(err))
+			hasErrors = true
+		}
 	}
 
 	datasetAPIClient := clientshealth.NewClientWithClienter("dataset-api", svc.datasetAPI.URL, svc.datasetAPI.Client)

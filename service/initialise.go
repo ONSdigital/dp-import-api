@@ -7,6 +7,7 @@ import (
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-api/config"
+	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/mongo"
 	kafka "github.com/ONSdigital/dp-kafka"
 	dphttp "github.com/ONSdigital/dp-net/http"
@@ -14,9 +15,9 @@ import (
 
 // ExternalServiceList represents a list of services
 type ExternalServiceList struct {
+	MongoDataStore    bool
 	DataBakerProducer bool
 	DirectProducer    bool
-	MongoDataStore    bool
 	HealthCheck       bool
 	Init              Initialiser
 }
@@ -64,7 +65,7 @@ func (e *ExternalServiceList) GetHealthCheck(cfg *config.Configuration, buildTim
 }
 
 // GetMongoDataStore returns an initialised connection to import store (mongo database)
-func (e *ExternalServiceList) GetMongoDataStore(cfg *config.Configuration) (dataStore *mongo.Mongo, err error) {
+func (e *ExternalServiceList) GetMongoDataStore(cfg *config.Configuration) (dataStore datastore.DataStorer, err error) {
 	dataStore, err = e.Init.DoGetMongoDataStore(cfg)
 	if err != nil {
 		return
@@ -111,7 +112,7 @@ func (e *Init) DoGetHealthCheck(cfg *config.Configuration, buildTime, gitCommit,
 }
 
 // DoGetMongoDataStore creates a mongoDB connection
-func (e *Init) DoGetMongoDataStore(cfg *config.Configuration) (*mongo.Mongo, error) {
+func (e *Init) DoGetMongoDataStore(cfg *config.Configuration) (datastore.DataStorer, error) {
 	return mongo.NewDatastore(cfg.MongoDBURL, cfg.MongoDBDatabase, cfg.MongoDBCollection)
 }
 

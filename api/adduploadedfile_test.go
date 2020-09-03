@@ -136,27 +136,5 @@ func TestSuccessfullyAddFile(t *testing.T) {
 				})
 			})
 		})
-
-		Convey("When upload is successful but auditing action successful errors", func() {
-			Convey("Then return status ok (200)", func() {
-				mockJobService := &testapi.JobServiceMock{}
-				api := Setup(mux.NewRouter(), &testapi.Dstore, mockJobService)
-
-				reader := strings.NewReader("{ \"alias_name\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}")
-				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
-				So(err, ShouldBeNil)
-
-				w := httptest.NewRecorder()
-				api.router.ServeHTTP(w, r)
-
-				So(w.Code, ShouldEqual, http.StatusOK)
-
-				Convey("Then the request body has been drained", func() {
-					bytesRead, err := r.Body.Read(make([]byte, 1))
-					So(bytesRead, ShouldEqual, 0)
-					So(err, ShouldEqual, io.EOF)
-				})
-			})
-		})
 	})
 }

@@ -17,15 +17,7 @@ import (
 //go:generate moq -out testapi/job_service.go -pkg testapi . JobService
 
 const (
-	// audit actions
-	uploadFileAction = "uploadFile"
-	updateJobAction  = "updateJob"
-	addJobAction     = "addJob"
-	getJobAction     = "getJob"
-	getJobsAction    = "getJobs"
-
-	jobIDKey      = "job_id"
-	notFoundError = "requested resource not found"
+	jobIDKey = "job_id"
 )
 
 var httpServer *dphttp.Server

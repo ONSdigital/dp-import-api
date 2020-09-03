@@ -118,11 +118,8 @@ func TestFailureToAddJob(t *testing.T) {
 			})
 		})
 
-		Convey(`When creating the new job a duplication key error occurs but the
-			auditing of unsuccessful action fails`, func() {
-
+		Convey(`When creating the new job a duplication key error occurs`, func() {
 			Convey("Then return status internal server error (500)", func() {
-
 				reader := strings.NewReader("{ \"number_of_instances\": 1, \"recipe\":\"test\"}")
 				r, err := testapi.CreateRequestWithAuth("POST", "http://localhost:21800/jobs", reader)
 				So(err, ShouldBeNil)
@@ -167,32 +164,6 @@ func TestSuccessfullyAddJob(t *testing.T) {
 
 				w := httptest.NewRecorder()
 				api.router.ServeHTTP(w, r)
-				So(w.Code, ShouldEqual, http.StatusCreated)
-				So(w.Body.String(), ShouldContainSubstring, "\"id\":\"34534543543\"")
-
-				Convey("Then the request body has been drained", func() {
-					_, err = r.Body.Read(make([]byte, 1))
-					So(err, ShouldEqual, io.EOF)
-				})
-			})
-		})
-
-		Convey("When auditing request but the successful action fails", func() {
-			Convey("Then continue to return status created (201)", func() {
-				mockJobService := &testapi.JobServiceMock{
-					CreateJobFunc: func(ctx context.Context, job *models.Job) (*models.Job, error) {
-						return dummyJob, nil
-					},
-				}
-				api := Setup(mux.NewRouter(), &testapi.Dstore, mockJobService)
-
-				reader := strings.NewReader("{ \"number_of_instances\": 1, \"recipe\":\"test\"}")
-				r, err := testapi.CreateRequestWithAuth("POST", "http://localhost:21800/jobs", reader)
-				So(err, ShouldBeNil)
-
-				w := httptest.NewRecorder()
-				api.router.ServeHTTP(w, r)
-
 				So(w.Code, ShouldEqual, http.StatusCreated)
 				So(w.Body.String(), ShouldContainSubstring, "\"id\":\"34534543543\"")
 
