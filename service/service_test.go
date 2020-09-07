@@ -1,4 +1,4 @@
-package service_test
+package service
 
 import (
 	"context"
@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-api/config"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	dsmock "github.com/ONSdigital/dp-import-api/datastore/mock"
-	"github.com/ONSdigital/dp-import-api/service"
 	"github.com/ONSdigital/dp-import-api/service/mock"
 	kafka "github.com/ONSdigital/dp-kafka"
 	"github.com/ONSdigital/dp-kafka/kafkatest"
@@ -21,7 +21,7 @@ import (
 
 var (
 	ctx           = context.Background()
-	testBuildTime = "BuildTime"
+	testBuildTime = "1599210455"
 	testGitCommit = "GitCommit"
 	testVersion   = "Version"
 )
@@ -33,36 +33,22 @@ var (
 	errHealthcheck = errors.New("healthCheck error")
 )
 
-var funcDoGetHealthcheckErr = func(cfg *config.Configuration, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
-	return nil, errHealthcheck
+func TestNew(t *testing.T) {
+	Convey("New returns a new uninitialised service", t, func() {
+		So(New(), ShouldResemble, &Service{})
+	})
 }
 
-var funcDoGetHTTPServerNil = func(bindAddr string, router http.Handler) service.HTTPServer {
-	return nil
-}
-
-var funcDoGetDataStoreErr = func(cfg *config.Configuration) (datastore.DataStorer, error) {
-	return nil, errMongo
-}
-
-func TestRun(t *testing.T) {
+func TestInit(t *testing.T) {
 
 	Convey("Having a set of mocked dependencies", t, func() {
 
 		cfg, err := config.Get()
 		So(err, ShouldBeNil)
 
-		hcMock := &mock.HealthCheckerMock{
-			AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
-			StartFunc:    func(ctx context.Context) {},
-		}
-
-		serverWg := &sync.WaitGroup{}
-		serverMock := &mock.HTTPServerMock{
-			ListenAndServeFunc: func() error {
-				serverWg.Done()
-				return nil
-			},
+		datastoreMock := &dsmock.DataStorerMock{}
+		getMongoDataStore = func(cfg *config.Configuration) (datastore.DataStorer, error) {
+			return datastoreMock, nil
 		}
 
 		kafkaMock := &kafkatest.IProducerMock{
@@ -70,212 +56,214 @@ func TestRun(t *testing.T) {
 				return &kafka.ProducerChannels{}
 			},
 		}
-
-		failingServerMock := &mock.HTTPServerMock{
-			ListenAndServeFunc: func() error {
-				serverWg.Done()
-				return errServer
-			},
+		getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
+			return kafkaMock, nil
 		}
 
-		funcDoGetHealthcheckOk := func(cfg *config.Configuration, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
-			return hcMock, nil
+		hcMock := &mock.HealthCheckerMock{
+			AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
+		}
+		getHealthCheck = func(version healthcheck.VersionInfo, criticalTimeout, interval time.Duration) HealthChecker {
+			return hcMock
 		}
 
-		funcDoGetHTTPServer := func(bindAddr string, router http.Handler) service.HTTPServer {
+		serverMock := &mock.HTTPServerMock{}
+		getHTTPServer = func(bindAddr string, router http.Handler) HTTPServer {
 			return serverMock
 		}
 
-		funcDoGetFailingHTTPSerer := func(bindAddr string, router http.Handler) service.HTTPServer {
-			return failingServerMock
-		}
-
-		funcDoGetDataStoreOk := func(cfg *config.Configuration) (datastore.DataStorer, error) {
-			return &dsmock.DataStorerMock{}, nil
-		}
-
-		funcDoGetKafkaProducer := func(failingTopic string) func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
-			return func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
-				if topic == failingTopic {
-					return nil, errKafka
-				}
-				return kafkaMock, nil
-			}
-		}
+		svc := &Service{}
 
 		Convey("Given that initialising MongoDB returns an error", func() {
-			initMock := &mock.InitialiserMock{
-				DoGetMongoDataStoreFunc: funcDoGetDataStoreErr,
-				DoGetKafkaProducerFunc:  funcDoGetKafkaProducer(""),
-				DoGetHealthCheckFunc:    funcDoGetHealthcheckOk,
-				DoGetHTTPServerFunc:     funcDoGetHTTPServer,
+			getMongoDataStore = func(cfg *config.Configuration) (datastore.DataStorer, error) {
+				return nil, errMongo
 			}
-			svcErrors := make(chan error, 1)
-			svcList := service.NewServiceList(initMock)
-			svc := service.New(cfg, svcList)
-			serverWg.Add(1)
-			err := svc.Run(ctx, testBuildTime, testGitCommit, testVersion, svcErrors)
 
-			Convey("Then service Run succeeds, but the initialisation flag is not set and further initialisations are attempted", func() {
+			Convey("Then service Init succeeds, mongoDataStore dependency is not set and further initialisations are attempted", func() {
+				err := svc.Init(ctx, cfg, testBuildTime, testGitCommit, testVersion)
 				So(err, ShouldBeNil)
-				So(svcList.MongoDataStore, ShouldBeFalse)
-				So(svcList.DataBakerProducer, ShouldBeTrue)
-				So(svcList.DirectProducer, ShouldBeTrue)
-				So(svcList.HealthCheck, ShouldBeTrue)
+				So(svc.mongoDataStore, ShouldBeNil)
+				So(svc.dataBakerProducer, ShouldResemble, kafkaMock)
+				So(svc.inputFileAvailableProducer, ShouldResemble, kafkaMock)
+				So(svc.healthCheck, ShouldResemble, hcMock)
+				So(svc.server, ShouldResemble, serverMock)
+
+				Convey("But all checks try to register", func() {
+					So(len(hcMock.AddCheckCalls()), ShouldEqual, 6)
+					So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Kafka Data Baker Producer")
+					So(hcMock.AddCheckCalls()[1].Name, ShouldResemble, "Kafka Input File Available Producer")
+					So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "Zebedee")
+					So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Mongo DB")
+					So(hcMock.AddCheckCalls()[4].Name, ShouldResemble, "Dataset API")
+					So(hcMock.AddCheckCalls()[5].Name, ShouldResemble, "Recipe API")
+				})
 			})
 		})
 
 		Convey("Given that initialising DataBaker kafka producer returns an error", func() {
-			initMock := &mock.InitialiserMock{
-				DoGetMongoDataStoreFunc: funcDoGetDataStoreOk,
-				DoGetKafkaProducerFunc:  funcDoGetKafkaProducer(cfg.DatabakerImportTopic),
+			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
+				if topic == cfg.DatabakerImportTopic {
+					return nil, errKafka
+				}
+				return kafkaMock, nil
 			}
-			svcErrors := make(chan error, 1)
-			svcList := service.NewServiceList(initMock)
-			svc := service.New(cfg, svcList)
-			err := svc.Run(ctx, testBuildTime, testGitCommit, testVersion, svcErrors)
 
-			Convey("Then service Run fails with the same error and the flag is not set. No further initialisations are attempted", func() {
+			Convey("Then service Init fails with the same error and the flag is not set. No further initialisations are attempted", func() {
+				err := svc.Init(ctx, cfg, testBuildTime, testGitCommit, testVersion)
 				So(err, ShouldResemble, errKafka)
-				So(svcList.MongoDataStore, ShouldBeTrue)
-				So(svcList.DataBakerProducer, ShouldBeFalse)
-				So(svcList.DirectProducer, ShouldBeFalse)
-				So(svcList.HealthCheck, ShouldBeFalse)
+				So(svc.mongoDataStore, ShouldResemble, datastoreMock)
+				So(svc.dataBakerProducer, ShouldBeNil)
+				So(svc.inputFileAvailableProducer, ShouldBeNil)
+				So(svc.healthCheck, ShouldBeNil)
+				So(svc.server, ShouldBeNil)
 			})
 		})
 
 		Convey("Given that initialising Kafka direct producer returns an error", func() {
-			initMock := &mock.InitialiserMock{
-				DoGetMongoDataStoreFunc: funcDoGetDataStoreOk,
-				DoGetKafkaProducerFunc:  funcDoGetKafkaProducer(cfg.InputFileAvailableTopic),
+			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
+				if topic == cfg.InputFileAvailableTopic {
+					return nil, errKafka
+				}
+				return kafkaMock, nil
 			}
-			svcErrors := make(chan error, 1)
-			svcList := service.NewServiceList(initMock)
-			svc := service.New(cfg, svcList)
-			err := svc.Run(ctx, testBuildTime, testGitCommit, testVersion, svcErrors)
 
-			Convey("Then service Run fails with the same error and the flag is not set. No further initialisations are attempted", func() {
+			Convey("Then service Init fails with the same error and the flag is not set. No further initialisations are attempted", func() {
+				err := svc.Init(ctx, cfg, testBuildTime, testGitCommit, testVersion)
 				So(err, ShouldResemble, errKafka)
-				So(svcList.MongoDataStore, ShouldBeTrue)
-				So(svcList.DataBakerProducer, ShouldBeTrue)
-				So(svcList.DirectProducer, ShouldBeFalse)
-				So(svcList.HealthCheck, ShouldBeFalse)
+				So(svc.mongoDataStore, ShouldResemble, datastoreMock)
+				So(svc.dataBakerProducer, ShouldResemble, kafkaMock)
+				So(svc.inputFileAvailableProducer, ShouldBeNil)
+				So(svc.healthCheck, ShouldBeNil)
+				So(svc.server, ShouldBeNil)
 			})
 		})
 
-		Convey("Given that initialising Helthcheck returns an error", func() {
-			initMock := &mock.InitialiserMock{
-				DoGetMongoDataStoreFunc: funcDoGetDataStoreOk,
-				DoGetKafkaProducerFunc:  funcDoGetKafkaProducer(""),
-				DoGetHealthCheckFunc:    funcDoGetHealthcheckErr,
-			}
-			svcErrors := make(chan error, 1)
-			svcList := service.NewServiceList(initMock)
-			svc := service.New(cfg, svcList)
-			err := svc.Run(ctx, testBuildTime, testGitCommit, testVersion, svcErrors)
+		Convey("Given that healthcheck versionInfo cannot be created due to a wrong build time", func() {
+			wrongBuildTime := "wrongFormat"
 
-			Convey("Then service Run fails with the same error and the flag is not set. No further initialisations are attempted", func() {
-				So(err, ShouldResemble, errHealthcheck)
-				So(svcList.MongoDataStore, ShouldBeTrue)
-				So(svcList.DataBakerProducer, ShouldBeTrue)
-				So(svcList.DirectProducer, ShouldBeTrue)
-				So(svcList.HealthCheck, ShouldBeFalse)
+			Convey("Then service Init fails with the same error and the flag is not set. No further initialisations are attempted", func() {
+				err := svc.Init(ctx, cfg, wrongBuildTime, testGitCommit, testVersion)
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldResemble, "failed to parse build time")
+				So(svc.mongoDataStore, ShouldResemble, datastoreMock)
+				So(svc.dataBakerProducer, ShouldResemble, kafkaMock)
+				So(svc.inputFileAvailableProducer, ShouldResemble, kafkaMock)
+				So(svc.healthCheck, ShouldBeNil)
+				So(svc.server, ShouldBeNil)
 			})
 		})
 
 		Convey("Given that Checkers cannot be registered", func() {
+			hcMock.AddCheckFunc = func(name string, checker healthcheck.Checker) error { return errHealthcheck }
 
-			errAddheckFail := errors.New("Error(s) registering checkers for healthcheck")
-			hcMockAddFail := &mock.HealthCheckerMock{
-				AddCheckFunc: func(name string, checker healthcheck.Checker) error { return errAddheckFail },
-				StartFunc:    func(ctx context.Context) {},
-			}
-
-			initMock := &mock.InitialiserMock{
-				DoGetMongoDataStoreFunc: funcDoGetDataStoreOk,
-				DoGetKafkaProducerFunc:  funcDoGetKafkaProducer(""),
-				DoGetHealthCheckFunc: func(cfg *config.Configuration, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
-					return hcMockAddFail, nil
-				},
-			}
-			svcErrors := make(chan error, 1)
-			svcList := service.NewServiceList(initMock)
-			svc := service.New(cfg, svcList)
-			err := svc.Run(ctx, testBuildTime, testGitCommit, testVersion, svcErrors)
-
-			Convey("Then service Run fails, but all checks try to register", func() {
+			Convey("Then service Init fails with the expected error and no further initialisations are attempted", func() {
+				err := svc.Init(ctx, cfg, testBuildTime, testGitCommit, testVersion)
 				So(err, ShouldNotBeNil)
-				So(err.Error(), ShouldResemble, fmt.Sprintf("unable to register checkers: %s", errAddheckFail.Error()))
-				So(svcList.MongoDataStore, ShouldBeTrue)
-				So(svcList.DataBakerProducer, ShouldBeTrue)
-				So(svcList.DirectProducer, ShouldBeTrue)
-				So(svcList.HealthCheck, ShouldBeTrue)
-				So(len(hcMockAddFail.AddCheckCalls()), ShouldEqual, 6)
-				So(hcMockAddFail.AddCheckCalls()[0].Name, ShouldResemble, "Kafka Data Baker Producer")
-				So(hcMockAddFail.AddCheckCalls()[1].Name, ShouldResemble, "Kafka Input File Available Producer")
-				So(hcMockAddFail.AddCheckCalls()[2].Name, ShouldResemble, "Zebedee")
-				So(hcMockAddFail.AddCheckCalls()[3].Name, ShouldResemble, "Mongo DB")
-				So(hcMockAddFail.AddCheckCalls()[4].Name, ShouldResemble, "Dataset API")
-				So(hcMockAddFail.AddCheckCalls()[5].Name, ShouldResemble, "Recipe API")
+				So(err.Error(), ShouldResemble, "unable to register checkers: Error(s) registering checkers for healthcheck")
+				So(svc.mongoDataStore, ShouldResemble, datastoreMock)
+				So(svc.dataBakerProducer, ShouldResemble, kafkaMock)
+				So(svc.inputFileAvailableProducer, ShouldResemble, kafkaMock)
+				So(svc.healthCheck, ShouldResemble, hcMock)
+				So(svc.server, ShouldBeNil)
+
+				Convey("But all checks try to register", func() {
+					So(len(hcMock.AddCheckCalls()), ShouldEqual, 6)
+					So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Kafka Data Baker Producer")
+					So(hcMock.AddCheckCalls()[1].Name, ShouldResemble, "Kafka Input File Available Producer")
+					So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "Zebedee")
+					So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Mongo DB")
+					So(hcMock.AddCheckCalls()[4].Name, ShouldResemble, "Dataset API")
+					So(hcMock.AddCheckCalls()[5].Name, ShouldResemble, "Recipe API")
+				})
 			})
 		})
 
 		Convey("Given that all dependencies are successfully initialised", func() {
-			initMock := &mock.InitialiserMock{
-				DoGetMongoDataStoreFunc: funcDoGetDataStoreOk,
-				DoGetKafkaProducerFunc:  funcDoGetKafkaProducer(""),
-				DoGetHealthCheckFunc:    funcDoGetHealthcheckOk,
-				DoGetHTTPServerFunc:     funcDoGetHTTPServer,
-			}
-			svcErrors := make(chan error, 1)
-			svcList := service.NewServiceList(initMock)
-			svc := service.New(cfg, svcList)
-			serverWg.Add(1)
-			err := svc.Run(ctx, testBuildTime, testGitCommit, testVersion, svcErrors)
 
-			Convey("Then service Run succeeds and all the flags are set", func() {
+			Convey("Then service Init succeeds and all the flags are set", func() {
+				err := svc.Init(ctx, cfg, testBuildTime, testGitCommit, testVersion)
 				So(err, ShouldBeNil)
-				So(svcList.MongoDataStore, ShouldBeTrue)
-				So(svcList.DataBakerProducer, ShouldBeTrue)
-				So(svcList.DirectProducer, ShouldBeTrue)
-				So(svcList.HealthCheck, ShouldBeTrue)
-			})
+				So(svc.mongoDataStore, ShouldResemble, datastoreMock)
+				So(svc.dataBakerProducer, ShouldResemble, kafkaMock)
+				So(svc.inputFileAvailableProducer, ShouldResemble, kafkaMock)
+				So(svc.healthCheck, ShouldResemble, hcMock)
+				So(svc.server, ShouldResemble, serverMock)
 
-			Convey("The checkers are registered and the healthcheck and http server started", func() {
-				So(len(hcMock.AddCheckCalls()), ShouldEqual, 6)
-				So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Kafka Data Baker Producer")
-				So(hcMock.AddCheckCalls()[1].Name, ShouldResemble, "Kafka Input File Available Producer")
-				So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "Zebedee")
-				So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Mongo DB")
-				So(hcMock.AddCheckCalls()[4].Name, ShouldResemble, "Dataset API")
-				So(hcMock.AddCheckCalls()[5].Name, ShouldResemble, "Recipe API")
-				So(len(initMock.DoGetHTTPServerCalls()), ShouldEqual, 1)
-				So(initMock.DoGetHTTPServerCalls()[0].BindAddr, ShouldEqual, ":21800")
+				Convey("And all checks are registered", func() {
+					So(len(hcMock.AddCheckCalls()), ShouldEqual, 6)
+					So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Kafka Data Baker Producer")
+					So(hcMock.AddCheckCalls()[1].Name, ShouldResemble, "Kafka Input File Available Producer")
+					So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "Zebedee")
+					So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Mongo DB")
+					So(hcMock.AddCheckCalls()[4].Name, ShouldResemble, "Dataset API")
+					So(hcMock.AddCheckCalls()[5].Name, ShouldResemble, "Recipe API")
+				})
+			})
+		})
+	})
+}
+
+func TestStart(t *testing.T) {
+
+	Convey("Having a correctly initialised Service with mocked dependencies", t, func() {
+
+		cfg, err := config.Get()
+		So(err, ShouldBeNil)
+
+		kafkaProducerDirect := &kafkatest.IProducerMock{
+			ChannelsFunc: func() *kafka.ProducerChannels {
+				return &kafka.ProducerChannels{}
+			},
+		}
+
+		kafkaProducerBaker := &kafkatest.IProducerMock{
+			ChannelsFunc: func() *kafka.ProducerChannels {
+				return &kafka.ProducerChannels{}
+			},
+		}
+
+		hcMock := &mock.HealthCheckerMock{
+			StartFunc: func(ctx context.Context) {},
+		}
+
+		serverWg := &sync.WaitGroup{}
+		serverMock := &mock.HTTPServerMock{}
+
+		svc := &Service{
+			cfg:                        cfg,
+			dataBakerProducer:          kafkaProducerBaker,
+			inputFileAvailableProducer: kafkaProducerDirect,
+			healthCheck:                hcMock,
+			server:                     serverMock,
+		}
+
+		Convey("When a service with a successful HTTP server is started", func() {
+			serverMock.ListenAndServeFunc = func() error {
+				serverWg.Done()
+				return nil
+			}
+			serverWg.Add(1)
+			svc.Start(ctx, make(chan error, 1))
+
+			Convey("Then healthcheck is started and HTTP server starts listening", func() {
 				So(len(hcMock.StartCalls()), ShouldEqual, 1)
 				serverWg.Wait() // Wait for HTTP server go-routine to finish
 				So(len(serverMock.ListenAndServeCalls()), ShouldEqual, 1)
 			})
 		})
 
-		Convey("Given that all dependencies are successfully initialised but the http server fails", func() {
-
-			initMock := &mock.InitialiserMock{
-				DoGetMongoDataStoreFunc: funcDoGetDataStoreOk,
-				DoGetKafkaProducerFunc:  funcDoGetKafkaProducer(""),
-				DoGetHealthCheckFunc:    funcDoGetHealthcheckOk,
-				DoGetHTTPServerFunc:     funcDoGetFailingHTTPSerer,
+		Convey("When a service with a failing HTTP server is started", func() {
+			serverMock.ListenAndServeFunc = func() error {
+				serverWg.Done()
+				return errServer
 			}
-			svcErrors := make(chan error, 1)
-			svcList := service.NewServiceList(initMock)
-			svc := service.New(cfg, svcList)
+			errChan := make(chan error, 1)
 			serverWg.Add(1)
-			err := svc.Run(ctx, testBuildTime, testGitCommit, testVersion, svcErrors)
-			So(err, ShouldBeNil)
+			svc.Start(ctx, errChan)
 
-			Convey("Then the error is returned in the error channel", func() {
-				sErr := <-svcErrors
-				So(sErr.Error(), ShouldResemble, fmt.Sprintf("failure in http listen and serve: %s", errServer.Error()))
-				So(len(failingServerMock.ListenAndServeCalls()), ShouldEqual, 1)
+			Convey("Then HTTP server errors are reported to the provided errors channel", func() {
+				rxErr := <-errChan
+				So(rxErr.Error(), ShouldResemble, fmt.Sprintf("failure in http listen and serve: %s", errServer.Error()))
 			})
 		})
 	})
@@ -283,7 +271,7 @@ func TestRun(t *testing.T) {
 
 func TestClose(t *testing.T) {
 
-	Convey("Having a correctly initialised service", t, func(c C) {
+	Convey("Having a correctly initialised service with mocked dependencies", t, func(c C) {
 
 		cfg, err := config.Get()
 		So(err, ShouldBeNil)
@@ -293,14 +281,11 @@ func TestClose(t *testing.T) {
 
 		// healthcheck Stop does not depend on any other service being closed/stopped
 		hcMock := &mock.HealthCheckerMock{
-			AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
-			StartFunc:    func(ctx context.Context) {},
-			StopFunc:     func() { hcStopped = true },
+			StopFunc: func() { hcStopped = true },
 		}
 
 		// server Shutdown will fail if healthcheck is not stopped
 		serverMock := &mock.HTTPServerMock{
-			ListenAndServeFunc: func() error { return nil },
 			ShutdownFunc: func(ctx context.Context) error {
 				if !hcStopped {
 					return errors.New("Server was stopped before healthcheck")
@@ -342,33 +327,24 @@ func TestClose(t *testing.T) {
 		}
 
 		Convey("Closing a service does not close uninitialised dependencies", func() {
-			svcList := service.NewServiceList(nil)
-			svcList.HealthCheck = true
-			svc := service.New(cfg, svcList)
-			svc.SetServer(serverMock)
-			svc.SetHealthCheck(hcMock)
-			err = svc.Close(context.Background())
+			svc := Service{
+				cfg: cfg,
+			}
+			err := svc.Close(context.Background())
 			So(err, ShouldBeNil)
-			So(len(hcMock.StopCalls()), ShouldEqual, 1)
-			So(len(serverMock.ShutdownCalls()), ShouldEqual, 1)
 		})
 
-		fullSvcList := &service.ExternalServiceList{
-			MongoDataStore:    true,
-			DataBakerProducer: true,
-			DirectProducer:    true,
-			HealthCheck:       true,
-			Init:              nil,
+		svc := Service{
+			cfg:                        cfg,
+			healthCheck:                hcMock,
+			mongoDataStore:             mongoMock,
+			dataBakerProducer:          dataBakerKafkaProducerMock,
+			inputFileAvailableProducer: inputFileProducerAvailableKafkaProducer,
+			server:                     serverMock,
 		}
 
 		Convey("Closing the service results in all the initialised dependencies being closed in the expected order", func() {
-			svc := service.New(cfg, fullSvcList)
-			svc.SetServer(serverMock)
-			svc.SetHealthCheck(hcMock)
-			svc.SetMongoDataStore(mongoMock)
-			svc.SetDataBakerProducer(dataBakerKafkaProducerMock)
-			svc.SetInputFileAvailableProducer(inputFileProducerAvailableKafkaProducer)
-			err = svc.Close(context.Background())
+			err := svc.Close(context.Background())
 			So(err, ShouldBeNil)
 			So(len(hcMock.StopCalls()), ShouldEqual, 1)
 			So(len(serverMock.ShutdownCalls()), ShouldEqual, 1)
@@ -378,27 +354,36 @@ func TestClose(t *testing.T) {
 		})
 
 		Convey("If services fail to stop, the Close operation tries to close all dependencies and returns an error", func() {
-			failingserverMock := &mock.HTTPServerMock{
-				ListenAndServeFunc: func() error { return nil },
-				ShutdownFunc: func(ctx context.Context) error {
-					return errors.New("Failed to stop http server")
-				},
+			serverMock.ShutdownFunc = func(ctx context.Context) error {
+				return errors.New("Failed to stop http server")
 			}
 
-			svc := service.New(cfg, fullSvcList)
-			svc.SetServer(failingserverMock)
-			svc.SetHealthCheck(hcMock)
-			svc.SetMongoDataStore(mongoMock)
-			svc.SetDataBakerProducer(dataBakerKafkaProducerMock)
-			svc.SetInputFileAvailableProducer(inputFileProducerAvailableKafkaProducer)
-			err = svc.Close(context.Background())
+			err := svc.Close(context.Background())
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldResemble, "failed to shutdown gracefully")
 			So(len(hcMock.StopCalls()), ShouldEqual, 1)
-			So(len(failingserverMock.ShutdownCalls()), ShouldEqual, 1)
+			So(len(serverMock.ShutdownCalls()), ShouldEqual, 1)
 			So(len(mongoMock.CloseCalls()), ShouldEqual, 1)
 			So(len(dataBakerKafkaProducerMock.CloseCalls()), ShouldEqual, 1)
 			So(len(inputFileProducerAvailableKafkaProducer.CloseCalls()), ShouldEqual, 1)
+		})
+
+		Convey("Given that a dependency takes more time to close than the graceful shutdown timeout", func() {
+			cfg.GracefulShutdownTimeout = 1 * time.Millisecond
+			serverMock.ShutdownFunc = func(ctx context.Context) error {
+				time.Sleep(2 * time.Millisecond)
+				return nil
+			}
+
+			Convey("Then closing the service fails with context.DeadlineExceeded error and no further dependencies are attempted to close", func() {
+				err = svc.Close(context.Background())
+				So(err, ShouldResemble, context.DeadlineExceeded)
+				So(len(hcMock.StopCalls()), ShouldEqual, 1)
+				So(len(serverMock.ShutdownCalls()), ShouldEqual, 1)
+				So(len(mongoMock.CloseCalls()), ShouldEqual, 0)
+				So(len(dataBakerKafkaProducerMock.CloseCalls()), ShouldEqual, 0)
+				So(len(inputFileProducerAvailableKafkaProducer.CloseCalls()), ShouldEqual, 0)
+			})
 		})
 	})
 }

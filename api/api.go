@@ -9,7 +9,6 @@ import (
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/dp-net/handlers"
-	dphttp "github.com/ONSdigital/dp-net/http"
 	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/mux"
 )
@@ -19,8 +18,6 @@ import (
 const (
 	jobIDKey = "job_id"
 )
-
-var httpServer *dphttp.Server
 
 // ImportAPI is a restful API used to manage importing datasets to be published
 type ImportAPI struct {
@@ -49,12 +46,6 @@ func Setup(router *mux.Router,
 	api.router.Path("/jobs/{id}").Methods("PUT").HandlerFunc(handlers.CheckIdentity(api.updateJobHandler))
 	api.router.Path("/jobs/{id}/files").Methods("PUT").HandlerFunc(handlers.CheckIdentity(api.addUploadedFileHandler))
 	return api
-}
-
-// Close is called during graceful shutdown to give the API an opportunity to perform any required disposal task
-func (api *ImportAPI) Close(ctx context.Context) error {
-	log.Event(ctx, "graceful shutdown of api complete", log.INFO)
-	return nil
 }
 
 func writeResponse(ctx context.Context, w http.ResponseWriter, statusCode int, b []byte, action string, logData log.Data) {

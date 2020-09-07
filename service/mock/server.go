@@ -5,7 +5,6 @@ package mock
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-import-api/service"
 	"sync"
 )
 
@@ -13,10 +12,6 @@ var (
 	lockHTTPServerMockListenAndServe sync.RWMutex
 	lockHTTPServerMockShutdown       sync.RWMutex
 )
-
-// Ensure, that HTTPServerMock does implement service.HTTPServer.
-// If this is not the case, regenerate this file with moq.
-var _ service.HTTPServer = &HTTPServerMock{}
 
 // HTTPServerMock is a mock implementation of service.HTTPServer.
 //

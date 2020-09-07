@@ -2,16 +2,22 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
 
 	clientshealth "github.com/ONSdigital/dp-api-clients-go/health"
 	clientsidentity "github.com/ONSdigital/dp-api-clients-go/identity"
 	"github.com/ONSdigital/dp-api-clients-go/middleware"
+	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-api/api"
 	"github.com/ONSdigital/dp-import-api/config"
 	"github.com/ONSdigital/dp-import-api/dataset"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/importqueue"
 	"github.com/ONSdigital/dp-import-api/job"
+	"github.com/ONSdigital/dp-import-api/mongo"
 	"github.com/ONSdigital/dp-import-api/recipe"
 	"github.com/ONSdigital/dp-import-api/url"
 	kafka "github.com/ONSdigital/dp-kafka"
@@ -27,7 +33,6 @@ import (
 // Service contains all the configs, server and clients to run the Dataset API
 type Service struct {
 	cfg                        *config.Configuration
-	serviceList                *ExternalServiceList
 	mongoDataStore             datastore.DataStorer
 	dataBakerProducer          kafka.IProducer
 	inputFileAvailableProducer kafka.IProducer
@@ -39,56 +44,55 @@ type Service struct {
 	recipeAPI                  *recipe.API
 }
 
+// getMongoDataStore creates a mongoDB connection
+var getMongoDataStore = func(cfg *config.Configuration) (datastore.DataStorer, error) {
+	return mongo.NewDatastore(cfg.MongoDBURL, cfg.MongoDBDatabase, cfg.MongoDBCollection)
+}
+
+// getKafkaProducer creates a new Kafka Producer
+var getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
+	producerChannels := kafka.CreateProducerChannels()
+	return kafka.NewProducer(ctx, kafkaBrokers, topic, envMax, producerChannels)
+}
+
+// getHealthCheck returns a healthcheck
+var getHealthCheck = func(version healthcheck.VersionInfo, criticalTimeout, interval time.Duration) HealthChecker {
+	hc := healthcheck.New(version, criticalTimeout, interval)
+	return &hc
+}
+
+// getHTTPServer returns an http server
+var getHTTPServer = func(bindAddr string, router http.Handler) HTTPServer {
+	s := dphttp.NewServer(bindAddr, router)
+	s.HandleOSSignals = false
+	return s
+}
+
 // New creates a new service
-func New(cfg *config.Configuration, serviceList *ExternalServiceList) *Service {
-	svc := &Service{
-		cfg:         cfg,
-		serviceList: serviceList,
+func New() *Service {
+	return &Service{}
+}
+
+// Init initialises all the service dependencies, including healthcheck with checkers, api and middleware.
+func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTime, gitCommit, version string) (err error) {
+
+	svc.cfg = cfg
+
+	// Get mongoDB connection (non-fatal)
+	svc.mongoDataStore, err = getMongoDataStore(svc.cfg)
+	if err != nil {
+		log.Event(ctx, "mongodb datastore error", log.ERROR, log.Error(err))
 	}
-	return svc
-}
-
-// SetServer sets the http server for a service
-func (svc *Service) SetServer(server HTTPServer) {
-	svc.server = server
-}
-
-// SetHealthCheck sets the healthchecker for a service
-func (svc *Service) SetHealthCheck(healthCheck HealthChecker) {
-	svc.healthCheck = healthCheck
-}
-
-// SetMongoDataStore sets the data store for a service
-func (svc *Service) SetMongoDataStore(ds datastore.DataStorer) {
-	svc.mongoDataStore = ds
-}
-
-// SetDataBakerProducer sets the data baker kafka producer for a service
-func (svc *Service) SetDataBakerProducer(dataBakerProducer kafka.IProducer) {
-	svc.dataBakerProducer = dataBakerProducer
-}
-
-// SetInputFileAvailableProducer ses the input file available kafka producer for a service
-func (svc *Service) SetInputFileAvailableProducer(inputFileAvailableProducer kafka.IProducer) {
-	svc.inputFileAvailableProducer = inputFileAvailableProducer
-}
-
-// Run the service
-func (svc *Service) Run(ctx context.Context, buildTime, gitCommit, version string, svcErrors chan error) (err error) {
-
-	// Get mongoDB connection
-	svc.mongoDataStore, err = svc.serviceList.GetMongoDataStore(svc.cfg)
-	logIfError(ctx, err, "mongodb datastore error")
 
 	// Get data baker kafka producer
-	svc.dataBakerProducer, err = svc.serviceList.GetProducer(ctx, svc.cfg.Brokers, svc.cfg.DatabakerImportTopic, DataBaker, svc.cfg.KafkaMaxBytes)
+	svc.dataBakerProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.DatabakerImportTopic, svc.cfg.KafkaMaxBytes)
 	if err != nil {
 		log.Event(ctx, "databaker kafka producer error", log.FATAL, log.Error(err))
 		return err
 	}
 
 	// Get input file available kafka producer
-	svc.inputFileAvailableProducer, err = svc.serviceList.GetProducer(ctx, svc.cfg.Brokers, svc.cfg.InputFileAvailableTopic, Direct, svc.cfg.KafkaMaxBytes)
+	svc.inputFileAvailableProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.InputFileAvailableTopic, svc.cfg.KafkaMaxBytes)
 	if err != nil {
 		log.Event(ctx, "direct kafka producer error", log.FATAL, log.Error(err))
 		return err
@@ -103,12 +107,13 @@ func (svc *Service) Run(ctx context.Context, buildTime, gitCommit, version strin
 	svc.datasetAPI = &dataset.API{Client: client, URL: svc.cfg.DatasetAPIURL, ServiceAuthToken: svc.cfg.ServiceAuthToken}
 	svc.recipeAPI = &recipe.API{Client: client, URL: svc.cfg.RecipeAPIURL}
 
-	// Get HealthCheck
-	svc.healthCheck, err = svc.serviceList.GetHealthCheck(svc.cfg, buildTime, gitCommit, version)
+	// Get HealthCheck and register checkers
+	versionInfo, err := healthcheck.NewVersionInfo(buildTime, gitCommit, version)
 	if err != nil {
-		log.Event(ctx, "could not instantiate healthcheck", log.FATAL, log.Error(err))
+		log.Event(ctx, "error creating version info", log.FATAL, log.Error(err))
 		return err
 	}
+	svc.healthCheck = getHealthCheck(versionInfo, svc.cfg.HealthCheckCriticalTimeout, svc.cfg.HealthCheckInterval)
 	if err := svc.registerCheckers(ctx); err != nil {
 		return errors.Wrap(err, "unable to register checkers")
 	}
@@ -116,18 +121,24 @@ func (svc *Service) Run(ctx context.Context, buildTime, gitCommit, version strin
 	// Get HTTP router and server with middleware
 	r := mux.NewRouter()
 	m := svc.createMiddleware(svc.cfg)
-	svc.server = svc.serviceList.GetHTTPServer(svc.cfg.BindAddr, m.Then(r))
+	svc.server = getHTTPServer(svc.cfg.BindAddr, m.Then(r))
 
 	// Create API with job service
 	urlBuilder := url.NewBuilder(svc.cfg.Host, svc.cfg.DatasetAPIURL)
 	jobQueue := importqueue.CreateImportQueue(svc.dataBakerProducer.Channels().Output, svc.inputFileAvailableProducer.Channels().Output)
 	jobService := job.NewService(svc.mongoDataStore, jobQueue, svc.datasetAPI, svc.recipeAPI, urlBuilder)
 	svc.importAPI = api.Setup(r, svc.mongoDataStore, jobService)
+	return nil
+}
+
+// Start starts an initialised service
+func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 
 	// Start kafka logging
 	svc.dataBakerProducer.Channels().LogErrors(ctx, "error received from kafka data baker producer, topic: "+svc.cfg.DatabakerImportTopic)
 	svc.inputFileAvailableProducer.Channels().LogErrors(ctx, "error received from kafka input file available producer, topic: "+svc.cfg.InputFileAvailableTopic)
 
+	// Start healthcheck
 	svc.healthCheck.Start(ctx)
 
 	// Run the http server in a new go-routine
@@ -137,8 +148,6 @@ func (svc *Service) Run(ctx context.Context, buildTime, gitCommit, version strin
 			svcErrors <- errors.Wrap(err, "failure in http listen and serve")
 		}
 	}()
-
-	return nil
 }
 
 // CreateMiddleware creates an Alice middleware chain of handlers
@@ -163,40 +172,41 @@ func (svc *Service) Close(ctx context.Context) error {
 		defer cancel()
 
 		// stop healthcheck, as it depends on everything else
-		if svc.serviceList.HealthCheck {
+		if svc.healthCheck != nil {
 			svc.healthCheck.Stop()
 		}
 
 		// stop any incoming requests
-		if logIfError(ctx, svc.server.Shutdown(ctx), "failed to shutdown http server") {
-			hasShutdownError = true
-		}
-
-		// close API
-		if logIfError(ctx, svc.importAPI.Close(ctx), "error closing API") {
-			hasShutdownError = true
+		if svc.server != nil {
+			if err := svc.server.Shutdown(ctx); err != nil {
+				log.Event(ctx, "failed to shutdown http server", log.ERROR, log.Error(err))
+				hasShutdownError = true
+			}
 		}
 
 		// Close MongoDB (if it exists)
-		if svc.serviceList.MongoDataStore {
+		if svc.mongoDataStore != nil {
 			log.Event(ctx, "closing mongo data store", log.INFO)
-			if logIfError(ctx, svc.mongoDataStore.Close(ctx), "unable to close mongo data store") {
+			if err := svc.mongoDataStore.Close(ctx); err != nil {
+				log.Event(ctx, "unable to close mongo data store", log.ERROR, log.Error(err))
 				hasShutdownError = true
 			}
 		}
 
 		// Close Data Baker Kafka Producer (it if exists)
-		if svc.serviceList.DataBakerProducer {
+		if svc.dataBakerProducer != nil {
 			log.Event(ctx, "closing data baker producer", log.INFO)
-			if logIfError(ctx, svc.dataBakerProducer.Close(ctx), "unable to close data baker producer") {
+			if err := svc.dataBakerProducer.Close(ctx); err != nil {
+				log.Event(ctx, "unable to close data baker producer", log.ERROR, log.Error(err))
 				hasShutdownError = true
 			}
 		}
 
 		// Close Direct Kafka Producer (if it exists)
-		if svc.serviceList.DirectProducer {
+		if svc.inputFileAvailableProducer != nil {
 			log.Event(ctx, "closing direct producer", log.INFO)
-			if logIfError(ctx, svc.inputFileAvailableProducer.Close(ctx), "unable to close direct producer") {
+			if err := svc.inputFileAvailableProducer.Close(ctx); err != nil {
+				log.Event(ctx, "unable to close direct producer", log.ERROR, log.Error(err))
 				hasShutdownError = true
 			}
 		}
@@ -222,54 +232,45 @@ func (svc *Service) Close(ctx context.Context) error {
 	return nil
 }
 
-// registerCheckers adds the checkers for the service clients to the health check object
+// registerCheckers adds the checkers for the service clients to the health check object.
+// If any dependency is missing, an erroring check will be created for it. This covers the scenario
+// when a service is started with some missing dependency.
 func (svc *Service) registerCheckers(ctx context.Context) (err error) {
 	hasErrors := false
 
-	if err = svc.healthCheck.AddCheck("Kafka Data Baker Producer", svc.dataBakerProducer.Checker); err != nil {
-		log.Event(ctx, "error adding check for kafka data baker producer", log.ERROR, log.Error(err))
-		hasErrors = true
+	// generic interface that must be satisfied by all health-checkable dependencies
+	type Dependency interface {
+		Checker(context.Context, *healthcheck.CheckState) error
 	}
 
-	if err = svc.healthCheck.AddCheck("Kafka Input File Available Producer", svc.inputFileAvailableProducer.Checker); err != nil {
-		log.Event(ctx, "error adding check for kafka input file available producer", log.ERROR, log.Error(err))
-		hasErrors = true
-	}
-
-	if err = svc.healthCheck.AddCheck("Zebedee", svc.identityClient.Checker); err != nil {
-		log.Event(ctx, "error adding checker for zebedee", log.ERROR, log.Error(err))
-		hasErrors = true
-	}
-
-	if svc.serviceList.MongoDataStore {
-		if err = svc.healthCheck.AddCheck("Mongo DB", svc.mongoDataStore.Checker); err != nil {
-			log.Event(ctx, "error creating mongodb health check", log.ERROR, log.Error(err))
-			hasErrors = true
+	// generic register checker method - if dependency is nil, a failing healthcheck will be created.
+	registerChecker := func(name string, dependency Dependency) {
+		if dependency != nil {
+			if err = svc.healthCheck.AddCheck(name, dependency.Checker); err != nil {
+				log.Event(ctx, fmt.Sprintf("error creating %s health check", strings.ToLower(name)), log.ERROR, log.Error(err))
+				hasErrors = true
+			}
+		} else {
+			svc.healthCheck.AddCheck(name, func(ctx context.Context, state *healthcheck.CheckState) error {
+				err := errors.New(fmt.Sprintf("%s not initialised", strings.ToLower(name)))
+				state.Update(healthcheck.StatusCritical, err.Error(), 0)
+				return err
+			})
 		}
 	}
 
 	datasetAPIClient := clientshealth.NewClientWithClienter("dataset-api", svc.datasetAPI.URL, svc.datasetAPI.Client)
-	if err = svc.healthCheck.AddCheck("Dataset API", datasetAPIClient.Checker); err != nil {
-		log.Event(ctx, "error creating dataset API health check", log.Error(err))
-		hasErrors = true
-	}
-
 	recipeAPIHealthCheckClient := clientshealth.NewClientWithClienter("recipe-api", svc.recipeAPI.URL, svc.recipeAPI.Client)
-	if err = svc.healthCheck.AddCheck("Recipe API", recipeAPIHealthCheckClient.Checker); err != nil {
-		log.Event(ctx, "error creating recipe API health check", log.Error(err))
-		hasErrors = true
-	}
+
+	registerChecker("Kafka Data Baker Producer", svc.dataBakerProducer)
+	registerChecker("Kafka Input File Available Producer", svc.inputFileAvailableProducer)
+	registerChecker("Zebedee", svc.identityClient)
+	registerChecker("Mongo DB", svc.mongoDataStore)
+	registerChecker("Dataset API", datasetAPIClient)
+	registerChecker("Recipe API", recipeAPIHealthCheckClient)
 
 	if hasErrors {
 		return errors.New("Error(s) registering checkers for healthcheck")
 	}
 	return nil
-}
-
-func logIfError(ctx context.Context, err error, message string) bool {
-	if err != nil {
-		log.Event(ctx, message, log.ERROR, log.Error(err))
-		return true
-	}
-	return false
 }

@@ -36,10 +36,7 @@ func main() {
 func run(ctx context.Context) error {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
-
-	// Create the service, providing an error channel for fatal errors
 	svcErrors := make(chan error, 1)
-	svcList := service.NewServiceList(&service.Init{})
 
 	// Read config
 	cfg, err := config.Get()
@@ -54,10 +51,11 @@ func run(ctx context.Context) error {
 	})
 
 	// Run the service
-	svc := service.New(cfg, svcList)
-	if err := svc.Run(ctx, BuildTime, GitCommit, Version, svcErrors); err != nil {
+	svc := service.New()
+	if err := svc.Init(ctx, cfg, BuildTime, GitCommit, Version); err != nil {
 		return errors.Wrap(err, "running service failed")
 	}
+	svc.Start(ctx, svcErrors)
 
 	// Blocks until an os interrupt or a fatal error occurs
 	select {

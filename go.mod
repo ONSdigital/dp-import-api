@@ -13,6 +13,7 @@ require (
 	github.com/ONSdigital/log.go v1.0.1
 	github.com/Shopify/sarama v1.26.1 // indirect
 	github.com/globalsign/mgo v0.0.0-20190517090918-73267e130ca1
+	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/gopherjs/gopherjs v0.0.0-20191106031601-ce3c9ade29de // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/justinas/alice v1.2.0
