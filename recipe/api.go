@@ -11,14 +11,14 @@ import (
 	"fmt"
 
 	"github.com/ONSdigital/dp-import-api/models"
-	rchttp "github.com/ONSdigital/dp-rchttp"
+	dphttp "github.com/ONSdigital/dp-net/http"
 	"github.com/ONSdigital/log.go/log"
 	"github.com/pkg/errors"
 )
 
 // API provides a client for calling the Recipe API.
 type API struct {
-	Client rchttp.Clienter
+	Client dphttp.Clienter
 	URL    string
 }
 

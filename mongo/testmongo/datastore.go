@@ -1,8 +1,10 @@
 package mongo
 
 import (
+	"context"
 	"errors"
 
+	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/models"
 )
@@ -75,5 +77,13 @@ func (ds *DataStorer) AddUploadedFile(jobID string, message *models.UploadedFile
 	if ds.InternalError {
 		return InternalError
 	}
+	return nil
+}
+
+func (m *DataStorer) Close(ctx context.Context) error {
+	return nil
+}
+
+func (m *DataStorer) Checker(ctx context.Context, state *healthcheck.CheckState) error {
 	return nil
 }

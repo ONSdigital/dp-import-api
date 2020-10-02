@@ -3,12 +3,13 @@ package recipe_test
 import (
 	"bytes"
 	"context"
-	"github.com/ONSdigital/dp-import-api/recipe"
-	rchttp "github.com/ONSdigital/dp-rchttp"
-	. "github.com/smartystreets/goconvey/convey"
 	"io/ioutil"
 	"net/http"
 	"testing"
+
+	"github.com/ONSdigital/dp-import-api/recipe"
+	dphttp "github.com/ONSdigital/dp-net/http"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestGetRecipe(t *testing.T) {
@@ -17,7 +18,7 @@ func TestGetRecipe(t *testing.T) {
 
 		testCtx := context.Background()
 
-		mockHttpClient := &rchttp.ClienterMock{
+		mockHttpClient := &dphttp.ClienterMock{
 			DoFunc: func(ctx context.Context, req *http.Request) (*http.Response, error) {
 				return Response(make([]byte, 0), 404), nil
 			},

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
@@ -181,6 +182,7 @@ func (m *Mongo) UpdateJobState(id, newState string) (err error) {
 	return
 }
 
+// HealthCheckClient generates a healthcheck client for this mongoDB, with an existing session
 func (m *Mongo) HealthCheckClient() *mongohealth.CheckMongoClient {
 	client := mongohealth.NewClient(session)
 
@@ -188,6 +190,12 @@ func (m *Mongo) HealthCheckClient() *mongohealth.CheckMongoClient {
 		Client:      *client,
 		Healthcheck: client.Healthcheck,
 	}
+}
+
+// Checker is called by the healthcheck library to check the health state of this mongoDB instance
+func (m *Mongo) Checker(ctx context.Context, state *healthcheck.CheckState) error {
+	checkMongoClient := m.HealthCheckClient()
+	return checkMongoClient.Checker(ctx, state)
 }
 
 // Close disconnects the mongo session

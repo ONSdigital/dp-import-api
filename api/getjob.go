@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ONSdigital/go-ns/audit"
-	"github.com/ONSdigital/go-ns/common"
 	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/mux"
 )
@@ -16,27 +14,14 @@ func (api *ImportAPI) getJobHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	jobID := vars["id"]
 	logData := log.Data{jobIDKey: jobID}
-	auditParams := common.Params{jobIDKey: jobID}
 
 	b, err := api.getJob(ctx, jobID, logData)
 	if err != nil {
-		// record unsuccessful attempt to get jobs
-		if auditError := api.auditor.Record(ctx, getJobAction, audit.Unsuccessful, auditParams); auditError != nil {
-			err = auditError
-		}
-
 		handleErr(ctx, w, err, logData)
 		return
 	}
 
-	// record successful attempt to get jobs
-	if auditError := api.auditor.Record(ctx, getJobAction, audit.Successful, auditParams); auditError != nil {
-		handleErr(ctx, w, auditError, logData)
-		return
-	}
-
 	writeResponse(ctx, w, http.StatusOK, b, "getJob", logData)
-
 	log.Event(ctx, "getJob endpoint: request successful", logData)
 }
 

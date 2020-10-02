@@ -5,36 +5,24 @@ import (
 	"net/http"
 
 	"github.com/ONSdigital/dp-import-api/models"
-	"github.com/ONSdigital/go-ns/audit"
-	"github.com/ONSdigital/go-ns/common"
-	"github.com/ONSdigital/go-ns/request"
+	dphttp "github.com/ONSdigital/dp-net/http"
 	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/mux"
 )
 
 func (api *ImportAPI) updateJobHandler(w http.ResponseWriter, r *http.Request) {
 
-	defer request.DrainBody(r)
+	defer dphttp.DrainBody(r)
 
 	ctx := r.Context()
 	vars := mux.Vars(r)
 	jobID := vars["id"]
 	logData := log.Data{jobIDKey: jobID}
-	auditParams := common.Params{jobIDKey: jobID}
 
 	if err := api.updateJob(ctx, r, jobID, logData); err != nil {
-		// record unsuccessful attempt to update job
-		if auditError := api.auditor.Record(ctx, updateJobAction, audit.Unsuccessful, auditParams); auditError != nil {
-			err = auditError
-		}
-
 		handleErr(ctx, w, err, logData)
 		return
 	}
-
-	// record successful attempt to update job
-	api.auditor.Record(ctx, updateJobAction, audit.Successful, auditParams)
-
 	log.Event(ctx, "job update completed successfully", log.INFO, logData)
 }
 
