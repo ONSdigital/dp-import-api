@@ -13,13 +13,27 @@ LDFLAGS=-ldflags "-w -s -X 'main.Version=${VERSION}' -X 'main.BuildTime=$(BUILD_
 export GOOS?=$(shell go env GOOS)
 export GOARCH?=$(shell go env GOARCH)
 
+.PHONY: all
+all: audit test build
+
+.PHONY: audit
+audit:
+	nancy go.sum
+
+.PHONY: build
 build:
 	@mkdir -p $(BUILD_ARCH)/$(BIN_DIR)
 	go build $(LDFLAGS) -o $(BUILD_ARCH)/$(BIN_DIR)/$(MAIN) cmd/$(MAIN)/main.go
+
+.PHONY: debug
 debug:
 	HUMAN_LOG=1 go run $(LDFLAGS) -race cmd/$(MAIN)/main.go
+
+.PHONY: acceptance
 acceptance:
 	MONGODB_IMPORTS_DATABASE=test HUMAN_LOG=1 go run $(LDFLAGS) -race cmd/$(MAIN)/main.go
+
+.PHONY: test
 test:
 	go test -cover -race ./...
 
