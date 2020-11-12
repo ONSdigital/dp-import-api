@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -9,6 +10,8 @@ import (
 
 func TestGetReturnsDefaultValues(t *testing.T) {
 	Convey("When a loading a configuration, default values are return", t, func() {
+		os.Clearenv()
+
 		configuration, error := Get()
 		So(error, ShouldBeNil)
 		So(configuration, ShouldResemble, &Configuration{
