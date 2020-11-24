@@ -184,7 +184,11 @@ func (m *Mongo) UpdateJobState(id, newState string) (err error) {
 
 // HealthCheckClient generates a healthcheck client for this mongoDB, with an existing session
 func (m *Mongo) HealthCheckClient() *mongohealth.CheckMongoClient {
-	client := mongohealth.NewClient(session)
+
+	databaseCollectionBuilder := make(map[mongohealth.Database][]mongohealth.Collection)
+	databaseCollectionBuilder[(mongohealth.Database)(m.Database)] = []mongohealth.Collection{(mongohealth.Collection)(m.Collection)}
+
+	client := mongohealth.NewClientWithCollections(session, databaseCollectionBuilder)
 
 	return &mongohealth.CheckMongoClient{
 		Client:      *client,
