@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-import-api
 
-go 1.14
+go 1.15
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.28.0
