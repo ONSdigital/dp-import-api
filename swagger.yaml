@@ -200,6 +200,11 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/File'
+      last_updated:
+        type: string
+        description: "The time this job was last updated."
+        example: "2016-07-17T08:38:25.316+0000"
+        format: string
   File:
     type: object
     properties:
