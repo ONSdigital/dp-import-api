@@ -369,24 +369,6 @@ func (mock *DataStorerMock) UpdateJobCalls() []struct {
 	return calls
 }
 
-// UpdateJobState calls UpdateJobStateFunc.
-func (mock *DataStorerMock) UpdateJobState(jobID string, state string) error {
-	if mock.UpdateJobStateFunc == nil {
-		panic("DataStorerMock.UpdateJobStateFunc: method is nil but DataStorer.UpdateJobState was just called")
-	}
-	callInfo := struct {
-		JobID string
-		State string
-	}{
-		JobID: jobID,
-		State: state,
-	}
-	lockDataStorerMockUpdateJobState.Lock()
-	mock.calls.UpdateJobState = append(mock.calls.UpdateJobState, callInfo)
-	lockDataStorerMockUpdateJobState.Unlock()
-	return mock.UpdateJobStateFunc(jobID, state)
-}
-
 // UpdateJobStateCalls gets all the calls that were made to UpdateJobState.
 // Check the length with:
 //     len(mockedDataStorer.UpdateJobStateCalls())
