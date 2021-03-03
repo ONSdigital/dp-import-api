@@ -158,28 +158,7 @@ func (m *Mongo) UpdateJob(id string, job *models.Job) (err error) {
 		return errs.ErrJobNotFound
 	}
 
-	return
-}
-
-// UpdateJobState changes the state attribute of an import job
-func (m *Mongo) UpdateJobState(id, newState string) (err error) {
-	s := session.Copy()
-	defer s.Close()
-
-	update := bson.M{
-		"$set": bson.M{"state": newState},
-		"$currentDate": bson.M{
-			"last_updated": true,
-			"unique_timestamp": bson.M{
-				"$type": "timestamp",
-			},
-		},
-	}
-
-	// Replace above with below once go-ns mongo package has been updated
-	// mongo.WithUpdates(bson.M{"$set": bson.M{"state": newState}})
-	_, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update)
-	return
+	return nil
 }
 
 // HealthCheckClient generates a healthcheck client for this mongoDB, with an existing session
