@@ -35,9 +35,9 @@ Scripts for updating and debugging Kafka can be found [here](https://github.com/
 | SERVICE_AUTH_TOKEN           | "0C30662F-6CF6-43B0-A96A-954772267FF5"    | The token used to identify this service when authenticating
 | HEALTHCHECK_INTERVAL         | 30s                                       | The time between calling healthcheck endpoints for check subsystems
 | HEALTHCHECK_CRITICAL_TIMEOUT | 90s                                       | The time taken for the health changes from warning state to critical due to subsystem check failures
-| DEFAULT_MAXIMUM_LIMIT        | 1000                                   | Default maximum limit for pagination
-| DEFAULT_LIMIT                | 20                                     | Default limit for pagination
-| DEFAULT_OFFSET               | 0                                      | Default offset for pagination
+| DEFAULT_MAXIMUM_LIMIT        | 1000                                      | Default maximum limit for pagination
+| DEFAULT_LIMIT                | 20                                        | Default limit for pagination
+| DEFAULT_OFFSET               | 0                                         | Default offset for pagination
 
 
 ### Contributing
