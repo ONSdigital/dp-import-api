@@ -371,7 +371,7 @@ func TestClose(t *testing.T) {
 		Convey("Given that a dependency takes more time to close than the graceful shutdown timeout", func() {
 			cfg.GracefulShutdownTimeout = 1 * time.Millisecond
 			serverMock.ShutdownFunc = func(ctx context.Context) error {
-				time.Sleep(2 * time.Millisecond)
+				time.Sleep(20 * time.Millisecond)
 				return nil
 			}
 
