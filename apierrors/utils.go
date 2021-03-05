@@ -9,6 +9,7 @@ var (
 	ErrFailedToParseJSONBody     = errors.New("failed to parse json body")
 	ErrFailedToReadRequestBody   = errors.New("failed to read message body")
 	ErrInvalidJob                = errors.New("the provided Job is not valid")
+	ErrInvalidQueryParameter     = errors.New("invalid query parameter")
 	ErrInternalServer            = errors.New("internal error")
 	ErrInvalidState              = errors.New("invalid state")
 	ErrInvalidUploadedFileObject = errors.New("invalid json object received, alias_name and url are required")
@@ -24,6 +25,7 @@ var (
 		ErrFailedToParseJSONBody:     true,
 		ErrFailedToReadRequestBody:   true,
 		ErrInvalidJob:                true,
+		ErrInvalidQueryParameter:     true,
 		ErrInvalidState:              true,
 		ErrInvalidUploadedFileObject: true,
 		ErrMissingProperties:         true,

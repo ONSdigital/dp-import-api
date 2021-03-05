@@ -11,7 +11,6 @@ import (
 	"github.com/ONSdigital/dp-import-api/api/testapi"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/models"
-	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -26,7 +25,7 @@ func TestFailureToUpdateJobState(t *testing.T) {
 						return nil
 					},
 				}
-				api := Setup(mux.NewRouter(), &testapi.Dstore, mockJobService)
+				api := SetupAPIWith(nil, mockJobService)
 
 				reader := strings.NewReader("{\"state\":\"created\"}")
 				r, err := testapi.CreateRequestWithOutAuth("PUT", "http://localhost:21800/jobs/12345", reader)
@@ -59,7 +58,7 @@ func TestFailureToUpdateJobState(t *testing.T) {
 					},
 				}
 
-				api := Setup(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService)
+				api := SetupAPIWith(&testapi.DstoreNotFound, mockJobService)
 				api.router.ServeHTTP(w, r)
 
 				So(w.Code, ShouldEqual, http.StatusBadRequest)
@@ -86,7 +85,7 @@ func TestFailureToUpdateJobState(t *testing.T) {
 					},
 				}
 
-				api := Setup(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService)
+				api := SetupAPIWith(&testapi.DstoreNotFound, mockJobService)
 				api.router.ServeHTTP(w, r)
 
 				So(w.Code, ShouldEqual, http.StatusBadRequest)
@@ -113,7 +112,7 @@ func TestFailureToUpdateJobState(t *testing.T) {
 					},
 				}
 
-				api := Setup(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService)
+				api := SetupAPIWith(&testapi.DstoreNotFound, mockJobService)
 				api.router.ServeHTTP(w, r)
 
 				So(w.Code, ShouldEqual, http.StatusNotFound)
@@ -134,7 +133,7 @@ func TestFailureToUpdateJobState(t *testing.T) {
 						return errs.ErrInternalServer
 					},
 				}
-				api := Setup(mux.NewRouter(), &testapi.DstoreInternalError, mockJobService)
+				api := SetupAPIWith(&testapi.DstoreInternalError, mockJobService)
 
 				reader := strings.NewReader("{\"state\":\"created\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345", reader)
@@ -167,7 +166,7 @@ func TestSuccessfullyUpdateJobState(t *testing.T) {
 						return nil
 					},
 				}
-				api := Setup(mux.NewRouter(), &testapi.Dstore, mockJobService)
+				api := SetupAPIWith(nil, mockJobService)
 
 				reader := strings.NewReader("{ \"state\":\"completed\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345", reader)
