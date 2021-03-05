@@ -59,7 +59,7 @@ func Get() (*Configuration, error) {
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
 		DefaultLimit:               20,
-		DefaultMaxLimit:            100,
+		DefaultMaxLimit:            1000,
 		DefaultOffset:              0,
 	}
 
