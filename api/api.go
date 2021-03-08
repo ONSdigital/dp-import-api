@@ -85,7 +85,19 @@ func handleErr(ctx context.Context, w http.ResponseWriter, err error, logData lo
 		response = errs.ErrInternalServer
 	}
 
+	logResponseStatus(ctx, logData, status, err)
+	http.Error(w, response.Error(), status)
+}
+
+func handleCustomErr(ctx context.Context, w http.ResponseWriter, err error, logData log.Data, status int) {
+	if logData == nil {
+		logData = log.Data{}
+	}
+	logResponseStatus(ctx, logData, status, err)
+	http.Error(w, err.Error(), status)
+}
+
+func logResponseStatus(ctx context.Context, logData log.Data, status int, err error) {
 	logData["responseStatus"] = status
 	log.Event(ctx, "request unsuccessful", log.ERROR, log.Error(err), logData)
-	http.Error(w, response.Error(), status)
 }

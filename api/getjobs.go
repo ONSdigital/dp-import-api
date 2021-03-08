@@ -53,7 +53,7 @@ func (api *ImportAPI) getJobsHandler(w http.ResponseWriter, r *http.Request) {
 	if limit > api.maxLimit {
 		logData["max_limit"] = api.maxLimit
 		log.Event(ctx, "limit is greater than the maximum allowed", log.ERROR, logData)
-		handleErr(ctx, w, errs.ErrInvalidQueryParameter, nil)
+		handleCustomErr(ctx, w, errs.ErrorMaximumLimitReached(api.maxLimit), logData, http.StatusBadRequest)
 		return
 	}
 
