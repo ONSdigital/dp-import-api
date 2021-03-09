@@ -39,6 +39,18 @@ parameters:
     schema:
       $ref: '#/definitions/File'
     required: true
+  limit:
+    name: limit
+    description: "Maximum number of items that will be returned. A value of zero will return zero items. The default value is 20, and the maximum limit allowed is 1000"
+    in: query
+    required: false
+    type: integer
+  offset:
+    name: offset
+    description: "Starting index of the items array that will be returned. By default it is zero, meaning that the returned items will start from the beginning."
+    in: query
+    required: false
+    type: integer
 securityDefinitions:
   FlorenceAPIKey:
     description: "API key used to allow florence users to create and query the progress of importing a dataset"
@@ -56,6 +68,8 @@ paths:
        - "application/json"
       parameters:
       - $ref: '#/parameters/state'
+      - $ref: '#/parameters/limit'
+      - $ref: '#/parameters/offset'
       security:
       - FlorenceAPIKey: []
       responses:
@@ -163,9 +177,26 @@ responses:
 definitions:
   JobList:
     description: "A list of import jobs"
-    type: array
-    items:
-      $ref: '#/definitions/Job'
+    type: object
+    properties:
+      count:
+        description: "The number of jobs returned"
+        readOnly: true
+        type: integer
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/Job'
+      limit:
+        description: "The number of jobs requested"
+        type: integer
+      offset:
+        description: "The first row of jobs to retrieve, starting at 0. Use this parameter as a pagination mechanism along with the limit parameter"
+        type: integer
+      total_count:
+        description: "The total number of jobs"
+        readOnly: true
+        type: integer
   Job:
     type: object
     description: "An object returned when an import job is created"

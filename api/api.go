@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/ONSdigital/dp-import-api/config"
 	"net/http"
 
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
@@ -21,9 +22,12 @@ const (
 
 // ImportAPI is a restful API used to manage importing datasets to be published
 type ImportAPI struct {
-	dataStore  datastore.DataStorer
-	router     *mux.Router
-	jobService JobService
+	dataStore     datastore.DataStorer
+	router        *mux.Router
+	jobService    JobService
+	defaultLimit  int
+	defaultOffset int
+	maxLimit      int
 }
 
 // JobService provide business logic for job related operations.
@@ -35,9 +39,16 @@ type JobService interface {
 // Setup manages all the routes configured to API
 func Setup(router *mux.Router,
 	dataStore datastore.DataStorer,
-	jobService JobService) *ImportAPI {
+	jobService JobService, cfg *config.Configuration) *ImportAPI {
 
-	api := &ImportAPI{dataStore: dataStore, router: router, jobService: jobService}
+	api := &ImportAPI{
+		dataStore:     dataStore,
+		router:        router,
+		jobService:    jobService,
+		defaultLimit:  cfg.DefaultLimit,
+		defaultOffset: cfg.DefaultOffset,
+		maxLimit:      cfg.DefaultMaxLimit,
+	}
 
 	// External API for florence
 	api.router.Path("/jobs").Methods("POST").HandlerFunc(handlers.CheckIdentity(api.addJobHandler))
@@ -74,7 +85,19 @@ func handleErr(ctx context.Context, w http.ResponseWriter, err error, logData lo
 		response = errs.ErrInternalServer
 	}
 
+	logResponseStatus(ctx, logData, status, err)
+	http.Error(w, response.Error(), status)
+}
+
+func handleCustomErr(ctx context.Context, w http.ResponseWriter, err error, logData log.Data, status int) {
+	if logData == nil {
+		logData = log.Data{}
+	}
+	logResponseStatus(ctx, logData, status, err)
+	http.Error(w, err.Error(), status)
+}
+
+func logResponseStatus(ctx context.Context, logData log.Data, status int, err error) {
 	logData["responseStatus"] = status
 	log.Event(ctx, "request unsuccessful", log.ERROR, log.Error(err), logData)
-	http.Error(w, response.Error(), status)
 }

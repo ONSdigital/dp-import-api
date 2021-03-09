@@ -7,7 +7,6 @@ import (
 
 	"github.com/ONSdigital/dp-import-api/api/testapi"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
-	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -17,8 +16,7 @@ func TestFailureToGetJob(t *testing.T) {
 	Convey("Given a request to get a job", t, func() {
 		Convey("When no auth token is provided", func() {
 			Convey("Then return status unauthorised (401)", func() {
-				mockJobService := &testapi.JobServiceMock{}
-				api := Setup(mux.NewRouter(), &testapi.Dstore, mockJobService)
+				api := SetupAPIWith(nil, nil)
 
 				r, err := testapi.CreateRequestWithOutAuth("GET", "http://localhost:21800/jobs/123", nil)
 				So(err, ShouldBeNil)
@@ -33,8 +31,7 @@ func TestFailureToGetJob(t *testing.T) {
 
 		Convey("When the request contains an invalid jobID", func() {
 			Convey("Then return status not found (404)", func() {
-				mockJobService := &testapi.JobServiceMock{}
-				api := Setup(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService)
+				api := SetupAPIWith(&testapi.DstoreNotFound, nil)
 
 				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs/123", nil)
 				So(err, ShouldBeNil)
@@ -55,8 +52,7 @@ func TestSuccessfullyGetJob(t *testing.T) {
 	Convey("Given a request to get a job", t, func() {
 		Convey("When retrieval of job from datastore is successful", func() {
 			Convey("Then return status ok (200)", func() {
-				mockJobService := &testapi.JobServiceMock{}
-				api := Setup(mux.NewRouter(), &testapi.Dstore, mockJobService)
+				api := SetupAPIWith(nil, nil)
 
 				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs/123", nil)
 				So(err, ShouldBeNil)
