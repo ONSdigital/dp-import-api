@@ -13,9 +13,8 @@ import (
 type DataStorer interface {
 	AddJob(importJob *models.Job) (*models.Job, error)
 	GetJob(jobID string) (*models.Job, error)
-	GetJobs(filters []string) ([]models.Job, error)
+	GetJobs(ctx context.Context, filters []string, offset int, limit int) (*models.JobResults, error)
 	UpdateJob(jobID string, update *models.Job) error
-	UpdateJobState(jobID string, state string) error
 	AddUploadedFile(jobID string, message *models.UploadedFile) error
 	Close(context.Context) error
 	Checker(context.Context, *healthcheck.CheckState) error

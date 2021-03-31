@@ -79,7 +79,7 @@ type DataStorerMock struct {
 	GetJobFunc func(jobID string) (*models.Job, error)
 
 	// GetJobsFunc mocks the GetJobs method.
-	GetJobsFunc func(filters []string) ([]models.Job, error)
+	GetJobsFunc func(ctx context.Context, filters []string, offset int, limit int) (*models.JobResults, error)
 
 	// UpdateJobFunc mocks the UpdateJob method.
 	UpdateJobFunc func(jobID string, update *models.Job) error
@@ -304,7 +304,7 @@ func (mock *DataStorerMock) GetJobCalls() []struct {
 }
 
 // GetJobs calls GetJobsFunc.
-func (mock *DataStorerMock) GetJobs(filters []string) ([]models.Job, error) {
+func (mock *DataStorerMock) GetJobs(ctx context.Context, filters []string, offset int, limit int) (*models.JobResults, error) {
 	if mock.GetJobsFunc == nil {
 		panic("DataStorerMock.GetJobsFunc: method is nil but DataStorer.GetJobs was just called")
 	}
@@ -316,7 +316,7 @@ func (mock *DataStorerMock) GetJobs(filters []string) ([]models.Job, error) {
 	lockDataStorerMockGetJobs.Lock()
 	mock.calls.GetJobs = append(mock.calls.GetJobs, callInfo)
 	lockDataStorerMockGetJobs.Unlock()
-	return mock.GetJobsFunc(filters)
+	return mock.GetJobsFunc(ctx, filters, offset, limit)
 }
 
 // GetJobsCalls gets all the calls that were made to GetJobs.
@@ -367,24 +367,6 @@ func (mock *DataStorerMock) UpdateJobCalls() []struct {
 	calls = mock.calls.UpdateJob
 	lockDataStorerMockUpdateJob.RUnlock()
 	return calls
-}
-
-// UpdateJobState calls UpdateJobStateFunc.
-func (mock *DataStorerMock) UpdateJobState(jobID string, state string) error {
-	if mock.UpdateJobStateFunc == nil {
-		panic("DataStorerMock.UpdateJobStateFunc: method is nil but DataStorer.UpdateJobState was just called")
-	}
-	callInfo := struct {
-		JobID string
-		State string
-	}{
-		JobID: jobID,
-		State: state,
-	}
-	lockDataStorerMockUpdateJobState.Lock()
-	mock.calls.UpdateJobState = append(mock.calls.UpdateJobState, callInfo)
-	lockDataStorerMockUpdateJobState.Unlock()
-	return mock.UpdateJobStateFunc(jobID, state)
 }
 
 // UpdateJobStateCalls gets all the calls that were made to UpdateJobState.

@@ -11,8 +11,6 @@ import (
 	"github.com/ONSdigital/dp-import-api/api/testapi"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/models"
-	"github.com/gorilla/mux"
-
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -22,8 +20,7 @@ func TestFailureToAddFile(t *testing.T) {
 	Convey("Given a request to add a s3 file", t, func() {
 		Convey("When no auth token is provided", func() {
 			Convey("Then return status unauthorised (401)", func() {
-				mockJobService := &testapi.JobServiceMock{}
-				api := Setup(mux.NewRouter(), &testapi.Dstore, mockJobService)
+				api := SetupAPIWith(nil, nil)
 
 				reader := strings.NewReader("{ \"alias_name\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}")
 				r, err := testapi.CreateRequestWithOutAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
@@ -40,7 +37,7 @@ func TestFailureToAddFile(t *testing.T) {
 		Convey("When the request body is invalid", func() {
 			Convey("Then return status bad request (400)", func() {
 				mockJobService := &testapi.JobServiceMock{}
-				api := Setup(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService)
+				api := SetupAPIWith(&testapi.DstoreNotFound, mockJobService)
 
 				reader := strings.NewReader("{")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
@@ -56,8 +53,7 @@ func TestFailureToAddFile(t *testing.T) {
 
 		Convey("When the request body is missing a mandatory field", func() {
 			Convey("Then return status bad request (400)", func() {
-				mockJobService := &testapi.JobServiceMock{}
-				api := Setup(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService)
+				api := SetupAPIWith(&testapi.DstoreNotFound, nil)
 
 				reader := strings.NewReader("{ \"url\":\"https://aws.s3/ons/myfile.exel\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
@@ -78,7 +74,7 @@ func TestFailureToAddFile(t *testing.T) {
 						return nil, errs.ErrInternalServer
 					},
 				}
-				api := Setup(mux.NewRouter(), &testapi.DstoreInternalError, mockJobService)
+				api := SetupAPIWith(&testapi.DstoreInternalError, mockJobService)
 
 				reader := strings.NewReader("{ \"alias_name\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
@@ -94,8 +90,7 @@ func TestFailureToAddFile(t *testing.T) {
 
 		Convey("When the request contains an invalid 'instance_id'", func() {
 			Convey("Then return status not found (404)", func() {
-				mockJobService := &testapi.JobServiceMock{}
-				api := Setup(mux.NewRouter(), &testapi.DstoreNotFound, mockJobService)
+				api := SetupAPIWith(&testapi.DstoreNotFound, nil)
 
 				reader := strings.NewReader("{ \"alias_name\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)
@@ -117,8 +112,7 @@ func TestSuccessfullyAddFile(t *testing.T) {
 	Convey("Given a request to add a s3 file", t, func() {
 		Convey("When request is valid", func() {
 			Convey("Then a retuen status ok (200)", func() {
-				mockJobService := &testapi.JobServiceMock{}
-				api := Setup(mux.NewRouter(), &testapi.Dstore, mockJobService)
+				api := SetupAPIWith(nil, nil)
 
 				reader := strings.NewReader("{ \"alias_name\":\"n1\",\"url\":\"https://aws.s3/ons/myfile.exel\"}")
 				r, err := testapi.CreateRequestWithAuth("PUT", "http://localhost:21800/jobs/12345/files", reader)

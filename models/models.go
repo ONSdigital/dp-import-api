@@ -25,7 +25,11 @@ var validStates = map[string]bool{
 
 // JobResults for list of Job items
 type JobResults struct {
-	Items []Job `json:"items"`
+	Count      int    `json:"count"`
+	Offset     int    `json:"offset"`
+	Limit      int    `json:"limit"`
+	TotalCount int    `json:"total_count"`
+	Items      []*Job `json:"items"`
 }
 
 // Job for importing datasets

@@ -23,11 +23,11 @@ func (ds *DataStorer) AddJob(importJob *models.Job) (*models.Job, error) {
 	return &models.Job{ID: "34534543543"}, nil
 }
 
-func (ds *DataStorer) GetJobs(filter []string) ([]models.Job, error) {
+func (ds *DataStorer) GetJobs(ctx context.Context, filter []string, offset int, limit int) (*models.JobResults, error) {
 	if ds.InternalError {
-		return []models.Job{}, InternalError
+		return &models.JobResults{Items: []*models.Job{}}, InternalError
 	}
-	return []models.Job{{ID: "34534543543"}}, nil
+	return &models.JobResults{Items: []*models.Job{{ID: "34534543543"}}}, nil
 }
 
 func (ds *DataStorer) GetJob(jobID string) (*models.Job, error) {

@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"github.com/ONSdigital/log.go/log"
 	"time"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
@@ -42,7 +43,7 @@ func NewDatastore(uri, database, collection string) (*Mongo, error) {
 }
 
 // GetJobs retrieves all import documents matching filters
-func (m *Mongo) GetJobs(filters []string) ([]models.Job, error) {
+func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit int) (*models.JobResults, error) {
 	s := session.Copy()
 	defer s.Close()
 
@@ -50,17 +51,56 @@ func (m *Mongo) GetJobs(filters []string) ([]models.Job, error) {
 	if len(filters) > 0 {
 		stateFilter = bson.M{"state": bson.M{"$in": filters}}
 	}
-	iter := s.DB(m.Database).C(m.Collection).Find(stateFilter).Iter()
-
-	results := []models.Job{}
-	if err := iter.All(&results); err != nil {
+	query := s.DB(m.Database).C(m.Collection).Find(stateFilter)
+	totalCount, err := query.Count()
+	if err != nil {
+		log.Event(ctx, "error counting items", log.ERROR, log.Error(err))
 		if err == mgo.ErrNotFound {
-			return nil, errs.ErrJobNotFound
+			return &models.JobResults{
+				Items:      []*models.Job{},
+				Count:      0,
+				TotalCount: 0,
+				Offset:     offset,
+				Limit:      limit,
+			}, nil
 		}
 		return nil, err
 	}
+	if totalCount < 1 {
+		return nil, errs.ErrJobNotFound
+	}
 
-	return results, nil
+	var jobItems []*models.Job
+	if limit > 0 {
+		iter := query.Sort().Skip(offset).Limit(limit).Iter()
+		defer func() {
+			err := iter.Close()
+			if err != nil {
+				log.Event(ctx, "error closing job iterator", log.ERROR, log.Error(err), log.Data{"filter": stateFilter})
+			}
+		}()
+
+		if err := iter.All(&jobItems); err != nil {
+			if err == mgo.ErrNotFound {
+				return &models.JobResults{
+					Items:      []*models.Job{},
+					Count:      0,
+					TotalCount: totalCount,
+					Offset:     offset,
+					Limit:      limit,
+				}, nil
+			}
+			return nil, err
+		}
+	}
+
+	return &models.JobResults{
+		Items:      jobItems,
+		Count:      len(jobItems),
+		TotalCount: totalCount,
+		Offset:     offset,
+		Limit:      limit,
+	}, nil
 }
 
 // GetJob retrieves a single import job
@@ -158,28 +198,7 @@ func (m *Mongo) UpdateJob(id string, job *models.Job) (err error) {
 		return errs.ErrJobNotFound
 	}
 
-	return
-}
-
-// UpdateJobState changes the state attribute of an import job
-func (m *Mongo) UpdateJobState(id, newState string) (err error) {
-	s := session.Copy()
-	defer s.Close()
-
-	update := bson.M{
-		"$set": bson.M{"state": newState},
-		"$currentDate": bson.M{
-			"last_updated": true,
-			"unique_timestamp": bson.M{
-				"$type": "timestamp",
-			},
-		},
-	}
-
-	// Replace above with below once go-ns mongo package has been updated
-	// mongo.WithUpdates(bson.M{"$set": bson.M{"state": newState}})
-	_, err = s.DB(m.Database).C(m.Collection).Upsert(bson.M{"id": id}, update)
-	return
+	return nil
 }
 
 // HealthCheckClient generates a healthcheck client for this mongoDB, with an existing session

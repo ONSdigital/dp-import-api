@@ -7,7 +7,6 @@ import (
 
 	"github.com/ONSdigital/dp-import-api/api/testapi"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
-	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -17,8 +16,7 @@ func TestFailureToGetJobs(t *testing.T) {
 	Convey("Given a request to get a list of jobs", t, func() {
 		Convey("When no auth token is provided", func() {
 			Convey("Then return status unauthorised (401)", func() {
-				mockJobService := &testapi.JobServiceMock{}
-				api := Setup(mux.NewRouter(), &testapi.Dstore, mockJobService)
+				api := SetupAPIWith(nil, nil)
 
 				r, err := testapi.CreateRequestWithOutAuth("GET", "http://localhost:21800/jobs", nil)
 				So(err, ShouldBeNil)
@@ -33,9 +31,8 @@ func TestFailureToGetJobs(t *testing.T) {
 
 		Convey("When there is no available datastore", func() {
 			Convey("Then return status internal error (500)", func() {
-				mockJobService := &testapi.JobServiceMock{}
 
-				api := Setup(mux.NewRouter(), &testapi.DstoreInternalError, mockJobService)
+				api := SetupAPIWith(&testapi.DstoreInternalError, nil)
 
 				w := httptest.NewRecorder()
 				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs", nil)
@@ -55,9 +52,7 @@ func TestGetJobs(t *testing.T) {
 	Convey("Given a request to get a list of jobs", t, func() {
 		Convey("When retrieval of resources from datastore is successful", func() {
 			Convey("Then return status ok (200)", func() {
-				mockJobService := &testapi.JobServiceMock{}
-
-				api := Setup(mux.NewRouter(), &testapi.Dstore, mockJobService)
+				api := SetupAPIWith(nil, nil)
 
 				w := httptest.NewRecorder()
 				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs", nil)
@@ -73,10 +68,7 @@ func TestGetJobs(t *testing.T) {
 	  'completed'`, t, func() {
 		Convey("When retrieval of resources from datastore is successful", func() {
 			Convey("Then return status ok (200)", func() {
-				mockJobService := &testapi.JobServiceMock{}
-
-				api := Setup(mux.NewRouter(), &testapi.Dstore, mockJobService)
-
+				api := SetupAPIWith(nil, nil)
 				w := httptest.NewRecorder()
 				r, err := testapi.CreateRequestWithAuth("GET", "http://localhost:21800/jobs?state=completed", nil)
 				So(err, ShouldBeNil)

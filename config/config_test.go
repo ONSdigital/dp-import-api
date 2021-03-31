@@ -31,6 +31,9 @@ func TestGetReturnsDefaultValues(t *testing.T) {
 			ZebedeeURL:                 "http://localhost:8082",
 			HealthCheckInterval:        30 * time.Second,
 			HealthCheckCriticalTimeout: 90 * time.Second,
+			DefaultLimit:               20,
+			DefaultMaxLimit:            1000,
+			DefaultOffset:              0,
 		})
 	})
 }

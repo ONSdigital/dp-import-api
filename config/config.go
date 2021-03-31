@@ -26,6 +26,9 @@ type Configuration struct {
 	ZebedeeURL                 string        `envconfig:"ZEBEDEE_URL"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
+	DefaultLimit               int           `envconfig:"DEFAULT_LIMIT"`
+	DefaultMaxLimit            int           `envconfig:"DEFAULT_MAXIMUM_LIMIT"`
+	DefaultOffset              int           `envconfig:"DEFAULT_OFFSET"`
 }
 
 var cfg *Configuration
@@ -55,6 +58,9 @@ func Get() (*Configuration, error) {
 		ZebedeeURL:                 "http://localhost:8082",
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
+		DefaultLimit:               20,
+		DefaultMaxLimit:            1000,
+		DefaultOffset:              0,
 	}
 
 	err := envconfig.Process("", cfg)
