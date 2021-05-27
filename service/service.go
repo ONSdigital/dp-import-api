@@ -32,16 +32,17 @@ import (
 
 // Service contains all the configs, server and clients to run the Dataset API
 type Service struct {
-	cfg                        *config.Configuration
-	mongoDataStore             datastore.DataStorer
-	dataBakerProducer          kafka.IProducer
-	inputFileAvailableProducer kafka.IProducer
-	server                     HTTPServer
-	healthCheck                HealthChecker
-	importAPI                  *api.ImportAPI
-	identityClient             *clientsidentity.Client
-	datasetAPI                 *dataset.API
-	recipeAPI                  *recipe.API
+	cfg                                      *config.Configuration
+	mongoDataStore                           datastore.DataStorer
+	dataBakerProducer                        kafka.IProducer
+	inputFileAvailableProducer               kafka.IProducer
+	cantabularDatasetInstanceStartedProducer kafka.IProducer
+	server                                   HTTPServer
+	healthCheck                              HealthChecker
+	importAPI                                *api.ImportAPI
+	identityClient                           *clientsidentity.Client
+	datasetAPI                               *dataset.API
+	recipeAPI                                *recipe.API
 }
 
 // getMongoDataStore creates a mongoDB connection
@@ -98,6 +99,13 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 		return err
 	}
 
+	// Get Cantabular Dataset Instance Started kafka producer
+	svc.cantabularDatasetInstanceStartedProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.CantabularDatasetInstanceStartedTopic, svc.cfg.KafkaMaxBytes)
+	if err != nil {
+		log.Event(ctx, "cantabular dataset instance started kafka producer error", log.FATAL, log.Error(err))
+		return err
+	}
+
 	// Create Identity Client
 	svc.identityClient = clientsidentity.New(svc.cfg.ZebedeeURL)
 
@@ -137,6 +145,7 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 	// Start kafka logging
 	svc.dataBakerProducer.Channels().LogErrors(ctx, "error received from kafka data baker producer, topic: "+svc.cfg.DatabakerImportTopic)
 	svc.inputFileAvailableProducer.Channels().LogErrors(ctx, "error received from kafka input file available producer, topic: "+svc.cfg.InputFileAvailableTopic)
+	svc.cantabularDatasetInstanceStartedProducer.Channels().LogErrors(ctx, "error recieved from kafka cantabular dataset instance started producer, topic: "+svc.cfg.CantabularDatasetInstanceStartedTopic)
 
 	// Start healthcheck
 	svc.healthCheck.Start(ctx)
@@ -210,6 +219,15 @@ func (svc *Service) Close(ctx context.Context) error {
 				hasShutdownError = true
 			}
 		}
+
+		// Close Cantabular Kafka Producer (if it exists)
+		if svc.cantabularDatasetInstanceStartedProducer != nil {
+			log.Event(ctx, "closing cantabular dataset instance started producer", log.INFO)
+			if err := svc.cantabularDatasetInstanceStartedProducer.Close(ctx); err != nil {
+				log.Event(ctx, "unable to close cantabular dataset instance started producer", log.ERROR, log.Error(err))
+				hasShutdownError = true
+			}
+		}
 	}()
 
 	// wait for shutdown success (via cancel) or failure (timeout)
@@ -264,6 +282,7 @@ func (svc *Service) registerCheckers(ctx context.Context) (err error) {
 
 	registerChecker("Kafka Data Baker Producer", svc.dataBakerProducer)
 	registerChecker("Kafka Input File Available Producer", svc.inputFileAvailableProducer)
+	registerChecker("Kafka Cantabular Dataset Instance Started Producer", svc.cantabularDatasetInstanceStartedProducer)
 	registerChecker("Zebedee", svc.identityClient)
 	registerChecker("Mongo DB", svc.mongoDataStore)
 	registerChecker("Dataset API", datasetAPIClient)
