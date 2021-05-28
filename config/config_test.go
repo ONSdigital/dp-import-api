@@ -22,6 +22,7 @@ func TestGetReturnsDefaultValues(t *testing.T) {
 			InputFileAvailableTopic:               "input-file-available",
 			CantabularDatasetInstanceStartedTopic: "cantabular-dataset-instance-started",
 			KafkaMaxBytes:                         2000000,
+			KafkaVersion:                          "1.0.2",
 			MongoDBURL:                            "localhost:27017",
 			MongoDBDatabase:                       "imports",
 			MongoDBCollection:                     "imports",

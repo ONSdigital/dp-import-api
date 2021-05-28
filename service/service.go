@@ -20,7 +20,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/mongo"
 	"github.com/ONSdigital/dp-import-api/recipe"
 	"github.com/ONSdigital/dp-import-api/url"
-	kafka "github.com/ONSdigital/dp-kafka"
+	kafka "github.com/ONSdigital/dp-kafka/v2"
 	dphandlers "github.com/ONSdigital/dp-net/handlers"
 	dphttp "github.com/ONSdigital/dp-net/http"
 	dprequest "github.com/ONSdigital/dp-net/request"
@@ -51,9 +51,13 @@ var getMongoDataStore = func(cfg *config.Configuration) (datastore.DataStorer, e
 }
 
 // getKafkaProducer creates a new Kafka Producer
-var getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
+var getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
 	producerChannels := kafka.CreateProducerChannels()
-	return kafka.NewProducer(ctx, kafkaBrokers, topic, envMax, producerChannels)
+	pConfig := &kafka.ProducerConfig{
+		KafkaVersion:    &kafkaVersion,
+		MaxMessageBytes: &envMax,
+	}
+	return kafka.NewProducer(ctx, kafkaBrokers, topic, producerChannels, pConfig)
 }
 
 // getHealthCheck returns a healthcheck
@@ -86,21 +90,21 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 	}
 
 	// Get data baker kafka producer
-	svc.dataBakerProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.DatabakerImportTopic, svc.cfg.KafkaMaxBytes)
+	svc.dataBakerProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.DatabakerImportTopic, svc.cfg.KafkaMaxBytes, svc.cfg.KafkaVersion)
 	if err != nil {
 		log.Event(ctx, "databaker kafka producer error", log.FATAL, log.Error(err))
 		return err
 	}
 
 	// Get input file available kafka producer
-	svc.inputFileAvailableProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.InputFileAvailableTopic, svc.cfg.KafkaMaxBytes)
+	svc.inputFileAvailableProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.InputFileAvailableTopic, svc.cfg.KafkaMaxBytes, svc.cfg.KafkaVersion)
 	if err != nil {
 		log.Event(ctx, "direct kafka producer error", log.FATAL, log.Error(err))
 		return err
 	}
 
 	// Get Cantabular Dataset Instance Started kafka producer
-	svc.cantabularDatasetInstanceStartedProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.CantabularDatasetInstanceStartedTopic, svc.cfg.KafkaMaxBytes)
+	svc.cantabularDatasetInstanceStartedProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.CantabularDatasetInstanceStartedTopic, svc.cfg.KafkaMaxBytes, svc.cfg.KafkaVersion)
 	if err != nil {
 		log.Event(ctx, "cantabular dataset instance started kafka producer error", log.FATAL, log.Error(err))
 		return err

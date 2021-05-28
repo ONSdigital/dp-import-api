@@ -13,8 +13,8 @@ import (
 	"github.com/ONSdigital/dp-import-api/datastore"
 	dsmock "github.com/ONSdigital/dp-import-api/datastore/mock"
 	"github.com/ONSdigital/dp-import-api/service/mock"
-	kafka "github.com/ONSdigital/dp-kafka"
-	"github.com/ONSdigital/dp-kafka/kafkatest"
+	kafka "github.com/ONSdigital/dp-kafka/v2"
+	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
 	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -56,7 +56,7 @@ func TestInit(t *testing.T) {
 				return &kafka.ProducerChannels{}
 			},
 		}
-		getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
+		getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
 			return kafkaMock, nil
 		}
 
@@ -103,7 +103,7 @@ func TestInit(t *testing.T) {
 		})
 
 		Convey("Given that initialising DataBaker kafka producer returns an error", func() {
-			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
+			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
 				if topic == cfg.DatabakerImportTopic {
 					return nil, errKafka
 				}
@@ -123,7 +123,7 @@ func TestInit(t *testing.T) {
 		})
 
 		Convey("Given that initialising Kafka direct producer returns an error", func() {
-			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
+			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
 				if topic == cfg.InputFileAvailableTopic {
 					return nil, errKafka
 				}
@@ -143,7 +143,7 @@ func TestInit(t *testing.T) {
 		})
 
 		Convey("Given that initialising Kafka cantabular producer returns an error", func() {
-			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
+			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
 				if topic == cfg.CantabularDatasetInstanceStartedTopic {
 					return nil, errKafka
 				}

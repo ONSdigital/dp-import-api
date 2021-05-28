@@ -17,6 +17,7 @@ type Configuration struct {
 	InputFileAvailableTopic               string        `envconfig:"INPUT_FILE_AVAILABLE_TOPIC"`
 	CantabularDatasetInstanceStartedTopic string        `envconfig:"CANTABULAR_DATASET_INSTANCE_STARTED_TOPIC"`
 	KafkaMaxBytes                         int           `envconfig:"KAFKA_MAX_BYTES"`
+	KafkaVersion                          string        `envconfig:"KAFKA_VERSION"`
 	ServiceAuthToken                      string        `envconfig:"SERVICE_AUTH_TOKEN"          json:"-"`
 	MongoDBURL                            string        `envconfig:"MONGODB_IMPORTS_ADDR"        json:"-"`
 	MongoDBCollection                     string        `envconfig:"MONGODB_IMPORTS_COLLECTION"`
@@ -50,6 +51,7 @@ func Get() (*Configuration, error) {
 		InputFileAvailableTopic:               "input-file-available",
 		CantabularDatasetInstanceStartedTopic: "cantabular-dataset-instance-started",
 		KafkaMaxBytes:                         2000000,
+		KafkaVersion:                          "1.0.2",
 		MongoDBURL:                            "localhost:27017",
 		MongoDBDatabase:                       "imports",
 		MongoDBCollection:                     "imports",
