@@ -137,7 +137,11 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 
 	// Create API with job service
 	urlBuilder := url.NewBuilder(svc.cfg.Host, svc.cfg.DatasetAPIURL)
-	jobQueue := importqueue.CreateImportQueue(svc.dataBakerProducer.Channels().Output, svc.inputFileAvailableProducer.Channels().Output)
+	jobQueue := importqueue.CreateImportQueue(
+		svc.dataBakerProducer.Channels().Output,
+		svc.inputFileAvailableProducer.Channels().Output,
+		svc.cantabularDatasetInstanceStartedProducer.Channels().Output,
+	)
 	jobService := job.NewService(svc.mongoDataStore, jobQueue, svc.datasetAPI, svc.recipeAPI, urlBuilder)
 	svc.importAPI = api.Setup(r, svc.mongoDataStore, jobService, cfg)
 	return nil
