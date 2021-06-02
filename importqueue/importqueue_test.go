@@ -123,18 +123,27 @@ func TestQueueV4File(t *testing.T) {
 func TestQueueCantabularFile(t *testing.T) {
 	ctx := context.Background()
 
-	job := models.ImportData{
-		JobID:       "jobId",
-		InstanceIDs: []string{"InstanceId"},
-		Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
-		Format:      "cantabular",
-	}
-
 	Convey("Given a mocked importQueue without a cantabular queue", t, func() {
 		importer := CreateImportQueue(nil, nil, nil)
 
-		Convey("Then importing a 'cantabular' recipe results in the expected error being returned", func() {
-			err := importer.Queue(ctx, &job)
+		Convey("Then importing a 'cantabular_blob' recipe results in the expected error being returned", func() {
+			err := importer.Queue(ctx, &models.ImportData{
+				JobID:       "jobId",
+				InstanceIDs: []string{"InstanceId"},
+				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Format:      formatCantabularBlob,
+			})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "cantabular queue (kafka producer) is not available")
+		})
+
+		Convey("Then importing a 'cantabular_table' recipe results in the expected error being returned", func() {
+			err := importer.Queue(ctx, &models.ImportData{
+				JobID:       "jobId",
+				InstanceIDs: []string{"InstanceId"},
+				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Format:      formatCantabularTable,
+			})
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "cantabular queue (kafka producer) is not available")
 		})
@@ -150,45 +159,101 @@ func TestQueueCantabularFile(t *testing.T) {
 			So(err.Error(), ShouldEqual, "job not available")
 		})
 
-		Convey("Then importing a 'cantabular' recipe with nil instanceIDs fails with the expected error", func() {
+		Convey("Then importing a 'cantabular_blob' recipe with nil instanceIDs fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs: nil,
 				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
-				Format:      "cantabular"})
+				Format:      formatCantabularBlob})
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "InstanceIds must be 1")
 		})
 
-		Convey("Then importing a 'cantabular' recipe with empty instanceIDs fails with the expected error", func() {
+		Convey("Then importing a 'cantabular_table' recipe with nil instanceIDs fails with the expected error", func() {
+			err := importer.Queue(ctx, &models.ImportData{
+				InstanceIDs: nil,
+				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Format:      formatCantabularTable})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "InstanceIds must be 1")
+		})
+
+		Convey("Then importing a 'cantabular_blob' recipe with empty instanceIDs fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs: []string{},
 				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
-				Format:      "cantabular"})
+				Format:      formatCantabularBlob})
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "InstanceIds must be 1")
 		})
 
-		Convey("Then importing a 'cantabular' recipe with multiple instanceIDs fails with the expected error", func() {
+		Convey("Then importing a 'cantabular_table' recipe with empty instanceIDs fails with the expected error", func() {
+			err := importer.Queue(ctx, &models.ImportData{
+				InstanceIDs: []string{},
+				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Format:      formatCantabularTable})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "InstanceIds must be 1")
+		})
+
+		Convey("Then importing a 'cantabular_blob' recipe with multiple instanceIDs fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs: []string{"1", "2"},
 				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
-				Format:      "cantabular"})
+				Format:      formatCantabularBlob})
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "InstanceIds must be 1")
 		})
 
-		Convey("Then importing a 'cantabular' recipe sends the expected import event to the cantabular queue", func() {
-			err := importer.Queue(ctx, &job)
+		Convey("Then importing a 'cantabular_table' recipe with multiple instanceIDs fails with the expected error", func() {
+			err := importer.Queue(ctx, &models.ImportData{
+				InstanceIDs: []string{"1", "2"},
+				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Format:      formatCantabularTable})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "InstanceIds must be 1")
+		})
+
+		Convey("Then importing a 'cantabular_blob' recipe sends the expected import event to the cantabular queue", func() {
+			job := &models.ImportData{
+				JobID:       "jobId",
+				InstanceIDs: []string{"InstanceId"},
+				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Format:      formatCantabularBlob,
+			}
+			err := importer.Queue(ctx, job)
 			So(err, ShouldBeNil)
 
 			bytes := <-cantabularQueue
 
-			var file events.InputFileAvailable
-			events.InputFileAvailableSchema.Unmarshal(bytes, &file)
+			var file events.CantabularDatasetInstanceStarted
+			events.CantabularDatasetInstanceStartedSchema.Unmarshal(bytes, &file)
 
-			So(file, ShouldResemble, events.InputFileAvailable{
-				JobID:      job.JobID,
-				InstanceID: job.InstanceIDs[0],
+			So(file, ShouldResemble, events.CantabularDatasetInstanceStarted{
+				JobID:          "jobId",
+				InstanceID:     job.InstanceIDs[0],
+				CantabularType: formatCantabularBlob,
+			})
+		})
+
+		Convey("Then importing a 'cantabular_table' recipe sends the expected import event to the cantabular queue", func() {
+			job := &models.ImportData{
+				JobID:       "jobId",
+				InstanceIDs: []string{"InstanceId"},
+				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Format:      formatCantabularTable,
+			}
+			err := importer.Queue(ctx, job)
+			So(err, ShouldBeNil)
+
+			bytes := <-cantabularQueue
+
+			var file events.CantabularDatasetInstanceStarted
+			events.CantabularDatasetInstanceStartedSchema.Unmarshal(bytes, &file)
+
+			So(file, ShouldResemble, events.CantabularDatasetInstanceStarted{
+				JobID:          job.JobID,
+				InstanceID:     job.InstanceIDs[0],
+				CantabularType: formatCantabularTable,
 			})
 		})
 	})

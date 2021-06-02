@@ -11,8 +11,9 @@ import (
 
 // block of constants corresponding to possible job formats
 const (
-	formatV4         = "v4"
-	formatCantabular = "cantabular"
+	formatV4              = "v4"
+	formatCantabularBlob  = "cantabular_blob"
+	formatCantabularTable = "cantabular_table"
 )
 
 // ImportQueue used to send import jobs via kafka topic
@@ -36,7 +37,7 @@ func (q *ImportQueue) Queue(ctx context.Context, job *models.ImportData) error {
 	switch job.Format {
 	case formatV4:
 		return q.queueV4(ctx, job)
-	case formatCantabular:
+	case formatCantabularTable, formatCantabularBlob:
 		return q.queueCantabular(ctx, job)
 	default:
 		log.Event(ctx, "unrecognised job format, no action has been taken", log.WARN, log.Data{"job_format": job.Format})
@@ -79,14 +80,15 @@ func (q *ImportQueue) queueCantabular(ctx context.Context, job *models.ImportDat
 		return errors.New("InstanceIds must be 1")
 	}
 
-	inputFileAvailableEvent := events.InputFileAvailable{
-		JobID:      job.JobID,
-		InstanceID: job.InstanceIDs[0],
+	event := events.CantabularDatasetInstanceStarted{
+		JobID:          job.JobID,
+		InstanceID:     job.InstanceIDs[0],
+		CantabularType: job.Format,
 	}
 
-	log.Event(ctx, "producing new input file available event", log.INFO, log.Data{"event": inputFileAvailableEvent, "format": formatCantabular})
+	log.Event(ctx, "producing new input file available event", log.INFO, log.Data{"event": event})
 
-	bytes, avroError := events.InputFileAvailableSchema.Marshal(inputFileAvailableEvent)
+	bytes, avroError := events.CantabularDatasetInstanceStartedSchema.Marshal(event)
 	if avroError != nil {
 		return avroError
 	}
