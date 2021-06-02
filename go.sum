@@ -3,8 +3,8 @@ github.com/ONSdigital/dp-api-clients-go v1.33.6 h1:RsVZ7a5Z8tpUpe6ARA2+XmdbG8BAY
 github.com/ONSdigital/dp-api-clients-go v1.33.6/go.mod h1:0pUK3MN1v7DTjq0JSAD+DqbsZ8AVTodrXSXgJecg9Pw=
 github.com/ONSdigital/dp-healthcheck v1.0.5 h1:DXnohGIqXaLLeYGdaGOhgkZjAbWMNoLAjQ3EgZeMT3M=
 github.com/ONSdigital/dp-healthcheck v1.0.5/go.mod h1:2wbVAUHMl9+4tWhUlxYUuA1dnf2+NrwzC+So5f5BMLk=
-github.com/ONSdigital/dp-import v0.0.0-20210601170540-249d60574471 h1:OKffDZU3OikTViTeqsXmbRjs2iqOEE6O6tjgq9CWflY=
-github.com/ONSdigital/dp-import v0.0.0-20210601170540-249d60574471/go.mod h1:WTsFDrvob+eTEj/JIuzUWdwLhHPRf3KETVDT9fEK+88=
+github.com/ONSdigital/dp-import v1.0.0 h1:cQK3PS6a55nowIekZjf0W+GYU+FIoZ9asm6hDXCsCJk=
+github.com/ONSdigital/dp-import v1.0.0/go.mod h1:WTsFDrvob+eTEj/JIuzUWdwLhHPRf3KETVDT9fEK+88=
 github.com/ONSdigital/dp-kafka/v2 v2.2.0 h1:4s9VfmUxi70WpaRZk/CbxDNGqcJTsNTE9aLaLgcn4n4=
 github.com/ONSdigital/dp-kafka/v2 v2.2.0/go.mod h1:lFw9GGYpW8N6dG7g2wLQgCJL9vpo17RvOzCsdMRCapQ=
 github.com/ONSdigital/dp-mocking v0.0.0-20190905163309-fee2702ad1b9 h1:+WXVfTDyWXY1DQRDFSmt1b/ORKk5c7jGiPu7NoeaM/0=
