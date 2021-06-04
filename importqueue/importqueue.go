@@ -86,7 +86,7 @@ func (q *ImportQueue) queueCantabular(ctx context.Context, job *models.ImportDat
 		CantabularType: job.Format,
 	}
 
-	log.Event(ctx, "producing new input file available event", log.INFO, log.Data{"event": event})
+	log.Event(ctx, "producing new cantabular dataset instance started event", log.INFO, log.Data{"event": event})
 
 	bytes, avroError := events.CantabularDatasetInstanceStartedSchema.Marshal(event)
 	if avroError != nil {
