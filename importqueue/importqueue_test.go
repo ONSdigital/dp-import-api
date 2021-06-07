@@ -9,13 +9,15 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+const testRecipeID = "b944be78-f56d-409b-9ebd-ab2b77ffe187"
+
 func TestQueueV4File(t *testing.T) {
 	ctx := context.Background()
 
 	job := models.ImportData{
 		JobID:         "jobId",
 		InstanceIDs:   []string{"1"},
-		Recipe:        "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+		Recipe:        testRecipeID,
 		Format:        "v4",
 		UploadedFiles: &[]models.UploadedFile{{AliasName: "aliasV4", URL: "s3//aws/000/v4.csv"}}}
 
@@ -42,64 +44,64 @@ func TestQueueV4File(t *testing.T) {
 		Convey("Then importing a 'v4' recipe with nil instanceIDs fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs:   nil,
-				Recipe:        "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:        testRecipeID,
 				Format:        "v4",
 				UploadedFiles: &[]models.UploadedFile{{AliasName: "aliasV4", URL: "s3//aws/000/v4.csv"}}})
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "InstanceIds and uploaded files must be 1")
+			So(err.Error(), ShouldEqual, "InstanceIds and uploaded files must have length 1")
 		})
 
 		Convey("Then importing a 'v4' recipe with empty instanceIDs fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs:   []string{},
-				Recipe:        "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:        testRecipeID,
 				Format:        "v4",
 				UploadedFiles: &[]models.UploadedFile{{AliasName: "aliasV4", URL: "s3//aws/000/v4.csv"}}})
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "InstanceIds and uploaded files must be 1")
+			So(err.Error(), ShouldEqual, "InstanceIds and uploaded files must have length 1")
 		})
 
 		Convey("Then importing a 'v4' recipe with multiple instanceIDs fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs:   []string{"1", "2"},
-				Recipe:        "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:        testRecipeID,
 				Format:        "v4",
 				UploadedFiles: &[]models.UploadedFile{{AliasName: "aliasV4", URL: "s3//aws/000/v4.csv"}}})
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "InstanceIds and uploaded files must be 1")
+			So(err.Error(), ShouldEqual, "InstanceIds and uploaded files must have length 1")
 		})
 
 		Convey("Then importing a 'v4' recipe with nil uploadedFiles fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs:   []string{"1"},
-				Recipe:        "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:        testRecipeID,
 				Format:        "v4",
 				UploadedFiles: nil})
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "InstanceIds and uploaded files must be 1")
+			So(err.Error(), ShouldEqual, "InstanceIds and uploaded files must have length 1")
 		})
 
 		Convey("Then importing a 'v4' recipe with empty uploadedFiles fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs:   []string{"1"},
-				Recipe:        "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:        testRecipeID,
 				Format:        "v4",
 				UploadedFiles: &[]models.UploadedFile{}})
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "InstanceIds and uploaded files must be 1")
+			So(err.Error(), ShouldEqual, "InstanceIds and uploaded files must have length 1")
 		})
 
 		Convey("Then importing a 'v4' recipe with multiple uploadedFiles fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs: []string{"1"},
-				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:      testRecipeID,
 				Format:      "v4",
 				UploadedFiles: &[]models.UploadedFile{
 					{AliasName: "aliasV41", URL: "s3//aws/000/v41.csv"},
 					{AliasName: "aliasV42", URL: "s3//aws/000/v42.csv"},
 				}})
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "InstanceIds and uploaded files must be 1")
+			So(err.Error(), ShouldEqual, "InstanceIds and uploaded files must have length 1")
 		})
 
 		Convey("Then importing a valid 'v4' recipe sends the expected import event to the v4 queue", func() {
@@ -130,7 +132,7 @@ func TestQueueCantabularFile(t *testing.T) {
 			err := importer.Queue(ctx, &models.ImportData{
 				JobID:       "jobId",
 				InstanceIDs: []string{"InstanceId"},
-				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:      testRecipeID,
 				Format:      formatCantabularBlob,
 			})
 			So(err, ShouldNotBeNil)
@@ -141,7 +143,7 @@ func TestQueueCantabularFile(t *testing.T) {
 			err := importer.Queue(ctx, &models.ImportData{
 				JobID:       "jobId",
 				InstanceIDs: []string{"InstanceId"},
-				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:      testRecipeID,
 				Format:      formatCantabularTable,
 			})
 			So(err, ShouldNotBeNil)
@@ -162,62 +164,62 @@ func TestQueueCantabularFile(t *testing.T) {
 		Convey("Then importing a 'cantabular_blob' recipe with nil instanceIDs fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs: nil,
-				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:      testRecipeID,
 				Format:      formatCantabularBlob})
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "InstanceIds must be 1")
+			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
 		})
 
 		Convey("Then importing a 'cantabular_table' recipe with nil instanceIDs fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs: nil,
-				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:      testRecipeID,
 				Format:      formatCantabularTable})
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "InstanceIds must be 1")
+			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
 		})
 
 		Convey("Then importing a 'cantabular_blob' recipe with empty instanceIDs fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs: []string{},
-				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:      testRecipeID,
 				Format:      formatCantabularBlob})
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "InstanceIds must be 1")
+			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
 		})
 
 		Convey("Then importing a 'cantabular_table' recipe with empty instanceIDs fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs: []string{},
-				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:      testRecipeID,
 				Format:      formatCantabularTable})
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "InstanceIds must be 1")
+			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
 		})
 
 		Convey("Then importing a 'cantabular_blob' recipe with multiple instanceIDs fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs: []string{"1", "2"},
-				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:      testRecipeID,
 				Format:      formatCantabularBlob})
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "InstanceIds must be 1")
+			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
 		})
 
 		Convey("Then importing a 'cantabular_table' recipe with multiple instanceIDs fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs: []string{"1", "2"},
-				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:      testRecipeID,
 				Format:      formatCantabularTable})
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldEqual, "InstanceIds must be 1")
+			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
 		})
 
 		Convey("Then importing a 'cantabular_blob' recipe sends the expected import event to the cantabular queue", func() {
 			job := &models.ImportData{
 				JobID:       "jobId",
 				InstanceIDs: []string{"InstanceId"},
-				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:      testRecipeID,
 				Format:      formatCantabularBlob,
 			}
 			err := importer.Queue(ctx, job)
@@ -225,11 +227,12 @@ func TestQueueCantabularFile(t *testing.T) {
 
 			bytes := <-cantabularQueue
 
-			var file events.CantabularDatasetInstanceStarted
-			events.CantabularDatasetInstanceStartedSchema.Unmarshal(bytes, &file)
+			var cantabularEvent events.CantabularDatasetInstanceStarted
+			events.CantabularDatasetInstanceStartedSchema.Unmarshal(bytes, &cantabularEvent)
 
-			So(file, ShouldResemble, events.CantabularDatasetInstanceStarted{
+			So(cantabularEvent, ShouldResemble, events.CantabularDatasetInstanceStarted{
 				JobID:          "jobId",
+				RecipeID:       testRecipeID,
 				InstanceID:     job.InstanceIDs[0],
 				CantabularType: formatCantabularBlob,
 			})
@@ -239,7 +242,7 @@ func TestQueueCantabularFile(t *testing.T) {
 			job := &models.ImportData{
 				JobID:       "jobId",
 				InstanceIDs: []string{"InstanceId"},
-				Recipe:      "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+				Recipe:      testRecipeID,
 				Format:      formatCantabularTable,
 			}
 			err := importer.Queue(ctx, job)
@@ -247,11 +250,12 @@ func TestQueueCantabularFile(t *testing.T) {
 
 			bytes := <-cantabularQueue
 
-			var file events.CantabularDatasetInstanceStarted
-			events.CantabularDatasetInstanceStartedSchema.Unmarshal(bytes, &file)
+			var cantabularEvent events.CantabularDatasetInstanceStarted
+			events.CantabularDatasetInstanceStartedSchema.Unmarshal(bytes, &cantabularEvent)
 
-			So(file, ShouldResemble, events.CantabularDatasetInstanceStarted{
+			So(cantabularEvent, ShouldResemble, events.CantabularDatasetInstanceStarted{
 				JobID:          job.JobID,
+				RecipeID:       testRecipeID,
 				InstanceID:     job.InstanceIDs[0],
 				CantabularType: formatCantabularTable,
 			})
@@ -264,7 +268,7 @@ func TestQueueDefault(t *testing.T) {
 
 	job := models.ImportData{
 		InstanceIDs:   []string{"1"},
-		Recipe:        "b944be78-f56d-409b-9ebd-ab2b77ffe187",
+		Recipe:        testRecipeID,
 		Format:        "other",
 		UploadedFiles: &[]models.UploadedFile{{AliasName: "aliasOther", URL: "s3//aws/000/other.csv"}}}
 

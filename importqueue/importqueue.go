@@ -51,7 +51,7 @@ func (q *ImportQueue) queueV4(ctx context.Context, job *models.ImportData) error
 		return errors.New("v4 queue (kafka producer) is not available")
 	}
 	if job.InstanceIDs == nil || len(job.InstanceIDs) != 1 || job.UploadedFiles == nil || len(*job.UploadedFiles) != 1 {
-		return errors.New("InstanceIds and uploaded files must be 1")
+		return errors.New("InstanceIds and uploaded files must have length 1")
 	}
 
 	inputFileAvailableEvent := events.InputFileAvailable{
@@ -77,10 +77,11 @@ func (q *ImportQueue) queueCantabular(ctx context.Context, job *models.ImportDat
 		return errors.New("cantabular queue (kafka producer) is not available")
 	}
 	if job.InstanceIDs == nil || len(job.InstanceIDs) != 1 {
-		return errors.New("InstanceIds must be 1")
+		return errors.New("InstanceIds must have length 1")
 	}
 
 	event := events.CantabularDatasetInstanceStarted{
+		RecipeID:       job.Recipe,
 		JobID:          job.JobID,
 		InstanceID:     job.InstanceIDs[0],
 		CantabularType: job.Format,
