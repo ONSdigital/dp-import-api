@@ -62,32 +62,32 @@ func (api *API) CreateInstance(ctx context.Context, job *models.Job, recipeInst 
 }
 
 // UpdateInstanceState tells the Dataset API that the state of a Dataset instance has changed
-func (api *API) UpdateInstanceState(ctx context.Context, instanceID string, newState string) error {
-	path := api.URL + "/instances/" + instanceID
-	logData := log.Data{"URL": path, "new_state": newState}
+// func (api *API) UpdateInstanceState(ctx context.Context, instanceID string, newState string) error {
+// 	path := api.URL + "/instances/" + instanceID
+// 	logData := log.Data{"URL": path, "new_state": newState}
 
-	jsonUpload, err := json.Marshal(models.Instance{State: newState})
-	if err != nil {
-		log.Event(ctx, "UpdateInstanceState: failed to marshal instance to json", log.ERROR, log.Error(err), logData)
-		return err
-	}
+// 	jsonUpload, err := json.Marshal(models.Instance{State: newState})
+// 	if err != nil {
+// 		log.Event(ctx, "UpdateInstanceState: failed to marshal instance to json", log.ERROR, log.Error(err), logData)
+// 		return err
+// 	}
 
-	logData["json_request"] = string(jsonUpload)
-	jsonResult, httpCode, err := api.put(ctx, path, jsonUpload)
-	logData["http_code"] = httpCode
-	logData["json_response"] = jsonResult
+// 	logData["json_request"] = string(jsonUpload)
+// 	jsonResult, httpCode, err := api.put(ctx, path, jsonUpload)
+// 	logData["http_code"] = httpCode
+// 	logData["json_response"] = jsonResult
 
-	if err == nil && httpCode != http.StatusOK {
-		err = errors.New("bad response while updating instance state")
-	}
+// 	if err == nil && httpCode != http.StatusOK {
+// 		err = errors.New("bad response while updating instance state")
+// 	}
 
-	if err != nil {
-		log.Event(ctx, "UpdateInstanceState: failed to update instance", log.ERROR, log.Error(err), logData)
-		return err
-	}
+// 	if err != nil {
+// 		log.Event(ctx, "UpdateInstanceState: failed to update instance", log.ERROR, log.Error(err), logData)
+// 		return err
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func (api *API) get(ctx context.Context, path string, vars url.Values) ([]byte, int, error) {
 	return api.callDatasetAPI(ctx, "GET", path, vars)

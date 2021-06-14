@@ -10,6 +10,7 @@ import (
 	clientshealth "github.com/ONSdigital/dp-api-clients-go/health"
 	clientsidentity "github.com/ONSdigital/dp-api-clients-go/identity"
 	"github.com/ONSdigital/dp-api-clients-go/middleware"
+	"github.com/ONSdigital/dp-api-clients-go/recipe"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-api/api"
 	"github.com/ONSdigital/dp-import-api/config"
@@ -18,7 +19,6 @@ import (
 	"github.com/ONSdigital/dp-import-api/importqueue"
 	"github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/mongo"
-	"github.com/ONSdigital/dp-import-api/recipe"
 	"github.com/ONSdigital/dp-import-api/url"
 	kafka "github.com/ONSdigital/dp-kafka/v2"
 	dphandlers "github.com/ONSdigital/dp-net/handlers"
@@ -41,8 +41,8 @@ type Service struct {
 	healthCheck                              HealthChecker
 	importAPI                                *api.ImportAPI
 	identityClient                           *clientsidentity.Client
-	datasetAPI                               *dataset.API
-	recipeAPI                                *recipe.API
+	datasetAPI                               job.DatasetAPI
+	recipeAPIClient                          job.RecipeAPIClient
 }
 
 // getMongoDataStore creates a mongoDB connection
@@ -113,11 +113,12 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 	// Create Identity Client
 	svc.identityClient = clientsidentity.New(svc.cfg.ZebedeeURL)
 
-	// Create dataset and recie API clients.
+	// Create dataset and recipe API clients.
 	// TODO: We should consider replacing these with the corresponding dp-api-clients-go clients
 	client := dphttp.NewClient()
 	svc.datasetAPI = &dataset.API{Client: client, URL: svc.cfg.DatasetAPIURL, ServiceAuthToken: svc.cfg.ServiceAuthToken}
-	svc.recipeAPI = &recipe.API{Client: client, URL: svc.cfg.RecipeAPIURL}
+	// svc.recipeAPI = &recipe.API{Client: client, URL: svc.cfg.RecipeAPIURL}
+	svc.recipeAPIClient = recipe.NewClient(svc.cfg.RecipeAPIURL)
 
 	// Get HealthCheck and register checkers
 	versionInfo, err := healthcheck.NewVersionInfo(buildTime, gitCommit, version)
@@ -142,7 +143,7 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 		svc.inputFileAvailableProducer.Channels().Output,
 		svc.cantabularDatasetInstanceStartedProducer.Channels().Output,
 	)
-	jobService := job.NewService(svc.mongoDataStore, jobQueue, svc.datasetAPI, svc.recipeAPI, urlBuilder)
+	jobService := job.NewService(svc.mongoDataStore, jobQueue, svc.datasetAPI, svc.recipeAPIClient, urlBuilder, svc.cfg.ServiceAuthToken)
 	svc.importAPI = api.Setup(r, svc.mongoDataStore, jobService, cfg)
 	return nil
 }
@@ -286,7 +287,7 @@ func (svc *Service) registerCheckers(ctx context.Context) (err error) {
 	}
 
 	datasetAPIClient := clientshealth.NewClientWithClienter("dataset-api", svc.datasetAPI.URL, svc.datasetAPI.Client)
-	recipeAPIHealthCheckClient := clientshealth.NewClientWithClienter("recipe-api", svc.recipeAPI.URL, svc.recipeAPI.Client)
+	// recipeAPIHealthCheckClient := clientshealth.NewClientWithClienter("recipe-api", svc.recipeAPI.URL, svc.recipeAPI.Client)
 
 	registerChecker("Kafka Data Baker Producer", svc.dataBakerProducer)
 	registerChecker("Kafka Input File Available Producer", svc.inputFileAvailableProducer)
@@ -294,7 +295,7 @@ func (svc *Service) registerCheckers(ctx context.Context) (err error) {
 	registerChecker("Zebedee", svc.identityClient)
 	registerChecker("Mongo DB", svc.mongoDataStore)
 	registerChecker("Dataset API", datasetAPIClient)
-	registerChecker("Recipe API", recipeAPIHealthCheckClient)
+	registerChecker("Recipe API", svc.recipeAPIClient)
 
 	if hasErrors {
 		return errors.New("Error(s) registering checkers for healthcheck")

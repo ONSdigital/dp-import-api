@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"time"
 
+	"github.com/ONSdigital/dp-api-clients-go/dataset"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/globalsign/mgo/bson"
 )
@@ -43,11 +44,11 @@ type Job struct {
 	UniqueTimestamp bson.MongoTimestamp `bson:"unique_timestamp,omitempty" json:"-"`
 }
 
-// LinksMap represents a list of links related to a job resource
-type LinksMap struct {
-	Instances []IDLink `bson:"instances,omitempty" json:"instances,omitempty"`
-	Self      IDLink   `bson:"self,omitempty" json:"self,omitempty"`
-}
+// // LinksMap represents a list of links related to a job resource
+// type LinksMap struct {
+// 	Instances []IDLink `bson:"instances,omitempty" json:"instances,omitempty"`
+// 	Self      IDLink   `bson:"self,omitempty" json:"self,omitempty"`
+// }
 
 // Validate the content of a job
 func (job *Job) Validate() error {
@@ -76,26 +77,27 @@ func (job *Job) ValidateState() error {
 	return nil
 }
 
-//this should probably be replaced with an import of
-//github.com/ONSdigital/dp-code-list-api/{pkg when unstubbed}
-type Recipe struct {
-	ID              string           `json:"id"`
-	Alias           string           `json:"alias"`
-	Format          string           `json:"format,omitempty"`
-	OutputInstances []RecipeInstance `json:"output_instances"`
-	InputFiles      []file           `json:"files,omitempty"`
-	CantabularBlob  string           `json:"cantabular_blob,omitempty"`
-}
+// //this should probably be replaced with an import of
+// //github.com/ONSdigital/dp-code-list-api/{pkg when unstubbed}
+// type Recipe struct {
+// 	ID              string           `json:"id"`
+// 	Alias           string           `json:"alias"`
+// 	Format          string           `json:"format,omitempty"`
+// 	OutputInstances []RecipeInstance `json:"output_instances"`
+// 	InputFiles      []file           `json:"files,omitempty"`
+// 	CantabularBlob  string           `json:"cantabular_blob,omitempty"`
+// }
 
-type file struct {
-	Description string `json:"description,omitempty"`
-}
+// type file struct {
+// 	Description string `json:"description,omitempty"`
+// }
 
 type RecipeInstance struct {
 	DatasetID string     `json:"dataset_id"`
 	CodeLists []CodeList `json:"code_lists"`
 }
 
+// TODO CodeList must be removed once all dependencies point to the right place
 type CodeList struct {
 	ID          string `json:"id"`
 	HRef        string `json:"href"`
@@ -103,26 +105,26 @@ type CodeList struct {
 	IsHierarchy bool   `json:"is_hierarchy"`
 }
 
-// Event which has happened to an instance
-type Event struct {
-	Type          string `json:"type"`
-	Time          string `json:"time"`
-	Message       string `json:"message"`
-	MessageOffset string `json:"messageOffset"`
-}
+// // Event which has happened to an instance
+// type Event struct {
+// 	Type          string `json:"type"`
+// 	Time          string `json:"time"`
+// 	Message       string `json:"message"`
+// 	MessageOffset string `json:"messageOffset"`
+// }
 
-// Instance which presents a single dataset being imported
-type Instance struct {
-	InstanceID        string               `json:"id,omitempty"`
-	Links             *InstanceLinks       `json:"links,omitempty"`
-	State             string               `json:"state,omitempty"`
-	Events            []Event              `json:"events,omitempty"`
-	TotalObservations int                  `json:"total_observations,omitempty"`
-	Headers           []string             `json:"headers,omitempty"`
-	Dimensions        []CodeList           `json:"dimensions,omitempty"`
-	LastUpdated       string               `json:"last_updated,omitempty"`
-	ImportTasks       *InstanceImportTasks `json:"import_tasks"`
-}
+// // Instance which presents a single dataset being imported
+// type Instance struct {
+// 	InstanceID        string               `json:"id,omitempty"`
+// 	Links             *InstanceLinks       `json:"links,omitempty"`
+// 	State             string               `json:"state,omitempty"`
+// 	Events            []Event              `json:"events,omitempty"`
+// 	TotalObservations int                  `json:"total_observations,omitempty"`
+// 	Headers           []string             `json:"headers,omitempty"`
+// 	Dimensions        []CodeList           `json:"dimensions,omitempty"`
+// 	LastUpdated       string               `json:"last_updated,omitempty"`
+// 	ImportTasks       *InstanceImportTasks `json:"import_tasks"`
+// }
 
 // InstanceImportTasks represents all of the tasks required to complete an import job.
 type InstanceImportTasks struct {
@@ -150,10 +152,10 @@ type BuildSearchIndexTask struct {
 	DimensionName string `bson:"dimension_name,omitempty" json:"dimension_name,omitempty"`
 }
 
-type InstanceLinks struct {
-	Job     IDLink `json:"job,omitempty"`
-	Dataset IDLink `json:"dataset,omitempty"`
-}
+// type InstanceLinks struct {
+// 	Job     IDLink `json:"job,omitempty"`
+// 	Dataset IDLink `json:"dataset,omitempty"`
+// }
 
 // UploadedFile used for a file which has been uploaded to a bucket
 type UploadedFile struct {
@@ -183,11 +185,11 @@ type DataBakerEvent struct {
 	JobID string `avro:"job_id"`
 }
 
-// IDLink holds the ID and a link to the resource
-type IDLink struct {
-	ID   string `json:"id"`
-	HRef string `json:"href"`
-}
+// // IDLink holds the ID and a link to the resource
+// type IDLink struct {
+// 	ID   string `json:"id"`
+// 	HRef string `json:"href"`
+// }
 
 // CreateJob from a json message
 func CreateJob(reader io.Reader) (*Job, error) {
@@ -218,34 +220,34 @@ func CreateUploadedFile(reader io.Reader) (*UploadedFile, error) {
 }
 
 // CreateInstance from a job ID
-func CreateInstance(job *Job, datasetID, datasetURL string, codelists []CodeList) *Instance {
+func CreateInstance(job *Job, datasetID, datasetURL string, codelists []dataset.CodeList) *dataset.NewInstance {
 
-	buildHierarchyTasks := make([]*BuildHierarchyTask, 0)
-	buildSearchTasks := make([]*BuildSearchIndexTask, 0)
+	buildHierarchyTasks := make([]*dataset.BuildHierarchyTask, 0)
+	buildSearchTasks := make([]*dataset.BuildSearchIndexTask, 0)
 
 	for _, codelist := range codelists {
 		if codelist.IsHierarchy {
-			buildHierarchyTasks = append(buildHierarchyTasks, &BuildHierarchyTask{
+			buildHierarchyTasks = append(buildHierarchyTasks, &dataset.BuildHierarchyTask{
 				State:         CreatedState,
 				CodeListID:    codelist.ID,
 				DimensionName: codelist.Name,
 			})
 
-			buildSearchTasks = append(buildSearchTasks, &BuildSearchIndexTask{
+			buildSearchTasks = append(buildSearchTasks, &dataset.BuildSearchIndexTask{
 				State:         CreatedState,
 				DimensionName: codelist.Name,
 			})
 		}
 	}
 
-	return &Instance{
+	return &dataset.NewInstance{
 		Dimensions: codelists,
-		Links: &InstanceLinks{
-			Job:     IDLink{ID: job.ID, HRef: job.Links.Self.HRef},
-			Dataset: IDLink{ID: datasetID, HRef: datasetURL},
+		Links: &dataset.Links{
+			Job:     dataset.Link{ID: job.ID, URL: job.Links.Self.HRef},
+			Dataset: dataset.Link{ID: datasetID, URL: datasetURL},
 		},
-		ImportTasks: &InstanceImportTasks{
-			ImportObservations: &ImportObservationsTask{
+		ImportTasks: &dataset.InstanceImportTasks{
+			ImportObservations: &dataset.ImportObservationsTask{
 				State:                CreatedState,
 				InsertedObservations: 0,
 			},
