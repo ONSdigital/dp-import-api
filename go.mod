@@ -3,7 +3,7 @@ module github.com/ONSdigital/dp-import-api
 go 1.15
 
 require (
-	github.com/ONSdigital/dp-api-clients-go v1.37.0
+	github.com/ONSdigital/dp-api-clients-go v1.37.1-0.20210614125757-5dcfb4a48a3a
 	github.com/ONSdigital/dp-healthcheck v1.0.5
 	github.com/ONSdigital/dp-import v1.1.0
 	github.com/ONSdigital/dp-kafka/v2 v2.2.0
@@ -23,5 +23,3 @@ require (
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/net v0.0.0-20210222171744-9060382bd457 // indirect
 )
-
-replace github.com/ONSdigital/dp-api-clients-go => ../dp-api-clients-go

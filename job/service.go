@@ -17,8 +17,8 @@ import (
 )
 
 //go:generate moq -out testjob/job_queue.go -pkg testjob . Queue
-//go:generate moq -out testjob/dataset_api.go -pkg testjob . DatasetAPI
-//go:generate moq -out testjob/recipe_api.go -pkg testjob . RecipeAPI
+//go:generate moq -out testjob/dataset_api.go -pkg testjob . DatasetAPIClient
+//go:generate moq -out testjob/recipe_api.go -pkg testjob . RecipeAPIClient
 
 // A list of custom errors
 var (
@@ -35,8 +35,9 @@ func ErrCreateInstanceFailed(datasetID string) error {
 type Service struct {
 	dataStore        datastore.DataStorer
 	queue            Queue
-	datasetAPI       DatasetAPIClient
-	recipeAPI        RecipeAPIClient
+	datasetAPIURL    string
+	datasetAPIClient DatasetAPIClient
+	recipeAPIClient  RecipeAPIClient
 	urlBuilder       *url.Builder
 	serviceAuthToken string
 }
@@ -48,10 +49,9 @@ type Queue interface {
 
 // DatasetAPIClient interface to the dataset API.
 type DatasetAPIClient interface {
-	// CreateInstance(ctx context.Context, job *models.Job, recipeInst *recipe.Instance) (instance *models.Instance, err error)
-	PostInstance(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, instance *dataset.NewInstance) error
-	//UpdateInstanceState(ctx context.Context, instanceID string, newState string) error
+	PostInstance(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (*dataset.Instance, error)
 	PutInstance(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, instanceID string, instanceUpdate dataset.UpdateInstance) error
+	Checker(ctx context.Context, state *healthcheck.CheckState) error
 }
 
 // RecipeAPIClient interface to the recipe API.
@@ -61,12 +61,13 @@ type RecipeAPIClient interface {
 }
 
 // NewService returns a new instance of a job.Service using the given dependencies.
-func NewService(dataStore datastore.DataStorer, queue Queue, datasetAPI DatasetAPIClient, recipeAPI RecipeAPIClient, urlBuilder *url.Builder, serviceAuthToken string) *Service {
+func NewService(dataStore datastore.DataStorer, queue Queue, datasetAPIURL string, datasetAPIClient DatasetAPIClient, recipeAPIClient RecipeAPIClient, urlBuilder *url.Builder, serviceAuthToken string) *Service {
 	return &Service{
 		dataStore:        dataStore,
 		queue:            queue,
-		datasetAPI:       datasetAPI,
-		recipeAPI:        recipeAPI,
+		datasetAPIURL:    datasetAPIURL,
+		datasetAPIClient: datasetAPIClient,
+		recipeAPIClient:  recipeAPIClient,
 		urlBuilder:       urlBuilder,
 		serviceAuthToken: serviceAuthToken,
 	}
@@ -82,7 +83,7 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 	}
 
 	//Get details needed for instances from Recipe API
-	recipe, err := service.recipeAPI.GetRecipe(ctx, "", "", job.RecipeID)
+	recipe, err := service.recipeAPIClient.GetRecipe(ctx, "", "", job.RecipeID)
 	if err != nil {
 		log.Event(ctx, "CreateJob: failed to get recipe details", log.ERROR, log.Error(err), logData)
 		return nil, ErrGetRecipeFailed
@@ -98,18 +99,11 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 
 	for _, oi := range recipe.OutputInstances {
 		// now create an instance for this file
-		// instance, instanceErr := service.datasetAPI.CreateInstance(ctx, job, &oi)
-
-		path := api.URL + "/instances"
-		datasetPath := api.URL + "/datasets/" + recipeInst.DatasetID
-		logData := log.Data{"URL": path, "job_id": job.ID, "job_url": job.Links.Self.HRef}
-
+		datasetPath := service.datasetAPIURL + "/datasets/" + oi.DatasetID
 		newInstance := models.CreateInstance(job, oi.DatasetID, datasetPath, oi.CodeLists)
-		instance, err := service.datasetAPI.PostInstance(ctx, "", service.serviceAuthToken, "", newInstance)
-
+		instance, err := service.datasetAPIClient.PostInstance(ctx, service.serviceAuthToken, newInstance)
 		if err != nil {
-			logData["instance"] = oi
-			log.Event(ctx, "CreateJob: failed to create instance in datastore", log.ERROR, log.Error(err), logData)
+			log.Event(ctx, "CreateJob: failed to create instance in datastore", log.ERROR, log.Error(err), log.Data{"job_id": job.ID, "job_url": job.Links.Self.HRef, "instance": oi})
 			return nil, ErrCreateInstanceFailed(oi.DatasetID)
 		}
 
@@ -166,7 +160,7 @@ func (service Service) prepareJob(ctx context.Context, jobID string) (*models.Im
 		return nil, err
 	}
 
-	recipe, err := service.recipeAPI.GetRecipe(ctx, "", "", importJob.RecipeID)
+	recipe, err := service.recipeAPIClient.GetRecipe(ctx, "", "", importJob.RecipeID)
 	if err != nil {
 		return nil, err
 	}
@@ -175,13 +169,12 @@ func (service Service) prepareJob(ctx context.Context, jobID string) (*models.Im
 	for _, instanceRef := range importJob.Links.Instances {
 		instanceIds = append(instanceIds, instanceRef.ID)
 
-		err = service.datasetAPI.PutInstance(ctx, "", service.serviceAuthToken, "", instanceRef.ID,
+		err = service.datasetAPIClient.PutInstance(ctx, "", service.serviceAuthToken, "", instanceRef.ID,
 			dataset.UpdateInstance{
 				State: dataset.StateSubmitted.String(),
 			},
 		)
 		if err != nil {
-			// if err = service.datasetAPI.UpdateInstanceState(ctx, instanceRef.ID, "submitted"); err != nil {
 			return nil, err
 		}
 	}

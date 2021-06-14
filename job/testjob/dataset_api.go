@@ -5,142 +5,210 @@ package testjob
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-api-clients-go/dataset"
+	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-api/job"
-	"github.com/ONSdigital/dp-import-api/models"
 	"sync"
 )
 
 var (
-	lockDatasetAPIMockCreateInstance      sync.RWMutex
-	lockDatasetAPIMockUpdateInstanceState sync.RWMutex
+	lockDatasetAPIClientMockChecker      sync.RWMutex
+	lockDatasetAPIClientMockPostInstance sync.RWMutex
+	lockDatasetAPIClientMockPutInstance  sync.RWMutex
 )
 
-// Ensure, that DatasetAPIMock does implement DatasetAPI.
+// Ensure, that DatasetAPIClientMock does implement job.DatasetAPIClient.
 // If this is not the case, regenerate this file with moq.
-var _ job.DatasetAPI = &DatasetAPIMock{}
+var _ job.DatasetAPIClient = &DatasetAPIClientMock{}
 
-// DatasetAPIMock is a mock implementation of job.DatasetAPI.
+// DatasetAPIClientMock is a mock implementation of job.DatasetAPIClient.
 //
-//     func TestSomethingThatUsesDatasetAPI(t *testing.T) {
+//     func TestSomethingThatUsesDatasetAPIClient(t *testing.T) {
 //
-//         // make and configure a mocked job.DatasetAPI
-//         mockedDatasetAPI := &DatasetAPIMock{
-//             CreateInstanceFunc: func(ctx context.Context, job *models.Job, recipeInst *models.RecipeInstance) (*models.Instance, error) {
-// 	               panic("mock out the CreateInstance method")
+//         // make and configure a mocked job.DatasetAPIClient
+//         mockedDatasetAPIClient := &DatasetAPIClientMock{
+//             CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+// 	               panic("mock out the Checker method")
 //             },
-//             UpdateInstanceStateFunc: func(ctx context.Context, instanceID string, newState string) error {
-// 	               panic("mock out the UpdateInstanceState method")
+//             PostInstanceFunc: func(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (*dataset.Instance, error) {
+// 	               panic("mock out the PostInstance method")
+//             },
+//             PutInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, instanceUpdate dataset.UpdateInstance) error {
+// 	               panic("mock out the PutInstance method")
 //             },
 //         }
 //
-//         // use mockedDatasetAPI in code that requires job.DatasetAPI
+//         // use mockedDatasetAPIClient in code that requires job.DatasetAPIClient
 //         // and then make assertions.
 //
 //     }
-type DatasetAPIMock struct {
-	// CreateInstanceFunc mocks the CreateInstance method.
-	CreateInstanceFunc func(ctx context.Context, job *models.Job, recipeInst *models.RecipeInstance) (*models.Instance, error)
+type DatasetAPIClientMock struct {
+	// CheckerFunc mocks the Checker method.
+	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
 
-	// UpdateInstanceStateFunc mocks the UpdateInstanceState method.
-	UpdateInstanceStateFunc func(ctx context.Context, instanceID string, newState string) error
+	// PostInstanceFunc mocks the PostInstance method.
+	PostInstanceFunc func(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (*dataset.Instance, error)
+
+	// PutInstanceFunc mocks the PutInstance method.
+	PutInstanceFunc func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, instanceUpdate dataset.UpdateInstance) error
 
 	// calls tracks calls to the methods.
 	calls struct {
-		// CreateInstance holds details about calls to the CreateInstance method.
-		CreateInstance []struct {
+		// Checker holds details about calls to the Checker method.
+		Checker []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
-			// Job is the job argument value.
-			Job *models.Job
-			// RecipeInst is the recipeInst argument value.
-			RecipeInst *models.RecipeInstance
+			// State is the state argument value.
+			State *healthcheck.CheckState
 		}
-		// UpdateInstanceState holds details about calls to the UpdateInstanceState method.
-		UpdateInstanceState []struct {
+		// PostInstance holds details about calls to the PostInstance method.
+		PostInstance []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
+			// ServiceAuthToken is the serviceAuthToken argument value.
+			ServiceAuthToken string
+			// NewInstance is the newInstance argument value.
+			NewInstance *dataset.NewInstance
+		}
+		// PutInstance holds details about calls to the PutInstance method.
+		PutInstance []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// UserAuthToken is the userAuthToken argument value.
+			UserAuthToken string
+			// ServiceAuthToken is the serviceAuthToken argument value.
+			ServiceAuthToken string
+			// CollectionID is the collectionID argument value.
+			CollectionID string
 			// InstanceID is the instanceID argument value.
 			InstanceID string
-			// NewState is the newState argument value.
-			NewState string
+			// InstanceUpdate is the instanceUpdate argument value.
+			InstanceUpdate dataset.UpdateInstance
 		}
 	}
 }
 
-// CreateInstance calls CreateInstanceFunc.
-func (mock *DatasetAPIMock) CreateInstance(ctx context.Context, job *models.Job, recipeInst *models.RecipeInstance) (*models.Instance, error) {
-	if mock.CreateInstanceFunc == nil {
-		panic("DatasetAPIMock.CreateInstanceFunc: method is nil but DatasetAPI.CreateInstance was just called")
+// Checker calls CheckerFunc.
+func (mock *DatasetAPIClientMock) Checker(ctx context.Context, state *healthcheck.CheckState) error {
+	if mock.CheckerFunc == nil {
+		panic("DatasetAPIClientMock.CheckerFunc: method is nil but DatasetAPIClient.Checker was just called")
 	}
 	callInfo := struct {
-		Ctx        context.Context
-		Job        *models.Job
-		RecipeInst *models.RecipeInstance
+		Ctx   context.Context
+		State *healthcheck.CheckState
 	}{
-		Ctx:        ctx,
-		Job:        job,
-		RecipeInst: recipeInst,
+		Ctx:   ctx,
+		State: state,
 	}
-	lockDatasetAPIMockCreateInstance.Lock()
-	mock.calls.CreateInstance = append(mock.calls.CreateInstance, callInfo)
-	lockDatasetAPIMockCreateInstance.Unlock()
-	return mock.CreateInstanceFunc(ctx, job, recipeInst)
+	lockDatasetAPIClientMockChecker.Lock()
+	mock.calls.Checker = append(mock.calls.Checker, callInfo)
+	lockDatasetAPIClientMockChecker.Unlock()
+	return mock.CheckerFunc(ctx, state)
 }
 
-// CreateInstanceCalls gets all the calls that were made to CreateInstance.
+// CheckerCalls gets all the calls that were made to Checker.
 // Check the length with:
-//     len(mockedDatasetAPI.CreateInstanceCalls())
-func (mock *DatasetAPIMock) CreateInstanceCalls() []struct {
-	Ctx        context.Context
-	Job        *models.Job
-	RecipeInst *models.RecipeInstance
+//     len(mockedDatasetAPIClient.CheckerCalls())
+func (mock *DatasetAPIClientMock) CheckerCalls() []struct {
+	Ctx   context.Context
+	State *healthcheck.CheckState
 } {
 	var calls []struct {
-		Ctx        context.Context
-		Job        *models.Job
-		RecipeInst *models.RecipeInstance
+		Ctx   context.Context
+		State *healthcheck.CheckState
 	}
-	lockDatasetAPIMockCreateInstance.RLock()
-	calls = mock.calls.CreateInstance
-	lockDatasetAPIMockCreateInstance.RUnlock()
+	lockDatasetAPIClientMockChecker.RLock()
+	calls = mock.calls.Checker
+	lockDatasetAPIClientMockChecker.RUnlock()
 	return calls
 }
 
-// UpdateInstanceState calls UpdateInstanceStateFunc.
-func (mock *DatasetAPIMock) UpdateInstanceState(ctx context.Context, instanceID string, newState string) error {
-	if mock.UpdateInstanceStateFunc == nil {
-		panic("DatasetAPIMock.UpdateInstanceStateFunc: method is nil but DatasetAPI.UpdateInstanceState was just called")
+// PostInstance calls PostInstanceFunc.
+func (mock *DatasetAPIClientMock) PostInstance(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (*dataset.Instance, error) {
+	if mock.PostInstanceFunc == nil {
+		panic("DatasetAPIClientMock.PostInstanceFunc: method is nil but DatasetAPIClient.PostInstance was just called")
 	}
 	callInfo := struct {
-		Ctx        context.Context
-		InstanceID string
-		NewState   string
+		Ctx              context.Context
+		ServiceAuthToken string
+		NewInstance      *dataset.NewInstance
 	}{
-		Ctx:        ctx,
-		InstanceID: instanceID,
-		NewState:   newState,
+		Ctx:              ctx,
+		ServiceAuthToken: serviceAuthToken,
+		NewInstance:      newInstance,
 	}
-	lockDatasetAPIMockUpdateInstanceState.Lock()
-	mock.calls.UpdateInstanceState = append(mock.calls.UpdateInstanceState, callInfo)
-	lockDatasetAPIMockUpdateInstanceState.Unlock()
-	return mock.UpdateInstanceStateFunc(ctx, instanceID, newState)
+	lockDatasetAPIClientMockPostInstance.Lock()
+	mock.calls.PostInstance = append(mock.calls.PostInstance, callInfo)
+	lockDatasetAPIClientMockPostInstance.Unlock()
+	return mock.PostInstanceFunc(ctx, serviceAuthToken, newInstance)
 }
 
-// UpdateInstanceStateCalls gets all the calls that were made to UpdateInstanceState.
+// PostInstanceCalls gets all the calls that were made to PostInstance.
 // Check the length with:
-//     len(mockedDatasetAPI.UpdateInstanceStateCalls())
-func (mock *DatasetAPIMock) UpdateInstanceStateCalls() []struct {
-	Ctx        context.Context
-	InstanceID string
-	NewState   string
+//     len(mockedDatasetAPIClient.PostInstanceCalls())
+func (mock *DatasetAPIClientMock) PostInstanceCalls() []struct {
+	Ctx              context.Context
+	ServiceAuthToken string
+	NewInstance      *dataset.NewInstance
 } {
 	var calls []struct {
-		Ctx        context.Context
-		InstanceID string
-		NewState   string
+		Ctx              context.Context
+		ServiceAuthToken string
+		NewInstance      *dataset.NewInstance
 	}
-	lockDatasetAPIMockUpdateInstanceState.RLock()
-	calls = mock.calls.UpdateInstanceState
-	lockDatasetAPIMockUpdateInstanceState.RUnlock()
+	lockDatasetAPIClientMockPostInstance.RLock()
+	calls = mock.calls.PostInstance
+	lockDatasetAPIClientMockPostInstance.RUnlock()
+	return calls
+}
+
+// PutInstance calls PutInstanceFunc.
+func (mock *DatasetAPIClientMock) PutInstance(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, instanceUpdate dataset.UpdateInstance) error {
+	if mock.PutInstanceFunc == nil {
+		panic("DatasetAPIClientMock.PutInstanceFunc: method is nil but DatasetAPIClient.PutInstance was just called")
+	}
+	callInfo := struct {
+		Ctx              context.Context
+		UserAuthToken    string
+		ServiceAuthToken string
+		CollectionID     string
+		InstanceID       string
+		InstanceUpdate   dataset.UpdateInstance
+	}{
+		Ctx:              ctx,
+		UserAuthToken:    userAuthToken,
+		ServiceAuthToken: serviceAuthToken,
+		CollectionID:     collectionID,
+		InstanceID:       instanceID,
+		InstanceUpdate:   instanceUpdate,
+	}
+	lockDatasetAPIClientMockPutInstance.Lock()
+	mock.calls.PutInstance = append(mock.calls.PutInstance, callInfo)
+	lockDatasetAPIClientMockPutInstance.Unlock()
+	return mock.PutInstanceFunc(ctx, userAuthToken, serviceAuthToken, collectionID, instanceID, instanceUpdate)
+}
+
+// PutInstanceCalls gets all the calls that were made to PutInstance.
+// Check the length with:
+//     len(mockedDatasetAPIClient.PutInstanceCalls())
+func (mock *DatasetAPIClientMock) PutInstanceCalls() []struct {
+	Ctx              context.Context
+	UserAuthToken    string
+	ServiceAuthToken string
+	CollectionID     string
+	InstanceID       string
+	InstanceUpdate   dataset.UpdateInstance
+} {
+	var calls []struct {
+		Ctx              context.Context
+		UserAuthToken    string
+		ServiceAuthToken string
+		CollectionID     string
+		InstanceID       string
+		InstanceUpdate   dataset.UpdateInstance
+	}
+	lockDatasetAPIClientMockPutInstance.RLock()
+	calls = mock.calls.PutInstance
+	lockDatasetAPIClientMockPutInstance.RUnlock()
 	return calls
 }

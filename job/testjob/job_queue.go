@@ -14,7 +14,7 @@ var (
 	lockQueueMockQueue sync.RWMutex
 )
 
-// Ensure, that QueueMock does implement Queue.
+// Ensure, that QueueMock does implement job.Queue.
 // If this is not the case, regenerate this file with moq.
 var _ job.Queue = &QueueMock{}
 
