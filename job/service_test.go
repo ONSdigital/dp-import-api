@@ -30,15 +30,43 @@ var (
 			},
 		},
 	}
-	dummyInstance = &dataset.Instance{
-		Version: dataset.Version{
-			InstanceID: "654",
-		},
-	}
 	datasetAPIURL    = "http://localhost:22000"
 	serviceAuthToken = "testToken"
 	ctx              = context.Background()
 )
+
+// dummyInstance generates a dataset Instance for testing
+func dummyInstance() *dataset.Instance {
+	return &dataset.Instance{
+		Version: dataset.Version{
+			ID: "dummyInstanceID",
+		},
+	}
+}
+
+// expectedNewInstance creates an expected NewInstance for the provided jobID and datasetID
+func expectedNewInstance(jobID, datasetID string) *dataset.NewInstance {
+	return &dataset.NewInstance{
+		Links: &dataset.Links{
+			Dataset: dataset.Link{
+				URL: "http://localhost:22000/datasets/" + datasetID,
+				ID:  datasetID,
+			},
+			Job: dataset.Link{
+				URL: "http://import-api/jobs/" + jobID,
+				ID:  jobID,
+			},
+		},
+		Dimensions: []dataset.CodeList{},
+		ImportTasks: &dataset.InstanceImportTasks{
+			ImportObservations: &dataset.ImportObservationsTask{
+				State: dataset.StateCreated.String(),
+			},
+			BuildHierarchyTasks:   []*dataset.BuildHierarchyTask{},
+			BuildSearchIndexTasks: []*dataset.BuildSearchIndexTask{},
+		},
+	}
+}
 
 func TestService_CreateJob(t *testing.T) {
 
@@ -48,7 +76,9 @@ func TestService_CreateJob(t *testing.T) {
 		mockedQueue := &testjob.QueueMock{}
 		mockedDatasetAPI := &testjob.DatasetAPIClientMock{
 			PostInstanceFunc: func(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (*dataset.Instance, error) {
-				return dummyInstance, nil
+				retInstance := dummyInstance()
+				retInstance.ID = "dummyInstance_" + newInstance.Links.Dataset.ID
+				return retInstance, nil
 			},
 			PutInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, instanceUpdate dataset.UpdateInstance) error {
 				return nil
@@ -62,24 +92,45 @@ func TestService_CreateJob(t *testing.T) {
 
 		jobService := job.NewService(mockDataStore, mockedQueue, datasetAPIURL, mockedDatasetAPI, mockedRecipeAPI, urlBuilder, serviceAuthToken)
 
-		job := &models.Job{
+		jobModel := &models.Job{
 			RecipeID: "123-234-456",
 		}
 
 		Convey("When create job is called", func() {
 
-			createdJob, err := jobService.CreateJob(ctx, job)
+			createdJob, err := jobService.CreateJob(ctx, jobModel)
 
-			Convey("The expected calls are made to dependencies and the job is updated", func() {
+			Convey("Then the expected job is returned without error", func() {
+				So(createdJob, ShouldResemble, &mongo.CreatedJob)
 				So(err, ShouldBeNil)
-				So(createdJob, ShouldNotBeNil)
+			})
 
-				So(job.ID, ShouldNotBeBlank)
-				So(job.Links.Self.HRef, ShouldNotBeBlank)
+			Convey("Then the provided job is mutated with the expected ID and link values", func() {
+				So(jobModel.ID, ShouldNotBeBlank)
+				So(jobModel.Links, ShouldResemble, models.LinksMap{
+					Self: models.IDLink{
+						ID:   jobModel.ID,
+						HRef: "http://import-api/jobs/" + jobModel.ID,
+					},
+					Instances: []models.IDLink{
+						{
+							ID:   "dummyInstance_dataset1",
+							HRef: "http://dataset-api/instances/dummyInstance_dataset1",
+						},
+						{
+							ID:   "dummyInstance_dataset2",
+							HRef: "http://dataset-api/instances/dummyInstance_dataset2",
+						},
+					},
+				})
+			})
 
-				// an instance is created for each output instance specified in the recipe.
-				So(len(mockedDatasetAPI.PostInstanceCalls()), ShouldEqual, len(dummyRecipe.OutputInstances))
-				So(len(job.Links.Instances), ShouldEqual, len(dummyRecipe.OutputInstances))
+			Convey("Then the expected instances, as defined by the recipe, are posted to dataset API with the correct authentication", func() {
+				So(mockedDatasetAPI.PostInstanceCalls(), ShouldHaveLength, 2)
+				So(mockedDatasetAPI.PostInstanceCalls()[0].NewInstance, ShouldResemble, expectedNewInstance(jobModel.ID, "dataset1"))
+				So(mockedDatasetAPI.PostInstanceCalls()[0].ServiceAuthToken, ShouldResemble, serviceAuthToken)
+				So(mockedDatasetAPI.PostInstanceCalls()[1].NewInstance, ShouldResemble, expectedNewInstance(jobModel.ID, "dataset2"))
+				So(mockedDatasetAPI.PostInstanceCalls()[1].ServiceAuthToken, ShouldResemble, serviceAuthToken)
 			})
 		})
 	})
@@ -128,7 +179,7 @@ func TestService_CreateJob_SaveJobFails(t *testing.T) {
 		mockedQueue := &testjob.QueueMock{}
 		mockedDatasetAPI := &testjob.DatasetAPIClientMock{
 			PostInstanceFunc: func(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (*dataset.Instance, error) {
-				return dummyInstance, nil
+				return dummyInstance(), nil
 			},
 		}
 		mockedRecipeAPI := &testjob.RecipeAPIClientMock{

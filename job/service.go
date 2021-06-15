@@ -73,32 +73,42 @@ func NewService(dataStore datastore.DataStorer, queue Queue, datasetAPIURL strin
 	}
 }
 
-// CreateJob creates a new job using the given job instance.
+// CreateJob creates a new job using the instances corresponding to the recipe defined by recipeID in the provided job.
+// A new instance will be posted to dataset api for each outputInstance defined in the recipe.
+// Note that the provided job will be modified (ID and links will be updated).
 func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.Job, error) {
 	logData := log.Data{"job": job}
 
+	// Validate job
 	if err := job.Validate(); err != nil {
 		log.Event(ctx, "CreateJob: failed validation", log.ERROR, log.Error(err), logData)
 		return nil, errs.ErrInvalidJob
 	}
 
-	//Get details needed for instances from Recipe API
+	// Get details needed for instances from Recipe API
 	recipe, err := service.recipeAPIClient.GetRecipe(ctx, "", "", job.RecipeID)
 	if err != nil {
 		log.Event(ctx, "CreateJob: failed to get recipe details", log.ERROR, log.Error(err), logData)
 		return nil, ErrGetRecipeFailed
 	}
 
+	// Generate a new random UUID
 	jobID, err := uuid.NewV4()
 	if err != nil {
 		log.Event(ctx, "CreateJob: failed to get UUID", log.ERROR, log.Error(err), logData)
 		return nil, err
 	}
+
+	// Update job ID and self link
 	job.ID = jobID.String()
-	job.Links.Self.HRef = service.urlBuilder.GetJobURL(job.ID)
+	job.Links.Self = models.IDLink{
+		HRef: service.urlBuilder.GetJobURL(job.ID),
+		ID:   job.ID,
+	}
 
 	for _, oi := range recipe.OutputInstances {
-		// now create an instance for this file
+
+		// Create a new instance by sending a 'POST /instances' to dataset API
 		datasetPath := service.datasetAPIURL + "/datasets/" + oi.DatasetID
 		newInstance := models.CreateInstance(job, oi.DatasetID, datasetPath, oi.CodeLists)
 		instance, err := service.datasetAPIClient.PostInstance(ctx, service.serviceAuthToken, newInstance)
@@ -107,14 +117,16 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 			return nil, ErrCreateInstanceFailed(oi.DatasetID)
 		}
 
+		// Append the new instance link to provided job
 		job.Links.Instances = append(job.Links.Instances,
 			models.IDLink{
-				ID:   instance.InstanceID,
-				HRef: service.urlBuilder.GetInstanceURL(instance.InstanceID),
+				ID:   instance.ID,
+				HRef: service.urlBuilder.GetInstanceURL(instance.ID),
 			},
 		)
 	}
 
+	// Add job to dataStore
 	createdJob, err := service.dataStore.AddJob(job)
 	if err != nil {
 		log.Event(ctx, "CreateJob: failed to create job in datastore", log.ERROR, log.Error(err), logData)
