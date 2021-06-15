@@ -1,7 +1,7 @@
 github.com/ONSdigital/dp-api-clients-go v1.28.0/go.mod h1:iyJy6uRL4B6OYOJA0XMr5UHt6+Q8XmN9uwmURO+9Oj4=
 github.com/ONSdigital/dp-api-clients-go v1.34.3/go.mod h1:kX+YKuoLYLfkeLHMvQKRRydZVxO7ZEYyYiwG2xhV51E=
-github.com/ONSdigital/dp-api-clients-go v1.37.1-0.20210614125757-5dcfb4a48a3a h1:5yy4XYbN2xTJjcHdm+gg5oAXeQcEKNWyR/Ap5Ue2IC0=
-github.com/ONSdigital/dp-api-clients-go v1.37.1-0.20210614125757-5dcfb4a48a3a/go.mod h1:Ga1+ANjviu21NFJI9wp5NctJIdB4TJLDGbpQFl2V8Wc=
+github.com/ONSdigital/dp-api-clients-go v1.38.0 h1:23ontCGXApZI/ZjKIptxq9sRWJ94kl3nkiyTHg7VaaM=
+github.com/ONSdigital/dp-api-clients-go v1.38.0/go.mod h1:Ga1+ANjviu21NFJI9wp5NctJIdB4TJLDGbpQFl2V8Wc=
 github.com/ONSdigital/dp-healthcheck v1.0.5 h1:DXnohGIqXaLLeYGdaGOhgkZjAbWMNoLAjQ3EgZeMT3M=
 github.com/ONSdigital/dp-healthcheck v1.0.5/go.mod h1:2wbVAUHMl9+4tWhUlxYUuA1dnf2+NrwzC+So5f5BMLk=
 github.com/ONSdigital/dp-import v1.1.0 h1:6pprHZ/TdEqVD4xjzlsmDyzv3r0XiD97pRQ5B3FsYWg=
