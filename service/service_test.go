@@ -13,8 +13,8 @@ import (
 	"github.com/ONSdigital/dp-import-api/datastore"
 	dsmock "github.com/ONSdigital/dp-import-api/datastore/mock"
 	"github.com/ONSdigital/dp-import-api/service/mock"
-	kafka "github.com/ONSdigital/dp-kafka"
-	"github.com/ONSdigital/dp-kafka/kafkatest"
+	kafka "github.com/ONSdigital/dp-kafka/v2"
+	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
 	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -56,7 +56,7 @@ func TestInit(t *testing.T) {
 				return &kafka.ProducerChannels{}
 			},
 		}
-		getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
+		getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
 			return kafkaMock, nil
 		}
 
@@ -85,23 +85,25 @@ func TestInit(t *testing.T) {
 				So(svc.mongoDataStore, ShouldBeNil)
 				So(svc.dataBakerProducer, ShouldResemble, kafkaMock)
 				So(svc.inputFileAvailableProducer, ShouldResemble, kafkaMock)
+				So(svc.cantabularDatasetInstanceStartedProducer, ShouldResemble, kafkaMock)
 				So(svc.healthCheck, ShouldResemble, hcMock)
 				So(svc.server, ShouldResemble, serverMock)
 
 				Convey("But all checks try to register", func() {
-					So(len(hcMock.AddCheckCalls()), ShouldEqual, 6)
+					So(len(hcMock.AddCheckCalls()), ShouldEqual, 7)
 					So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Kafka Data Baker Producer")
 					So(hcMock.AddCheckCalls()[1].Name, ShouldResemble, "Kafka Input File Available Producer")
-					So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "Zebedee")
-					So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Mongo DB")
-					So(hcMock.AddCheckCalls()[4].Name, ShouldResemble, "Dataset API")
-					So(hcMock.AddCheckCalls()[5].Name, ShouldResemble, "Recipe API")
+					So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "Kafka Cantabular Dataset Instance Started Producer")
+					So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Zebedee")
+					So(hcMock.AddCheckCalls()[4].Name, ShouldResemble, "Mongo DB")
+					So(hcMock.AddCheckCalls()[5].Name, ShouldResemble, "Dataset API")
+					So(hcMock.AddCheckCalls()[6].Name, ShouldResemble, "Recipe API")
 				})
 			})
 		})
 
 		Convey("Given that initialising DataBaker kafka producer returns an error", func() {
-			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
+			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
 				if topic == cfg.DatabakerImportTopic {
 					return nil, errKafka
 				}
@@ -114,13 +116,14 @@ func TestInit(t *testing.T) {
 				So(svc.mongoDataStore, ShouldResemble, datastoreMock)
 				So(svc.dataBakerProducer, ShouldBeNil)
 				So(svc.inputFileAvailableProducer, ShouldBeNil)
+				So(svc.cantabularDatasetInstanceStartedProducer, ShouldBeNil)
 				So(svc.healthCheck, ShouldBeNil)
 				So(svc.server, ShouldBeNil)
 			})
 		})
 
 		Convey("Given that initialising Kafka direct producer returns an error", func() {
-			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
+			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
 				if topic == cfg.InputFileAvailableTopic {
 					return nil, errKafka
 				}
@@ -133,6 +136,28 @@ func TestInit(t *testing.T) {
 				So(svc.mongoDataStore, ShouldResemble, datastoreMock)
 				So(svc.dataBakerProducer, ShouldResemble, kafkaMock)
 				So(svc.inputFileAvailableProducer, ShouldBeNil)
+				So(svc.cantabularDatasetInstanceStartedProducer, ShouldBeNil)
+				So(svc.healthCheck, ShouldBeNil)
+				So(svc.server, ShouldBeNil)
+			})
+		})
+
+		Convey("Given that initialising Kafka cantabular producer returns an error", func() {
+			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
+				if topic == cfg.CantabularDatasetInstanceStartedTopic {
+					return nil, errKafka
+				}
+				return kafkaMock, nil
+			}
+
+			Convey("Then service Init fails with the same error and the flag is not set. No further initialisations are attempted", func() {
+				err := svc.Init(ctx, cfg, testBuildTime, testGitCommit, testVersion)
+				So(err, ShouldResemble, errKafka)
+				So(svc.mongoDataStore, ShouldResemble, datastoreMock)
+				So(svc.dataBakerProducer, ShouldResemble, kafkaMock)
+				So(svc.inputFileAvailableProducer, ShouldResemble, kafkaMock)
+				So(svc.cantabularDatasetInstanceStartedProducer, ShouldBeNil)
+				So(svc.cantabularDatasetInstanceStartedProducer, ShouldBeNil)
 				So(svc.healthCheck, ShouldBeNil)
 				So(svc.server, ShouldBeNil)
 			})
@@ -148,6 +173,7 @@ func TestInit(t *testing.T) {
 				So(svc.mongoDataStore, ShouldResemble, datastoreMock)
 				So(svc.dataBakerProducer, ShouldResemble, kafkaMock)
 				So(svc.inputFileAvailableProducer, ShouldResemble, kafkaMock)
+				So(svc.cantabularDatasetInstanceStartedProducer, ShouldResemble, kafkaMock)
 				So(svc.healthCheck, ShouldBeNil)
 				So(svc.server, ShouldBeNil)
 			})
@@ -163,17 +189,19 @@ func TestInit(t *testing.T) {
 				So(svc.mongoDataStore, ShouldResemble, datastoreMock)
 				So(svc.dataBakerProducer, ShouldResemble, kafkaMock)
 				So(svc.inputFileAvailableProducer, ShouldResemble, kafkaMock)
+				So(svc.cantabularDatasetInstanceStartedProducer, ShouldResemble, kafkaMock)
 				So(svc.healthCheck, ShouldResemble, hcMock)
 				So(svc.server, ShouldBeNil)
 
 				Convey("But all checks try to register", func() {
-					So(len(hcMock.AddCheckCalls()), ShouldEqual, 6)
+					So(len(hcMock.AddCheckCalls()), ShouldEqual, 7)
 					So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Kafka Data Baker Producer")
 					So(hcMock.AddCheckCalls()[1].Name, ShouldResemble, "Kafka Input File Available Producer")
-					So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "Zebedee")
-					So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Mongo DB")
-					So(hcMock.AddCheckCalls()[4].Name, ShouldResemble, "Dataset API")
-					So(hcMock.AddCheckCalls()[5].Name, ShouldResemble, "Recipe API")
+					So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "Kafka Cantabular Dataset Instance Started Producer")
+					So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Zebedee")
+					So(hcMock.AddCheckCalls()[4].Name, ShouldResemble, "Mongo DB")
+					So(hcMock.AddCheckCalls()[5].Name, ShouldResemble, "Dataset API")
+					So(hcMock.AddCheckCalls()[6].Name, ShouldResemble, "Recipe API")
 				})
 			})
 		})
@@ -190,13 +218,14 @@ func TestInit(t *testing.T) {
 				So(svc.server, ShouldResemble, serverMock)
 
 				Convey("And all checks are registered", func() {
-					So(len(hcMock.AddCheckCalls()), ShouldEqual, 6)
+					So(len(hcMock.AddCheckCalls()), ShouldEqual, 7)
 					So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Kafka Data Baker Producer")
 					So(hcMock.AddCheckCalls()[1].Name, ShouldResemble, "Kafka Input File Available Producer")
-					So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "Zebedee")
-					So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Mongo DB")
-					So(hcMock.AddCheckCalls()[4].Name, ShouldResemble, "Dataset API")
-					So(hcMock.AddCheckCalls()[5].Name, ShouldResemble, "Recipe API")
+					So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "Kafka Cantabular Dataset Instance Started Producer")
+					So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Zebedee")
+					So(hcMock.AddCheckCalls()[4].Name, ShouldResemble, "Mongo DB")
+					So(hcMock.AddCheckCalls()[5].Name, ShouldResemble, "Dataset API")
+					So(hcMock.AddCheckCalls()[6].Name, ShouldResemble, "Recipe API")
 				})
 			})
 		})
@@ -222,6 +251,12 @@ func TestStart(t *testing.T) {
 			},
 		}
 
+		kafkaProducerCantabular := &kafkatest.IProducerMock{
+			ChannelsFunc: func() *kafka.ProducerChannels {
+				return &kafka.ProducerChannels{}
+			},
+		}
+
 		hcMock := &mock.HealthCheckerMock{
 			StartFunc: func(ctx context.Context) {},
 		}
@@ -230,11 +265,12 @@ func TestStart(t *testing.T) {
 		serverMock := &mock.HTTPServerMock{}
 
 		svc := &Service{
-			cfg:                        cfg,
-			dataBakerProducer:          kafkaProducerBaker,
-			inputFileAvailableProducer: kafkaProducerDirect,
-			healthCheck:                hcMock,
-			server:                     serverMock,
+			cfg:                                      cfg,
+			dataBakerProducer:                        kafkaProducerBaker,
+			inputFileAvailableProducer:               kafkaProducerDirect,
+			cantabularDatasetInstanceStartedProducer: kafkaProducerCantabular,
+			healthCheck:                              hcMock,
+			server:                                   serverMock,
 		}
 
 		Convey("When a service with a successful HTTP server is started", func() {
@@ -326,6 +362,13 @@ func TestClose(t *testing.T) {
 			CloseFunc: funcClose,
 		}
 
+		cantabularKafkaProducer := &kafkatest.IProducerMock{
+			ChannelsFunc: func() *kafka.ProducerChannels {
+				return &kafka.ProducerChannels{}
+			},
+			CloseFunc: funcClose,
+		}
+
 		Convey("Closing a service does not close uninitialised dependencies", func() {
 			svc := Service{
 				cfg: cfg,
@@ -335,12 +378,13 @@ func TestClose(t *testing.T) {
 		})
 
 		svc := Service{
-			cfg:                        cfg,
-			healthCheck:                hcMock,
-			mongoDataStore:             mongoMock,
-			dataBakerProducer:          dataBakerKafkaProducerMock,
-			inputFileAvailableProducer: inputFileProducerAvailableKafkaProducer,
-			server:                     serverMock,
+			cfg:                                      cfg,
+			healthCheck:                              hcMock,
+			mongoDataStore:                           mongoMock,
+			dataBakerProducer:                        dataBakerKafkaProducerMock,
+			inputFileAvailableProducer:               inputFileProducerAvailableKafkaProducer,
+			cantabularDatasetInstanceStartedProducer: cantabularKafkaProducer,
+			server:                                   serverMock,
 		}
 
 		Convey("Closing the service results in all the initialised dependencies being closed in the expected order", func() {
@@ -351,6 +395,7 @@ func TestClose(t *testing.T) {
 			So(len(mongoMock.CloseCalls()), ShouldEqual, 1)
 			So(len(dataBakerKafkaProducerMock.CloseCalls()), ShouldEqual, 1)
 			So(len(inputFileProducerAvailableKafkaProducer.CloseCalls()), ShouldEqual, 1)
+			So(len(cantabularKafkaProducer.CloseCalls()), ShouldEqual, 1)
 		})
 
 		Convey("If services fail to stop, the Close operation tries to close all dependencies and returns an error", func() {
@@ -366,6 +411,7 @@ func TestClose(t *testing.T) {
 			So(len(mongoMock.CloseCalls()), ShouldEqual, 1)
 			So(len(dataBakerKafkaProducerMock.CloseCalls()), ShouldEqual, 1)
 			So(len(inputFileProducerAvailableKafkaProducer.CloseCalls()), ShouldEqual, 1)
+			So(len(cantabularKafkaProducer.CloseCalls()), ShouldEqual, 1)
 		})
 
 		Convey("Given that a dependency takes more time to close than the graceful shutdown timeout", func() {
@@ -383,6 +429,7 @@ func TestClose(t *testing.T) {
 				So(len(mongoMock.CloseCalls()), ShouldEqual, 0)
 				So(len(dataBakerKafkaProducerMock.CloseCalls()), ShouldEqual, 0)
 				So(len(inputFileProducerAvailableKafkaProducer.CloseCalls()), ShouldEqual, 0)
+				So(len(cantabularKafkaProducer.CloseCalls()), ShouldEqual, 0)
 			})
 		})
 	})

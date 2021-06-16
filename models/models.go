@@ -83,6 +83,12 @@ type Recipe struct {
 	Alias           string           `json:"alias"`
 	Format          string           `json:"format,omitempty"`
 	OutputInstances []RecipeInstance `json:"output_instances"`
+	InputFiles      []file           `json:"files,omitempty"`
+	CantabularBlob  string           `json:"cantabular_blob,omitempty"`
+}
+
+type file struct {
+	Description string `json:"description,omitempty"`
 }
 
 type RecipeInstance struct {

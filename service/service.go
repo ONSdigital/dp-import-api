@@ -20,7 +20,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/mongo"
 	"github.com/ONSdigital/dp-import-api/recipe"
 	"github.com/ONSdigital/dp-import-api/url"
-	kafka "github.com/ONSdigital/dp-kafka"
+	kafka "github.com/ONSdigital/dp-kafka/v2"
 	dphandlers "github.com/ONSdigital/dp-net/handlers"
 	dphttp "github.com/ONSdigital/dp-net/http"
 	dprequest "github.com/ONSdigital/dp-net/request"
@@ -32,16 +32,17 @@ import (
 
 // Service contains all the configs, server and clients to run the Dataset API
 type Service struct {
-	cfg                        *config.Configuration
-	mongoDataStore             datastore.DataStorer
-	dataBakerProducer          kafka.IProducer
-	inputFileAvailableProducer kafka.IProducer
-	server                     HTTPServer
-	healthCheck                HealthChecker
-	importAPI                  *api.ImportAPI
-	identityClient             *clientsidentity.Client
-	datasetAPI                 *dataset.API
-	recipeAPI                  *recipe.API
+	cfg                                      *config.Configuration
+	mongoDataStore                           datastore.DataStorer
+	dataBakerProducer                        kafka.IProducer
+	inputFileAvailableProducer               kafka.IProducer
+	cantabularDatasetInstanceStartedProducer kafka.IProducer
+	server                                   HTTPServer
+	healthCheck                              HealthChecker
+	importAPI                                *api.ImportAPI
+	identityClient                           *clientsidentity.Client
+	datasetAPI                               *dataset.API
+	recipeAPI                                *recipe.API
 }
 
 // getMongoDataStore creates a mongoDB connection
@@ -50,9 +51,13 @@ var getMongoDataStore = func(cfg *config.Configuration) (datastore.DataStorer, e
 }
 
 // getKafkaProducer creates a new Kafka Producer
-var getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int) (kafka.IProducer, error) {
+var getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
 	producerChannels := kafka.CreateProducerChannels()
-	return kafka.NewProducer(ctx, kafkaBrokers, topic, envMax, producerChannels)
+	pConfig := &kafka.ProducerConfig{
+		KafkaVersion:    &kafkaVersion,
+		MaxMessageBytes: &envMax,
+	}
+	return kafka.NewProducer(ctx, kafkaBrokers, topic, producerChannels, pConfig)
 }
 
 // getHealthCheck returns a healthcheck
@@ -85,16 +90,23 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 	}
 
 	// Get data baker kafka producer
-	svc.dataBakerProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.DatabakerImportTopic, svc.cfg.KafkaMaxBytes)
+	svc.dataBakerProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.DatabakerImportTopic, svc.cfg.KafkaMaxBytes, svc.cfg.KafkaVersion)
 	if err != nil {
 		log.Event(ctx, "databaker kafka producer error", log.FATAL, log.Error(err))
 		return err
 	}
 
 	// Get input file available kafka producer
-	svc.inputFileAvailableProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.InputFileAvailableTopic, svc.cfg.KafkaMaxBytes)
+	svc.inputFileAvailableProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.InputFileAvailableTopic, svc.cfg.KafkaMaxBytes, svc.cfg.KafkaVersion)
 	if err != nil {
 		log.Event(ctx, "direct kafka producer error", log.FATAL, log.Error(err))
+		return err
+	}
+
+	// Get Cantabular Dataset Instance Started kafka producer
+	svc.cantabularDatasetInstanceStartedProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.CantabularDatasetInstanceStartedTopic, svc.cfg.KafkaMaxBytes, svc.cfg.KafkaVersion)
+	if err != nil {
+		log.Event(ctx, "cantabular dataset instance started kafka producer error", log.FATAL, log.Error(err))
 		return err
 	}
 
@@ -125,7 +137,11 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 
 	// Create API with job service
 	urlBuilder := url.NewBuilder(svc.cfg.Host, svc.cfg.DatasetAPIURL)
-	jobQueue := importqueue.CreateImportQueue(svc.dataBakerProducer.Channels().Output, svc.inputFileAvailableProducer.Channels().Output)
+	jobQueue := importqueue.CreateImportQueue(
+		svc.dataBakerProducer.Channels().Output,
+		svc.inputFileAvailableProducer.Channels().Output,
+		svc.cantabularDatasetInstanceStartedProducer.Channels().Output,
+	)
 	jobService := job.NewService(svc.mongoDataStore, jobQueue, svc.datasetAPI, svc.recipeAPI, urlBuilder)
 	svc.importAPI = api.Setup(r, svc.mongoDataStore, jobService, cfg)
 	return nil
@@ -137,6 +153,7 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 	// Start kafka logging
 	svc.dataBakerProducer.Channels().LogErrors(ctx, "error received from kafka data baker producer, topic: "+svc.cfg.DatabakerImportTopic)
 	svc.inputFileAvailableProducer.Channels().LogErrors(ctx, "error received from kafka input file available producer, topic: "+svc.cfg.InputFileAvailableTopic)
+	svc.cantabularDatasetInstanceStartedProducer.Channels().LogErrors(ctx, "error recieved from kafka cantabular dataset instance started producer, topic: "+svc.cfg.CantabularDatasetInstanceStartedTopic)
 
 	// Start healthcheck
 	svc.healthCheck.Start(ctx)
@@ -210,6 +227,15 @@ func (svc *Service) Close(ctx context.Context) error {
 				hasShutdownError = true
 			}
 		}
+
+		// Close Cantabular Kafka Producer (if it exists)
+		if svc.cantabularDatasetInstanceStartedProducer != nil {
+			log.Event(ctx, "closing cantabular dataset instance started producer", log.INFO)
+			if err := svc.cantabularDatasetInstanceStartedProducer.Close(ctx); err != nil {
+				log.Event(ctx, "unable to close cantabular dataset instance started producer", log.ERROR, log.Error(err))
+				hasShutdownError = true
+			}
+		}
 	}()
 
 	// wait for shutdown success (via cancel) or failure (timeout)
@@ -264,6 +290,7 @@ func (svc *Service) registerCheckers(ctx context.Context) (err error) {
 
 	registerChecker("Kafka Data Baker Producer", svc.dataBakerProducer)
 	registerChecker("Kafka Input File Available Producer", svc.inputFileAvailableProducer)
+	registerChecker("Kafka Cantabular Dataset Instance Started Producer", svc.cantabularDatasetInstanceStartedProducer)
 	registerChecker("Zebedee", svc.identityClient)
 	registerChecker("Mongo DB", svc.mongoDataStore)
 	registerChecker("Dataset API", datasetAPIClient)
