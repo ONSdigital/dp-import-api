@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ONSdigital/dp-api-clients-go/recipe"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/mocks"
 	. "github.com/smartystreets/goconvey/convey"
@@ -76,19 +77,22 @@ func TestCreateInstance(t *testing.T) {
 
 	Convey("Given a dummy job and slice of codelists", t, func() {
 
+		hierarchy := true
+		notHierarchy := false
+
 		job := &Job{}
 		datasetID := "123"
 		datasetURL := "/wut"
-		codelists := []CodeList{
+		codelists := []recipe.CodeList{
 			{
 				Name:        "codelist1",
 				ID:          "1",
-				IsHierarchy: false,
+				IsHierarchy: &notHierarchy,
 			},
 			{
 				Name:        "codelist2",
 				ID:          "2",
-				IsHierarchy: true,
+				IsHierarchy: &hierarchy,
 			},
 		}
 

@@ -16,11 +16,14 @@ type DataStorer struct {
 	InternalError bool
 }
 
+// CreatedJob represents a job returned by AddJob
+var CreatedJob models.Job = models.Job{ID: "34534543543"}
+
 func (ds *DataStorer) AddJob(importJob *models.Job) (*models.Job, error) {
 	if ds.InternalError {
 		return &models.Job{}, InternalError
 	}
-	return &models.Job{ID: "34534543543"}, nil
+	return &CreatedJob, nil
 }
 
 func (ds *DataStorer) GetJobs(ctx context.Context, filter []string, offset int, limit int) (*models.JobResults, error) {

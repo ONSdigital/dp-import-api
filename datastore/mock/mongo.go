@@ -19,7 +19,6 @@ var (
 	lockDataStorerMockGetJob          sync.RWMutex
 	lockDataStorerMockGetJobs         sync.RWMutex
 	lockDataStorerMockUpdateJob       sync.RWMutex
-	lockDataStorerMockUpdateJobState  sync.RWMutex
 )
 
 // Ensure, that DataStorerMock does implement datastore.DataStorer.
@@ -47,14 +46,11 @@ var _ datastore.DataStorer = &DataStorerMock{}
 //             GetJobFunc: func(jobID string) (*models.Job, error) {
 // 	               panic("mock out the GetJob method")
 //             },
-//             GetJobsFunc: func(filters []string) ([]models.Job, error) {
+//             GetJobsFunc: func(ctx context.Context, filters []string, offset int, limit int) (*models.JobResults, error) {
 // 	               panic("mock out the GetJobs method")
 //             },
 //             UpdateJobFunc: func(jobID string, update *models.Job) error {
 // 	               panic("mock out the UpdateJob method")
-//             },
-//             UpdateJobStateFunc: func(jobID string, state string) error {
-// 	               panic("mock out the UpdateJobState method")
 //             },
 //         }
 //
@@ -83,9 +79,6 @@ type DataStorerMock struct {
 
 	// UpdateJobFunc mocks the UpdateJob method.
 	UpdateJobFunc func(jobID string, update *models.Job) error
-
-	// UpdateJobStateFunc mocks the UpdateJobState method.
-	UpdateJobStateFunc func(jobID string, state string) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -120,8 +113,14 @@ type DataStorerMock struct {
 		}
 		// GetJobs holds details about calls to the GetJobs method.
 		GetJobs []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
 			// Filters is the filters argument value.
 			Filters []string
+			// Offset is the offset argument value.
+			Offset int
+			// Limit is the limit argument value.
+			Limit int
 		}
 		// UpdateJob holds details about calls to the UpdateJob method.
 		UpdateJob []struct {
@@ -129,13 +128,6 @@ type DataStorerMock struct {
 			JobID string
 			// Update is the update argument value.
 			Update *models.Job
-		}
-		// UpdateJobState holds details about calls to the UpdateJobState method.
-		UpdateJobState []struct {
-			// JobID is the jobID argument value.
-			JobID string
-			// State is the state argument value.
-			State string
 		}
 	}
 }
@@ -309,9 +301,15 @@ func (mock *DataStorerMock) GetJobs(ctx context.Context, filters []string, offse
 		panic("DataStorerMock.GetJobsFunc: method is nil but DataStorer.GetJobs was just called")
 	}
 	callInfo := struct {
+		Ctx     context.Context
 		Filters []string
+		Offset  int
+		Limit   int
 	}{
+		Ctx:     ctx,
 		Filters: filters,
+		Offset:  offset,
+		Limit:   limit,
 	}
 	lockDataStorerMockGetJobs.Lock()
 	mock.calls.GetJobs = append(mock.calls.GetJobs, callInfo)
@@ -323,10 +321,16 @@ func (mock *DataStorerMock) GetJobs(ctx context.Context, filters []string, offse
 // Check the length with:
 //     len(mockedDataStorer.GetJobsCalls())
 func (mock *DataStorerMock) GetJobsCalls() []struct {
+	Ctx     context.Context
 	Filters []string
+	Offset  int
+	Limit   int
 } {
 	var calls []struct {
+		Ctx     context.Context
 		Filters []string
+		Offset  int
+		Limit   int
 	}
 	lockDataStorerMockGetJobs.RLock()
 	calls = mock.calls.GetJobs
@@ -366,22 +370,5 @@ func (mock *DataStorerMock) UpdateJobCalls() []struct {
 	lockDataStorerMockUpdateJob.RLock()
 	calls = mock.calls.UpdateJob
 	lockDataStorerMockUpdateJob.RUnlock()
-	return calls
-}
-
-// UpdateJobStateCalls gets all the calls that were made to UpdateJobState.
-// Check the length with:
-//     len(mockedDataStorer.UpdateJobStateCalls())
-func (mock *DataStorerMock) UpdateJobStateCalls() []struct {
-	JobID string
-	State string
-} {
-	var calls []struct {
-		JobID string
-		State string
-	}
-	lockDataStorerMockUpdateJobState.RLock()
-	calls = mock.calls.UpdateJobState
-	lockDataStorerMockUpdateJobState.RUnlock()
 	return calls
 }

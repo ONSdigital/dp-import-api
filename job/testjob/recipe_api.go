@@ -5,81 +5,143 @@ package testjob
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-api-clients-go/recipe"
+	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-api/job"
-	"github.com/ONSdigital/dp-import-api/models"
 	"sync"
 )
 
 var (
-	lockRecipeAPIMockGetRecipe sync.RWMutex
+	lockRecipeAPIClientMockChecker   sync.RWMutex
+	lockRecipeAPIClientMockGetRecipe sync.RWMutex
 )
 
-// Ensure, that RecipeAPIMock does implement RecipeAPI.
+// Ensure, that RecipeAPIClientMock does implement job.RecipeAPIClient.
 // If this is not the case, regenerate this file with moq.
-var _ job.RecipeAPI = &RecipeAPIMock{}
+var _ job.RecipeAPIClient = &RecipeAPIClientMock{}
 
-// RecipeAPIMock is a mock implementation of job.RecipeAPI.
+// RecipeAPIClientMock is a mock implementation of job.RecipeAPIClient.
 //
-//     func TestSomethingThatUsesRecipeAPI(t *testing.T) {
+//     func TestSomethingThatUsesRecipeAPIClient(t *testing.T) {
 //
-//         // make and configure a mocked job.RecipeAPI
-//         mockedRecipeAPI := &RecipeAPIMock{
-//             GetRecipeFunc: func(ctx context.Context, ID string) (*models.Recipe, error) {
+//         // make and configure a mocked job.RecipeAPIClient
+//         mockedRecipeAPIClient := &RecipeAPIClientMock{
+//             CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+// 	               panic("mock out the Checker method")
+//             },
+//             GetRecipeFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, recipeID string) (*recipe.Recipe, error) {
 // 	               panic("mock out the GetRecipe method")
 //             },
 //         }
 //
-//         // use mockedRecipeAPI in code that requires job.RecipeAPI
+//         // use mockedRecipeAPIClient in code that requires job.RecipeAPIClient
 //         // and then make assertions.
 //
 //     }
-type RecipeAPIMock struct {
+type RecipeAPIClientMock struct {
+	// CheckerFunc mocks the Checker method.
+	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
+
 	// GetRecipeFunc mocks the GetRecipe method.
-	GetRecipeFunc func(ctx context.Context, ID string) (*models.Recipe, error)
+	GetRecipeFunc func(ctx context.Context, userAuthToken string, serviceAuthToken string, recipeID string) (*recipe.Recipe, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// Checker holds details about calls to the Checker method.
+		Checker []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// State is the state argument value.
+			State *healthcheck.CheckState
+		}
 		// GetRecipe holds details about calls to the GetRecipe method.
 		GetRecipe []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
-			// ID is the ID argument value.
-			ID string
+			// UserAuthToken is the userAuthToken argument value.
+			UserAuthToken string
+			// ServiceAuthToken is the serviceAuthToken argument value.
+			ServiceAuthToken string
+			// RecipeID is the recipeID argument value.
+			RecipeID string
 		}
 	}
 }
 
-// GetRecipe calls GetRecipeFunc.
-func (mock *RecipeAPIMock) GetRecipe(ctx context.Context, ID string) (*models.Recipe, error) {
-	if mock.GetRecipeFunc == nil {
-		panic("RecipeAPIMock.GetRecipeFunc: method is nil but RecipeAPI.GetRecipe was just called")
+// Checker calls CheckerFunc.
+func (mock *RecipeAPIClientMock) Checker(ctx context.Context, state *healthcheck.CheckState) error {
+	if mock.CheckerFunc == nil {
+		panic("RecipeAPIClientMock.CheckerFunc: method is nil but RecipeAPIClient.Checker was just called")
 	}
 	callInfo := struct {
-		Ctx context.Context
-		ID  string
+		Ctx   context.Context
+		State *healthcheck.CheckState
 	}{
-		Ctx: ctx,
-		ID:  ID,
+		Ctx:   ctx,
+		State: state,
 	}
-	lockRecipeAPIMockGetRecipe.Lock()
+	lockRecipeAPIClientMockChecker.Lock()
+	mock.calls.Checker = append(mock.calls.Checker, callInfo)
+	lockRecipeAPIClientMockChecker.Unlock()
+	return mock.CheckerFunc(ctx, state)
+}
+
+// CheckerCalls gets all the calls that were made to Checker.
+// Check the length with:
+//     len(mockedRecipeAPIClient.CheckerCalls())
+func (mock *RecipeAPIClientMock) CheckerCalls() []struct {
+	Ctx   context.Context
+	State *healthcheck.CheckState
+} {
+	var calls []struct {
+		Ctx   context.Context
+		State *healthcheck.CheckState
+	}
+	lockRecipeAPIClientMockChecker.RLock()
+	calls = mock.calls.Checker
+	lockRecipeAPIClientMockChecker.RUnlock()
+	return calls
+}
+
+// GetRecipe calls GetRecipeFunc.
+func (mock *RecipeAPIClientMock) GetRecipe(ctx context.Context, userAuthToken string, serviceAuthToken string, recipeID string) (*recipe.Recipe, error) {
+	if mock.GetRecipeFunc == nil {
+		panic("RecipeAPIClientMock.GetRecipeFunc: method is nil but RecipeAPIClient.GetRecipe was just called")
+	}
+	callInfo := struct {
+		Ctx              context.Context
+		UserAuthToken    string
+		ServiceAuthToken string
+		RecipeID         string
+	}{
+		Ctx:              ctx,
+		UserAuthToken:    userAuthToken,
+		ServiceAuthToken: serviceAuthToken,
+		RecipeID:         recipeID,
+	}
+	lockRecipeAPIClientMockGetRecipe.Lock()
 	mock.calls.GetRecipe = append(mock.calls.GetRecipe, callInfo)
-	lockRecipeAPIMockGetRecipe.Unlock()
-	return mock.GetRecipeFunc(ctx, ID)
+	lockRecipeAPIClientMockGetRecipe.Unlock()
+	return mock.GetRecipeFunc(ctx, userAuthToken, serviceAuthToken, recipeID)
 }
 
 // GetRecipeCalls gets all the calls that were made to GetRecipe.
 // Check the length with:
-//     len(mockedRecipeAPI.GetRecipeCalls())
-func (mock *RecipeAPIMock) GetRecipeCalls() []struct {
-	Ctx context.Context
-	ID  string
+//     len(mockedRecipeAPIClient.GetRecipeCalls())
+func (mock *RecipeAPIClientMock) GetRecipeCalls() []struct {
+	Ctx              context.Context
+	UserAuthToken    string
+	ServiceAuthToken string
+	RecipeID         string
 } {
 	var calls []struct {
-		Ctx context.Context
-		ID  string
+		Ctx              context.Context
+		UserAuthToken    string
+		ServiceAuthToken string
+		RecipeID         string
 	}
-	lockRecipeAPIMockGetRecipe.RLock()
+	lockRecipeAPIClientMockGetRecipe.RLock()
 	calls = mock.calls.GetRecipe
-	lockRecipeAPIMockGetRecipe.RUnlock()
+	lockRecipeAPIClientMockGetRecipe.RUnlock()
 	return calls
 }
