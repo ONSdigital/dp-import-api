@@ -17,12 +17,14 @@ const (
 	CompletedState = "completed"
 	CreatedState   = "created"
 	SubmittedState = "submitted"
+	FailedState    = "failed"
 )
 
 var validStates = map[string]bool{
 	CompletedState: true,
 	CreatedState:   true,
 	SubmittedState: true,
+	FailedState:    true,
 }
 
 // JobResults for list of Job items
