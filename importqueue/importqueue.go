@@ -12,8 +12,8 @@ import (
 // block of constants corresponding to possible job formats
 const (
 	formatV4              = "v4"
-	formatCantabularBlob  = "cantabular-blob"
-	formatCantabularTable = "cantabular-table"
+	formatCantabularBlob  = "cantabular_blob"
+	formatCantabularTable = "cantabular_table"
 )
 
 // ImportQueue used to send import jobs via kafka topic
