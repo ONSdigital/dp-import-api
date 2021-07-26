@@ -15,6 +15,7 @@ var (
 	ErrInternalServer            = errors.New("internal error")
 	ErrInvalidState              = errors.New("invalid state")
 	ErrInvalidUploadedFileObject = errors.New("invalid json object received, alias_name and url are required")
+	ErrInvalidInstanceID         = errors.New("the instance id was not found in the provided job")
 	ErrJobNotFound               = errors.New("job not found")
 	ErrMissingProperties         = errors.New("missing properties to create import job")
 	ErrUnauthorised              = errors.New("unauthenticated request")
@@ -31,6 +32,7 @@ var (
 		ErrInvalidPositiveInteger:    true,
 		ErrInvalidState:              true,
 		ErrInvalidUploadedFileObject: true,
+		ErrInvalidInstanceID:         true,
 		ErrMissingProperties:         true,
 	}
 )

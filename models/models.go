@@ -38,13 +38,14 @@ type JobResults struct {
 
 // Job for importing datasets
 type Job struct {
-	ID              string              `bson:"id,omitempty"               json:"id,omitempty"`
-	RecipeID        string              `bson:"recipe,omitempty"           json:"recipe,omitempty"`
-	State           string              `bson:"state,omitempty"            json:"state,omitempty"`
-	UploadedFiles   *[]UploadedFile     `bson:"files,omitempty"            json:"files,omitempty"`
-	Links           LinksMap            `bson:"links,omitempty"            json:"links,omitempty"`
-	LastUpdated     time.Time           `bson:"last_updated,omitempty"     json:"last_updated,omitempty"`
-	UniqueTimestamp bson.MongoTimestamp `bson:"unique_timestamp,omitempty" json:"-"`
+	ID              string               `bson:"id,omitempty"                  json:"id,omitempty"`
+	RecipeID        string               `bson:"recipe,omitempty"              json:"recipe,omitempty"`
+	State           string               `bson:"state,omitempty"               json:"state,omitempty"`
+	UploadedFiles   *[]UploadedFile      `bson:"files,omitempty"               json:"files,omitempty"`
+	Links           LinksMap             `bson:"links,omitempty"               json:"links,omitempty"`
+	Processed       []ProcessedInstances `bson:"processed_instances,omitempty" json:"processed_instances,omitempty"`
+	LastUpdated     time.Time            `bson:"last_updated,omitempty"        json:"last_updated,omitempty"`
+	UniqueTimestamp bson.MongoTimestamp  `bson:"unique_timestamp,omitempty"    json:"-"`
 }
 
 // LinksMap represents a list of links related to a job resource
@@ -112,6 +113,13 @@ type DataBakerEvent struct {
 type IDLink struct {
 	ID   string `json:"id"`
 	HRef string `json:"href"`
+}
+
+// ProcessedInstances holds the ID and the number of code lists that have been processed during an import process for an instance
+type ProcessedInstances struct {
+	ID             string `bson:"id,omitempty"               json:"id,omitempty"`
+	RequiredCount  int    `bson:"required_count,omitempty"   json:"required_count,omitempty"`
+	ProcessedCount int    `bson:"processed_count,omitempty"  json:"processed_count,omitempty"`
 }
 
 // CreateJob from a json message

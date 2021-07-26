@@ -40,7 +40,16 @@ func (ds *DataStorer) GetJob(jobID string) (*models.Job, error) {
 	if ds.NotFound {
 		return &models.Job{}, errs.ErrJobNotFound
 	}
-	return &models.Job{ID: "34534543543"}, nil
+	return &models.Job{
+		ID: "34534543543",
+		Processed: []models.ProcessedInstances{
+			{
+				ID:             "54321",
+				RequiredCount:  5,
+				ProcessedCount: 0,
+			},
+		},
+	}, nil
 }
 
 func (ds *DataStorer) AddInstance(jobID string) (string, error) {
@@ -74,6 +83,16 @@ func (ds *DataStorer) UpdateJobState(string, string) error {
 }
 
 func (ds *DataStorer) AddUploadedFile(jobID string, message *models.UploadedFile) error {
+	if ds.NotFound {
+		return errs.ErrJobNotFound
+	}
+	if ds.InternalError {
+		return InternalError
+	}
+	return nil
+}
+
+func (ds *DataStorer) UpdateProcessedInstance(id string, procInstances []models.ProcessedInstances) (err error) {
 	if ds.NotFound {
 		return errs.ErrJobNotFound
 	}

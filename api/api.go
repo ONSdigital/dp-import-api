@@ -3,8 +3,9 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/ONSdigital/dp-import-api/config"
 	"net/http"
+
+	"github.com/ONSdigital/dp-import-api/config"
 
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/datastore"
@@ -17,7 +18,8 @@ import (
 //go:generate moq -out testapi/job_service.go -pkg testapi . JobService
 
 const (
-	jobIDKey = "job_id"
+	jobIDKey      = "job_id"
+	instanceIDKey = "instance_id"
 )
 
 // ImportAPI is a restful API used to manage importing datasets to be published
@@ -56,6 +58,7 @@ func Setup(router *mux.Router,
 	api.router.Path("/jobs/{id}").Methods("GET").HandlerFunc(handlers.CheckIdentity(api.getJobHandler))
 	api.router.Path("/jobs/{id}").Methods("PUT").HandlerFunc(handlers.CheckIdentity(api.updateJobHandler))
 	api.router.Path("/jobs/{id}/files").Methods("PUT").HandlerFunc(handlers.CheckIdentity(api.addUploadedFileHandler))
+	api.router.Path("/jobs/{id}/processed/{instance_id}").Methods("PUT").HandlerFunc(handlers.CheckIdentity(api.increaseProcessedInstanceHandler))
 	return api
 }
 

@@ -2,8 +2,9 @@ package mongo
 
 import (
 	"context"
-	"github.com/ONSdigital/log.go/log"
 	"time"
+
+	"github.com/ONSdigital/log.go/log"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
@@ -192,6 +193,30 @@ func (m *Mongo) UpdateJob(id string, job *models.Job) (err error) {
 
 	// Replace above with below once go-ns mongo package has been updated
 	//mongo.WithUpdates(bson.M{"$set": job})
+	err = s.DB(m.Database).C(m.Collection).Update(bson.M{"id": id}, update)
+
+	if err != nil && err == mgo.ErrNotFound {
+		return errs.ErrJobNotFound
+	}
+
+	return nil
+}
+
+// UpdateProcessedInstance overides the processed instances for an existing import job
+func (m *Mongo) UpdateProcessedInstance(id string, procInstances []models.ProcessedInstances) (err error) {
+	s := session.Copy()
+	defer s.Close()
+
+	update := bson.M{
+		"$set": bson.M{"processed_instances": procInstances},
+		"$currentDate": bson.M{
+			"last_updated": true,
+			"unique_timestamp": bson.M{
+				"$type": "timestamp",
+			},
+		},
+	}
+
 	err = s.DB(m.Database).C(m.Collection).Update(bson.M{"id": id}, update)
 
 	if err != nil && err == mgo.ErrNotFound {

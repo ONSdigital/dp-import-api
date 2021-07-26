@@ -12,13 +12,14 @@ import (
 )
 
 var (
-	lockDataStorerMockAddJob          sync.RWMutex
-	lockDataStorerMockAddUploadedFile sync.RWMutex
-	lockDataStorerMockChecker         sync.RWMutex
-	lockDataStorerMockClose           sync.RWMutex
-	lockDataStorerMockGetJob          sync.RWMutex
-	lockDataStorerMockGetJobs         sync.RWMutex
-	lockDataStorerMockUpdateJob       sync.RWMutex
+	lockDataStorerMockAddJob                  sync.RWMutex
+	lockDataStorerMockAddUploadedFile         sync.RWMutex
+	lockDataStorerMockChecker                 sync.RWMutex
+	lockDataStorerMockClose                   sync.RWMutex
+	lockDataStorerMockGetJob                  sync.RWMutex
+	lockDataStorerMockGetJobs                 sync.RWMutex
+	lockDataStorerMockUpdateJob               sync.RWMutex
+	lockDataStorerMockUpdateProcessedInstance sync.RWMutex
 )
 
 // Ensure, that DataStorerMock does implement datastore.DataStorer.
@@ -52,6 +53,9 @@ var _ datastore.DataStorer = &DataStorerMock{}
 //             UpdateJobFunc: func(jobID string, update *models.Job) error {
 // 	               panic("mock out the UpdateJob method")
 //             },
+//             UpdateProcessedInstanceFunc: func(id string, procInstances []models.ProcessedInstances) error {
+// 	               panic("mock out the UpdateProcessedInstance method")
+//             },
 //         }
 //
 //         // use mockedDataStorer in code that requires datastore.DataStorer
@@ -79,6 +83,9 @@ type DataStorerMock struct {
 
 	// UpdateJobFunc mocks the UpdateJob method.
 	UpdateJobFunc func(jobID string, update *models.Job) error
+
+	// UpdateProcessedInstanceFunc mocks the UpdateProcessedInstance method.
+	UpdateProcessedInstanceFunc func(id string, procInstances []models.ProcessedInstances) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -128,6 +135,13 @@ type DataStorerMock struct {
 			JobID string
 			// Update is the update argument value.
 			Update *models.Job
+		}
+		// UpdateProcessedInstance holds details about calls to the UpdateProcessedInstance method.
+		UpdateProcessedInstance []struct {
+			// ID is the id argument value.
+			ID string
+			// ProcInstances is the procInstances argument value.
+			ProcInstances []models.ProcessedInstances
 		}
 	}
 }
@@ -370,5 +384,40 @@ func (mock *DataStorerMock) UpdateJobCalls() []struct {
 	lockDataStorerMockUpdateJob.RLock()
 	calls = mock.calls.UpdateJob
 	lockDataStorerMockUpdateJob.RUnlock()
+	return calls
+}
+
+// UpdateProcessedInstance calls UpdateProcessedInstanceFunc.
+func (mock *DataStorerMock) UpdateProcessedInstance(id string, procInstances []models.ProcessedInstances) error {
+	if mock.UpdateProcessedInstanceFunc == nil {
+		panic("DataStorerMock.UpdateProcessedInstanceFunc: method is nil but DataStorer.UpdateProcessedInstance was just called")
+	}
+	callInfo := struct {
+		ID            string
+		ProcInstances []models.ProcessedInstances
+	}{
+		ID:            id,
+		ProcInstances: procInstances,
+	}
+	lockDataStorerMockUpdateProcessedInstance.Lock()
+	mock.calls.UpdateProcessedInstance = append(mock.calls.UpdateProcessedInstance, callInfo)
+	lockDataStorerMockUpdateProcessedInstance.Unlock()
+	return mock.UpdateProcessedInstanceFunc(id, procInstances)
+}
+
+// UpdateProcessedInstanceCalls gets all the calls that were made to UpdateProcessedInstance.
+// Check the length with:
+//     len(mockedDataStorer.UpdateProcessedInstanceCalls())
+func (mock *DataStorerMock) UpdateProcessedInstanceCalls() []struct {
+	ID            string
+	ProcInstances []models.ProcessedInstances
+} {
+	var calls []struct {
+		ID            string
+		ProcInstances []models.ProcessedInstances
+	}
+	lockDataStorerMockUpdateProcessedInstance.RLock()
+	calls = mock.calls.UpdateProcessedInstance
+	lockDataStorerMockUpdateProcessedInstance.RUnlock()
 	return calls
 }

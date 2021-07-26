@@ -75,7 +75,7 @@ func NewService(dataStore datastore.DataStorer, queue Queue, datasetAPIURL strin
 
 // CreateJob creates a new job using the instances corresponding to the recipe defined by recipeID in the provided job.
 // A new instance will be posted to dataset api for each outputInstance defined in the recipe.
-// Note that the provided job will be modified (ID and links will be updated).
+// Note that the provided job will be modified (ID, links and counts will be updated).
 func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.Job, error) {
 	logData := log.Data{"job": job}
 
@@ -106,6 +106,8 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 		ID:   job.ID,
 	}
 
+	job.Processed = []models.ProcessedInstances{}
+
 	for _, oi := range recipe.OutputInstances {
 
 		// Create a new instance by sending a 'POST /instances' to dataset API
@@ -122,6 +124,15 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 			models.IDLink{
 				ID:   instance.ID,
 				HRef: service.urlBuilder.GetInstanceURL(instance.ID),
+			},
+		)
+
+		// Initialise the processed instances count for the current instance
+		job.Processed = append(job.Processed,
+			models.ProcessedInstances{
+				ID:             instance.ID,
+				RequiredCount:  len(oi.CodeLists),
+				ProcessedCount: 0,
 			},
 		)
 	}

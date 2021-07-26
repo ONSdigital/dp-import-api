@@ -24,9 +24,11 @@ var (
 		OutputInstances: []recipe.Instance{
 			{
 				DatasetID: "dataset1",
+				CodeLists: []recipe.CodeList{{ID: "codelist11"}, {ID: "codelist12"}},
 			},
 			{
 				DatasetID: "dataset2",
+				CodeLists: []recipe.CodeList{{ID: "codelist21"}, {ID: "codelist22"}, {ID: "codelist23"}},
 			},
 		},
 	}
@@ -46,7 +48,7 @@ func dummyInstance() *dataset.Instance {
 
 // expectedNewInstance creates an expected NewInstance for the provided jobID and datasetID
 func expectedNewInstance(jobID, datasetID string) *dataset.NewInstance {
-	return &dataset.NewInstance{
+	newInstance := &dataset.NewInstance{
 		Links: &dataset.Links{
 			Dataset: dataset.Link{
 				URL: "http://localhost:22000/datasets/" + datasetID,
@@ -66,6 +68,12 @@ func expectedNewInstance(jobID, datasetID string) *dataset.NewInstance {
 			BuildSearchIndexTasks: []*dataset.BuildSearchIndexTask{},
 		},
 	}
+	if datasetID == "dataset1" {
+		newInstance.Dimensions = []dataset.CodeList{{ID: "codelist11"}, {ID: "codelist12"}}
+	} else if datasetID == "dataset2" {
+		newInstance.Dimensions = []dataset.CodeList{{ID: "codelist21"}, {ID: "codelist22"}, {ID: "codelist23"}}
+	}
+	return newInstance
 }
 
 func TestService_CreateJob(t *testing.T) {
