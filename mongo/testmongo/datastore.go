@@ -9,11 +9,15 @@ import (
 	"github.com/ONSdigital/dp-import-api/models"
 )
 
+const testLockID = "testLockID"
+
 var InternalError = errors.New("DataStore internal error")
 
 type DataStorer struct {
 	NotFound      bool
 	InternalError bool
+	IsLocked      bool
+	HasBeenLocked bool
 }
 
 // CreatedJob represents a job returned by AddJob
@@ -108,4 +112,21 @@ func (m *DataStorer) Close(ctx context.Context) error {
 
 func (m *DataStorer) Checker(ctx context.Context, state *healthcheck.CheckState) error {
 	return nil
+}
+
+func (m *DataStorer) AcquireInstanceLock(ctx context.Context, jobID string) (lockID string, err error) {
+	if m.IsLocked {
+		return "", errors.New("already locked")
+	}
+	m.IsLocked = true
+	m.HasBeenLocked = true
+	return testLockID, nil
+}
+
+func (m *DataStorer) UnlockInstance(lockID string) error {
+	if lockID == testLockID {
+		m.IsLocked = false
+		return nil
+	}
+	return errors.New("wrongLockID")
 }

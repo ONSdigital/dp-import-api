@@ -45,8 +45,8 @@ type Service struct {
 }
 
 // getMongoDataStore creates a mongoDB connection
-var getMongoDataStore = func(cfg *config.Configuration) (datastore.DataStorer, error) {
-	return mongo.NewDatastore(cfg.MongoDBURL, cfg.MongoDBDatabase, cfg.MongoDBCollection)
+var getMongoDataStore = func(ctx context.Context, cfg *config.Configuration) (datastore.DataStorer, error) {
+	return mongo.NewDatastore(ctx, cfg.MongoDBURL, cfg.MongoDBDatabase, cfg.MongoDBCollection)
 }
 
 // getKafkaProducer creates a new Kafka Producer
@@ -83,7 +83,7 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 	svc.cfg = cfg
 
 	// Get mongoDB connection (non-fatal)
-	svc.mongoDataStore, err = getMongoDataStore(svc.cfg)
+	svc.mongoDataStore, err = getMongoDataStore(ctx, svc.cfg)
 	if err != nil {
 		log.Event(ctx, "mongodb datastore error", log.ERROR, log.Error(err))
 	}

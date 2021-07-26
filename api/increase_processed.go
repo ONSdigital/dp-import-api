@@ -20,7 +20,13 @@ func (api *ImportAPI) increaseProcessedInstanceHandler(w http.ResponseWriter, r 
 	instanceID := vars["instance_id"]
 	logData := log.Data{jobIDKey: jobID, instanceIDKey: instanceID}
 
-	// TODO get lock
+	// Acquire imports lock so that the read and increase are atomic
+	lockID, err := api.dataStore.AcquireInstanceLock(ctx, jobID)
+	if err != nil {
+		handleErr(ctx, w, err, logData)
+		return
+	}
+	defer api.dataStore.UnlockInstance(lockID)
 
 	// Get import job from DB
 	job, err := api.dataStore.GetJob(jobID)

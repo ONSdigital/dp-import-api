@@ -12,12 +12,14 @@ import (
 )
 
 var (
+	lockDataStorerMockAcquireInstanceLock     sync.RWMutex
 	lockDataStorerMockAddJob                  sync.RWMutex
 	lockDataStorerMockAddUploadedFile         sync.RWMutex
 	lockDataStorerMockChecker                 sync.RWMutex
 	lockDataStorerMockClose                   sync.RWMutex
 	lockDataStorerMockGetJob                  sync.RWMutex
 	lockDataStorerMockGetJobs                 sync.RWMutex
+	lockDataStorerMockUnlockInstance          sync.RWMutex
 	lockDataStorerMockUpdateJob               sync.RWMutex
 	lockDataStorerMockUpdateProcessedInstance sync.RWMutex
 )
@@ -32,6 +34,9 @@ var _ datastore.DataStorer = &DataStorerMock{}
 //
 //         // make and configure a mocked datastore.DataStorer
 //         mockedDataStorer := &DataStorerMock{
+//             AcquireInstanceLockFunc: func(ctx context.Context, jobID string) (string, error) {
+// 	               panic("mock out the AcquireInstanceLock method")
+//             },
 //             AddJobFunc: func(importJob *models.Job) (*models.Job, error) {
 // 	               panic("mock out the AddJob method")
 //             },
@@ -50,6 +55,9 @@ var _ datastore.DataStorer = &DataStorerMock{}
 //             GetJobsFunc: func(ctx context.Context, filters []string, offset int, limit int) (*models.JobResults, error) {
 // 	               panic("mock out the GetJobs method")
 //             },
+//             UnlockInstanceFunc: func(lockID string) error {
+// 	               panic("mock out the UnlockInstance method")
+//             },
 //             UpdateJobFunc: func(jobID string, update *models.Job) error {
 // 	               panic("mock out the UpdateJob method")
 //             },
@@ -63,6 +71,9 @@ var _ datastore.DataStorer = &DataStorerMock{}
 //
 //     }
 type DataStorerMock struct {
+	// AcquireInstanceLockFunc mocks the AcquireInstanceLock method.
+	AcquireInstanceLockFunc func(ctx context.Context, jobID string) (string, error)
+
 	// AddJobFunc mocks the AddJob method.
 	AddJobFunc func(importJob *models.Job) (*models.Job, error)
 
@@ -81,6 +92,9 @@ type DataStorerMock struct {
 	// GetJobsFunc mocks the GetJobs method.
 	GetJobsFunc func(ctx context.Context, filters []string, offset int, limit int) (*models.JobResults, error)
 
+	// UnlockInstanceFunc mocks the UnlockInstance method.
+	UnlockInstanceFunc func(lockID string) error
+
 	// UpdateJobFunc mocks the UpdateJob method.
 	UpdateJobFunc func(jobID string, update *models.Job) error
 
@@ -89,6 +103,13 @@ type DataStorerMock struct {
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// AcquireInstanceLock holds details about calls to the AcquireInstanceLock method.
+		AcquireInstanceLock []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// JobID is the jobID argument value.
+			JobID string
+		}
 		// AddJob holds details about calls to the AddJob method.
 		AddJob []struct {
 			// ImportJob is the importJob argument value.
@@ -129,6 +150,11 @@ type DataStorerMock struct {
 			// Limit is the limit argument value.
 			Limit int
 		}
+		// UnlockInstance holds details about calls to the UnlockInstance method.
+		UnlockInstance []struct {
+			// LockID is the lockID argument value.
+			LockID string
+		}
 		// UpdateJob holds details about calls to the UpdateJob method.
 		UpdateJob []struct {
 			// JobID is the jobID argument value.
@@ -144,6 +170,41 @@ type DataStorerMock struct {
 			ProcInstances []models.ProcessedInstances
 		}
 	}
+}
+
+// AcquireInstanceLock calls AcquireInstanceLockFunc.
+func (mock *DataStorerMock) AcquireInstanceLock(ctx context.Context, jobID string) (string, error) {
+	if mock.AcquireInstanceLockFunc == nil {
+		panic("DataStorerMock.AcquireInstanceLockFunc: method is nil but DataStorer.AcquireInstanceLock was just called")
+	}
+	callInfo := struct {
+		Ctx   context.Context
+		JobID string
+	}{
+		Ctx:   ctx,
+		JobID: jobID,
+	}
+	lockDataStorerMockAcquireInstanceLock.Lock()
+	mock.calls.AcquireInstanceLock = append(mock.calls.AcquireInstanceLock, callInfo)
+	lockDataStorerMockAcquireInstanceLock.Unlock()
+	return mock.AcquireInstanceLockFunc(ctx, jobID)
+}
+
+// AcquireInstanceLockCalls gets all the calls that were made to AcquireInstanceLock.
+// Check the length with:
+//     len(mockedDataStorer.AcquireInstanceLockCalls())
+func (mock *DataStorerMock) AcquireInstanceLockCalls() []struct {
+	Ctx   context.Context
+	JobID string
+} {
+	var calls []struct {
+		Ctx   context.Context
+		JobID string
+	}
+	lockDataStorerMockAcquireInstanceLock.RLock()
+	calls = mock.calls.AcquireInstanceLock
+	lockDataStorerMockAcquireInstanceLock.RUnlock()
+	return calls
 }
 
 // AddJob calls AddJobFunc.
@@ -349,6 +410,37 @@ func (mock *DataStorerMock) GetJobsCalls() []struct {
 	lockDataStorerMockGetJobs.RLock()
 	calls = mock.calls.GetJobs
 	lockDataStorerMockGetJobs.RUnlock()
+	return calls
+}
+
+// UnlockInstance calls UnlockInstanceFunc.
+func (mock *DataStorerMock) UnlockInstance(lockID string) error {
+	if mock.UnlockInstanceFunc == nil {
+		panic("DataStorerMock.UnlockInstanceFunc: method is nil but DataStorer.UnlockInstance was just called")
+	}
+	callInfo := struct {
+		LockID string
+	}{
+		LockID: lockID,
+	}
+	lockDataStorerMockUnlockInstance.Lock()
+	mock.calls.UnlockInstance = append(mock.calls.UnlockInstance, callInfo)
+	lockDataStorerMockUnlockInstance.Unlock()
+	return mock.UnlockInstanceFunc(lockID)
+}
+
+// UnlockInstanceCalls gets all the calls that were made to UnlockInstance.
+// Check the length with:
+//     len(mockedDataStorer.UnlockInstanceCalls())
+func (mock *DataStorerMock) UnlockInstanceCalls() []struct {
+	LockID string
+} {
+	var calls []struct {
+		LockID string
+	}
+	lockDataStorerMockUnlockInstance.RLock()
+	calls = mock.calls.UnlockInstance
+	lockDataStorerMockUnlockInstance.RUnlock()
 	return calls
 }
 

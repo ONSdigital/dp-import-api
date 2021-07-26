@@ -9,6 +9,7 @@ import (
 
 	"github.com/ONSdigital/dp-import-api/api/testapi"
 	"github.com/ONSdigital/dp-import-api/models"
+	testmongo "github.com/ONSdigital/dp-import-api/mongo/testmongo"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -22,7 +23,8 @@ func TestIncreaseProcessedInstanceHandler(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		Convey("When the update is successful", func() {
-			api := SetupAPIWith(nil, nil)
+			ds := &testmongo.DataStorer{}
+			api := SetupAPIWith(ds, nil)
 			api.router.ServeHTTP(w, r)
 
 			Convey("Then the returned status code 200 OK, with the expected body", func() {
@@ -34,6 +36,11 @@ func TestIncreaseProcessedInstanceHandler(t *testing.T) {
 						ProcessedCount: 1,
 					},
 				})
+			})
+
+			Convey("Then the datastore has been locked, but is no longer locked", func() {
+				So(ds.HasBeenLocked, ShouldBeTrue)
+				So(ds.IsLocked, ShouldBeFalse)
 			})
 		})
 

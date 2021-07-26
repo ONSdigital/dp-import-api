@@ -47,7 +47,7 @@ func TestInit(t *testing.T) {
 		So(err, ShouldBeNil)
 
 		datastoreMock := &dsmock.DataStorerMock{}
-		getMongoDataStore = func(cfg *config.Configuration) (datastore.DataStorer, error) {
+		getMongoDataStore = func(ctx context.Context, cfg *config.Configuration) (datastore.DataStorer, error) {
 			return datastoreMock, nil
 		}
 
@@ -75,7 +75,7 @@ func TestInit(t *testing.T) {
 		svc := &Service{}
 
 		Convey("Given that initialising MongoDB returns an error", func() {
-			getMongoDataStore = func(cfg *config.Configuration) (datastore.DataStorer, error) {
+			getMongoDataStore = func(ctx context.Context, cfg *config.Configuration) (datastore.DataStorer, error) {
 				return nil, errMongo
 			}
 

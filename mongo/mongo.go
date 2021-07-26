@@ -2,50 +2,83 @@ package mongo
 
 import (
 	"context"
+	"fmt"
 	"time"
-
-	"github.com/ONSdigital/log.go/log"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
-
+	mongo "github.com/ONSdigital/dp-mongodb"
+	mongolock "github.com/ONSdigital/dp-mongodb/dplock"
+	mongohealth "github.com/ONSdigital/dp-mongodb/health"
+	"github.com/ONSdigital/log.go/log"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
-
-	mongo "github.com/ONSdigital/dp-mongodb"
-	mongohealth "github.com/ONSdigital/dp-mongodb/health"
 )
 
 var _ datastore.DataStorer = (*Mongo)(nil)
 
-var session *mgo.Session
-
 // Mongo represents a simplistic MongoDB configuration
 type Mongo struct {
-	Collection string
-	Database   string
-	URI        string
+	Collection   string
+	Database     string
+	URI          string
+	Session      *mgo.Session
+	healthClient *mongohealth.CheckMongoClient
+	lockClient   *mongolock.Lock
 }
 
 // NewDatastore creates a new mgo.Session with a strong consistency and a write mode of "majority"
-func NewDatastore(uri, database, collection string) (*Mongo, error) {
-	if session == nil {
-		var err error
-		if session, err = mgo.Dial(uri); err != nil {
-			return nil, err
-		}
+func NewDatastore(ctx context.Context, uri, database, collection string) (m *Mongo, err error) {
 
-		session.EnsureSafe(&mgo.Safe{WMode: "majority"})
-		session.SetMode(mgo.Strong, true)
+	m = &Mongo{
+		Collection: collection,
+		Database:   database,
+		URI:        uri}
+
+	m.Session, err = mgo.Dial(uri)
+	if err != nil {
+		return nil, err
 	}
-	return &Mongo{Collection: collection, Database: database, URI: uri}, nil
+
+	m.Session.EnsureSafe(&mgo.Safe{WMode: "majority"})
+	m.Session.SetMode(mgo.Strong, true)
+
+	importLocksCollection := fmt.Sprintf("%s_locks", collection)
+
+	databaseCollectionBuilder := make(map[mongohealth.Database][]mongohealth.Collection)
+	databaseCollectionBuilder[(mongohealth.Database)(database)] = []mongohealth.Collection{(mongohealth.Collection)(collection), (mongohealth.Collection)(importLocksCollection)}
+
+	// Create client and healthclient from session
+	client := mongohealth.NewClientWithCollections(m.Session, databaseCollectionBuilder)
+	m.healthClient = &mongohealth.CheckMongoClient{
+		Client:      *client,
+		Healthcheck: client.Healthcheck,
+	}
+
+	m.lockClient = mongolock.New(ctx, m.Session, database, collection)
+
+	return m, nil
+}
+
+// AcquireInstanceLock tries to lock the provided jobID.
+// If the job is already locked, this function will block until it's released,
+// at which point we acquire the lock and return.
+// Note: the lock is currently only used to update processed_instances
+func (m *Mongo) AcquireInstanceLock(ctx context.Context, jobID string) (lockID string, err error) {
+	return m.lockClient.Acquire(ctx, jobID)
+}
+
+// UnlockInstance releases an exclusive mongoDB lock for the provided lockId (if it exists)
+// Note: the lock is currently only used to update processed_instances
+func (m *Mongo) UnlockInstance(lockID string) error {
+	return m.lockClient.Unlock(lockID)
 }
 
 // GetJobs retrieves all import documents matching filters
 func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit int) (*models.JobResults, error) {
-	s := session.Copy()
+	s := m.Session.Copy()
 	defer s.Close()
 
 	var stateFilter bson.M
@@ -106,7 +139,7 @@ func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit
 
 // GetJob retrieves a single import job
 func (m *Mongo) GetJob(id string) (*models.Job, error) {
-	s := session.Copy()
+	s := m.Session.Copy()
 	defer s.Close()
 	var job models.Job
 	err := s.DB(m.Database).C(m.Collection).Find(bson.M{"id": id}).One(&job)
@@ -121,7 +154,7 @@ func (m *Mongo) GetJob(id string) (*models.Job, error) {
 
 // AddJob adds an ImportJob document
 func (m *Mongo) AddJob(job *models.Job) (*models.Job, error) {
-	s := session.Copy()
+	s := m.Session.Copy()
 	defer s.Close()
 
 	currentTime := time.Now().UTC()
@@ -140,7 +173,7 @@ func (m *Mongo) AddJob(job *models.Job) (*models.Job, error) {
 
 // AddUploadedFile adds an UploadedFile to an import job
 func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile) error {
-	s := session.Copy()
+	s := m.Session.Copy()
 	defer s.Close()
 
 	update := bson.M{
@@ -178,7 +211,7 @@ func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile) error {
 
 // UpdateJob adds or overides an existing import job
 func (m *Mongo) UpdateJob(id string, job *models.Job) (err error) {
-	s := session.Copy()
+	s := m.Session.Copy()
 	defer s.Close()
 
 	update := bson.M{
@@ -204,7 +237,7 @@ func (m *Mongo) UpdateJob(id string, job *models.Job) (err error) {
 
 // UpdateProcessedInstance overides the processed instances for an existing import job
 func (m *Mongo) UpdateProcessedInstance(id string, procInstances []models.ProcessedInstances) (err error) {
-	s := session.Copy()
+	s := m.Session.Copy()
 	defer s.Close()
 
 	update := bson.M{
@@ -226,27 +259,12 @@ func (m *Mongo) UpdateProcessedInstance(id string, procInstances []models.Proces
 	return nil
 }
 
-// HealthCheckClient generates a healthcheck client for this mongoDB, with an existing session
-func (m *Mongo) HealthCheckClient() *mongohealth.CheckMongoClient {
-
-	databaseCollectionBuilder := make(map[mongohealth.Database][]mongohealth.Collection)
-	databaseCollectionBuilder[(mongohealth.Database)(m.Database)] = []mongohealth.Collection{(mongohealth.Collection)(m.Collection)}
-
-	client := mongohealth.NewClientWithCollections(session, databaseCollectionBuilder)
-
-	return &mongohealth.CheckMongoClient{
-		Client:      *client,
-		Healthcheck: client.Healthcheck,
-	}
-}
-
 // Checker is called by the healthcheck library to check the health state of this mongoDB instance
 func (m *Mongo) Checker(ctx context.Context, state *healthcheck.CheckState) error {
-	checkMongoClient := m.HealthCheckClient()
-	return checkMongoClient.Checker(ctx, state)
+	return m.healthClient.Checker(ctx, state)
 }
 
 // Close disconnects the mongo session
 func (m *Mongo) Close(ctx context.Context) error {
-	return mongo.Close(ctx, session)
+	return mongo.Close(ctx, m.Session)
 }

@@ -19,4 +19,6 @@ type DataStorer interface {
 	AddUploadedFile(jobID string, message *models.UploadedFile) error
 	Close(context.Context) error
 	Checker(context.Context, *healthcheck.CheckState) error
+	AcquireInstanceLock(ctx context.Context, jobID string) (lockID string, err error)
+	UnlockInstance(lockID string) error
 }
