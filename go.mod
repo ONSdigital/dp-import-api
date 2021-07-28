@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.38.0
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.0.6-beta.0.20210728130800-1972776fc954
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.1.7-beta
 	github.com/ONSdigital/dp-healthcheck v1.0.5
 	github.com/ONSdigital/dp-import v1.1.0
 	github.com/ONSdigital/dp-kafka/v2 v2.2.0
