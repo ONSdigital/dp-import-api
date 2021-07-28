@@ -5,7 +5,7 @@ package testjob
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-api-clients-go/recipe"
+	"github.com/ONSdigital/dp-api-clients-go/v2/recipe"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-import-api/job"
 	"sync"

@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/ONSdigital/dp-api-clients-go/dataset"
-	"github.com/ONSdigital/dp-api-clients-go/recipe"
+	"github.com/ONSdigital/dp-api-clients-go/v2/dataset"
+	"github.com/ONSdigital/dp-api-clients-go/v2/recipe"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/globalsign/mgo/bson"
 )

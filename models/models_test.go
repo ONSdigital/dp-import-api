@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ONSdigital/dp-api-clients-go/recipe"
+	"github.com/ONSdigital/dp-api-clients-go/v2/recipe"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/mocks"
 	. "github.com/smartystreets/goconvey/convey"

@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ONSdigital/dp-api-clients-go/dataset"
-	"github.com/ONSdigital/dp-api-clients-go/recipe"
+	"github.com/ONSdigital/dp-api-clients-go/v2/dataset"
+	"github.com/ONSdigital/dp-api-clients-go/v2/headers"
+	"github.com/ONSdigital/dp-api-clients-go/v2/recipe"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/datastore"
@@ -49,8 +50,8 @@ type Queue interface {
 
 // DatasetAPIClient interface to the dataset API.
 type DatasetAPIClient interface {
-	PostInstance(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (*dataset.Instance, error)
-	PutInstance(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, instanceID string, instanceUpdate dataset.UpdateInstance) error
+	PostInstance(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (i *dataset.Instance, eTag string, err error)
+	PutInstance(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, instanceID string, i dataset.UpdateInstance, ifMatch string) (eTag string, err error)
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
 }
 
@@ -113,7 +114,8 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 		// Create a new instance by sending a 'POST /instances' to dataset API
 		datasetPath := service.datasetAPIURL + "/datasets/" + oi.DatasetID
 		newInstance := models.CreateInstance(job, oi.DatasetID, datasetPath, oi.CodeLists)
-		instance, err := service.datasetAPIClient.PostInstance(ctx, service.serviceAuthToken, newInstance)
+		newInstance.Type = recipe.Format
+		instance, _, err := service.datasetAPIClient.PostInstance(ctx, service.serviceAuthToken, newInstance)
 		if err != nil {
 			log.Event(ctx, "CreateJob: failed to create instance in datastore", log.ERROR, log.Error(err), log.Data{"job_id": job.ID, "job_url": job.Links.Self.HRef, "instance": oi})
 			return nil, ErrCreateInstanceFailed(oi.DatasetID)
@@ -192,10 +194,11 @@ func (service Service) prepareJob(ctx context.Context, jobID string) (*models.Im
 	for _, instanceRef := range importJob.Links.Instances {
 		instanceIds = append(instanceIds, instanceRef.ID)
 
-		err = service.datasetAPIClient.PutInstance(ctx, "", service.serviceAuthToken, "", instanceRef.ID,
+		_, err = service.datasetAPIClient.PutInstance(ctx, "", service.serviceAuthToken, "", instanceRef.ID,
 			dataset.UpdateInstance{
 				State: dataset.StateSubmitted.String(),
 			},
+			headers.IfMatchAnyETag,
 		)
 		if err != nil {
 			return nil, err

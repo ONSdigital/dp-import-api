@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ONSdigital/dp-api-clients-go/dataset"
-	"github.com/ONSdigital/dp-api-clients-go/recipe"
+	"github.com/ONSdigital/dp-api-clients-go/v2/dataset"
+	"github.com/ONSdigital/dp-api-clients-go/v2/recipe"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/job"
 	"github.com/ONSdigital/dp-import-api/job/testjob"
@@ -15,6 +15,8 @@ import (
 	"github.com/ONSdigital/dp-import-api/url"
 	. "github.com/smartystreets/goconvey/convey"
 )
+
+const testETag = "testETag"
 
 var (
 	urlBuilder  = url.NewBuilder("http://import-api", "http://dataset-api")
@@ -31,6 +33,7 @@ var (
 				CodeLists: []recipe.CodeList{{ID: "codelist21"}, {ID: "codelist22"}, {ID: "codelist23"}},
 			},
 		},
+		Format: "cantabular_blob",
 	}
 	datasetAPIURL    = "http://localhost:22000"
 	serviceAuthToken = "testToken"
@@ -67,6 +70,7 @@ func expectedNewInstance(jobID, datasetID string) *dataset.NewInstance {
 			BuildHierarchyTasks:   []*dataset.BuildHierarchyTask{},
 			BuildSearchIndexTasks: []*dataset.BuildSearchIndexTask{},
 		},
+		Type: "cantabular_blob",
 	}
 	if datasetID == "dataset1" {
 		newInstance.Dimensions = []dataset.CodeList{{ID: "codelist11"}, {ID: "codelist12"}}
@@ -83,13 +87,13 @@ func TestService_CreateJob(t *testing.T) {
 		mockDataStore := &mongo.DataStorer{}
 		mockedQueue := &testjob.QueueMock{}
 		mockedDatasetAPI := &testjob.DatasetAPIClientMock{
-			PostInstanceFunc: func(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (*dataset.Instance, error) {
+			PostInstanceFunc: func(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (*dataset.Instance, string, error) {
 				retInstance := dummyInstance()
 				retInstance.ID = "dummyInstance_" + newInstance.Links.Dataset.ID
-				return retInstance, nil
+				return retInstance, testETag, nil
 			},
-			PutInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, instanceUpdate dataset.UpdateInstance) error {
-				return nil
+			PutInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, i dataset.UpdateInstance, ifMatch string) (string, error) {
+				return testETag, nil
 			},
 		}
 		mockedRecipeAPI := &testjob.RecipeAPIClientMock{
@@ -151,8 +155,8 @@ func TestService_CreateJob_CreateInstanceFails(t *testing.T) {
 		mockDataStore := &mongo.DataStorer{}
 		mockedQueue := &testjob.QueueMock{}
 		mockedDatasetAPI := &testjob.DatasetAPIClientMock{
-			PostInstanceFunc: func(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (*dataset.Instance, error) {
-				return nil, errors.New("Create instance failed.")
+			PostInstanceFunc: func(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (*dataset.Instance, string, error) {
+				return nil, "", errors.New("Create instance failed.")
 			},
 		}
 		mockedRecipeAPI := &testjob.RecipeAPIClientMock{
@@ -186,8 +190,8 @@ func TestService_CreateJob_SaveJobFails(t *testing.T) {
 		mockDataStore := &mongo.DataStorer{InternalError: true}
 		mockedQueue := &testjob.QueueMock{}
 		mockedDatasetAPI := &testjob.DatasetAPIClientMock{
-			PostInstanceFunc: func(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (*dataset.Instance, error) {
-				return dummyInstance(), nil
+			PostInstanceFunc: func(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (*dataset.Instance, string, error) {
+				return dummyInstance(), testETag, nil
 			},
 		}
 		mockedRecipeAPI := &testjob.RecipeAPIClientMock{
@@ -281,8 +285,8 @@ func TestService_UpdateJob(t *testing.T) {
 			},
 		}
 		mockedDatasetAPI := &testjob.DatasetAPIClientMock{
-			PutInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, instanceUpdate dataset.UpdateInstance) error {
-				return nil
+			PutInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, i dataset.UpdateInstance, ifMatch string) (string, error) {
+				return testETag, nil
 			},
 		}
 		mockedRecipeAPI := &testjob.RecipeAPIClientMock{}
@@ -318,8 +322,8 @@ func TestService_UpdateJob_SaveFails(t *testing.T) {
 			},
 		}
 		mockedDatasetAPI := &testjob.DatasetAPIClientMock{
-			PutInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, instanceUpdate dataset.UpdateInstance) error {
-				return nil
+			PutInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, i dataset.UpdateInstance, ifMatch string) (string, error) {
+				return testETag, nil
 			},
 		}
 		mockedRecipeAPI := &testjob.RecipeAPIClientMock{}
@@ -354,8 +358,8 @@ func TestService_UpdateJob_QueuesWhenSubmitted(t *testing.T) {
 			},
 		}
 		mockedDatasetAPI := &testjob.DatasetAPIClientMock{
-			PutInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, instanceUpdate dataset.UpdateInstance) error {
-				return nil
+			PutInstanceFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, instanceID string, i dataset.UpdateInstance, ifMatch string) (string, error) {
+				return testETag, nil
 			},
 		}
 		mockedRecipeAPI := &testjob.RecipeAPIClientMock{

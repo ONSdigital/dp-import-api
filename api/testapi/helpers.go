@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	mockdatastore "github.com/ONSdigital/dp-import-api/mongo/testmongo"
-	dprequest "github.com/ONSdigital/dp-net/request"
+	dprequest "github.com/ONSdigital/dp-net/v2/request"
 )
 
 // List of mocked datastores returning different results
