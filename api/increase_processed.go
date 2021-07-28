@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
-	dphttp "github.com/ONSdigital/dp-net/v2/http"
+	dphttp "github.com/ONSdigital/dp-net/http"
 	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/mux"
 )

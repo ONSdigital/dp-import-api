@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/ONSdigital/dp-import-api/models"
-	dphttp "github.com/ONSdigital/dp-net/v2/http"
+	dphttp "github.com/ONSdigital/dp-net/http"
 	"github.com/ONSdigital/log.go/log"
 )
 
