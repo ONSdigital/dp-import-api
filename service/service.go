@@ -274,11 +274,13 @@ func (svc *Service) registerCheckers(ctx context.Context) (err error) {
 				hasErrors = true
 			}
 		} else {
-			svc.healthCheck.AddCheck(name, func(ctx context.Context, state *healthcheck.CheckState) error {
-				err := errors.New(fmt.Sprintf("%s not initialised", strings.ToLower(name)))
-				state.Update(healthcheck.StatusCritical, err.Error(), 0)
-				return err
-			})
+			if err = svc.healthCheck.AddCheck(name, func(ctx context.Context, state *healthcheck.CheckState) error {
+				message := fmt.Sprintf("%s not initialised", strings.ToLower(name))
+				return state.Update(healthcheck.StatusCritical, message, 0)
+			}); err != nil {
+				log.Event(ctx, fmt.Sprintf("error creating %s health check stub for unused (nil) dependency", strings.ToLower(name)), log.ERROR, log.Error(err))
+				hasErrors = true
+			}
 		}
 	}
 

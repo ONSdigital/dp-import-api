@@ -1,9 +1,10 @@
 package url_test
 
 import (
+	"testing"
+
 	"github.com/ONSdigital/dp-import-api/url"
 	. "github.com/smartystreets/goconvey/convey"
-	"testing"
 )
 
 var importAPIHost string = "http://import-api"
@@ -18,11 +19,11 @@ func TestBuilder_GetInstanceURL(t *testing.T) {
 
 		Convey("When the instance URL is requested", func() {
 
-			url := builder.GetInstanceURL(instanceID)
+			builtURL := builder.GetInstanceURL(instanceID)
 
 			Convey("Then the expected URL is returned", func() {
 				expectedURL := datasetAPIHost + "/instances/" + instanceID
-				So(url, ShouldEqual, expectedURL)
+				So(builtURL, ShouldEqual, expectedURL)
 			})
 		})
 	})
@@ -36,11 +37,11 @@ func TestBuilder_GetJobURL(t *testing.T) {
 
 		Convey("When the instance URL is requested", func() {
 
-			url := builder.GetJobURL(jobID)
+			builtURL := builder.GetJobURL(jobID)
 
 			Convey("Then the expected URL is returned", func() {
 				expectedURL := importAPIHost + "/jobs/" + jobID
-				So(url, ShouldEqual, expectedURL)
+				So(builtURL, ShouldEqual, expectedURL)
 			})
 		})
 	})

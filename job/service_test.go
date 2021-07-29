@@ -294,14 +294,14 @@ func TestService_UpdateJob(t *testing.T) {
 		jobService := job.NewService(mockDataStore, mockedQueue, datasetAPIURL, mockedDatasetAPI, mockedRecipeAPI, urlBuilder, serviceAuthToken)
 
 		jobID := "123"
-		job := &models.Job{
+		jobUpdate := &models.Job{
 			RecipeID: "123-234-456",
 			ID:       jobID,
 		}
 
 		Convey("When update job is called", func() {
 
-			err := jobService.UpdateJob(ctx, jobID, job)
+			err := jobService.UpdateJob(ctx, jobID, jobUpdate)
 
 			Convey("The expected calls are made to dependencies", func() {
 				So(err, ShouldBeNil)
@@ -371,7 +371,7 @@ func TestService_UpdateJob_QueuesWhenSubmitted(t *testing.T) {
 		jobService := job.NewService(mockDataStore, mockedQueue, datasetAPIURL, mockedDatasetAPI, mockedRecipeAPI, urlBuilder, serviceAuthToken)
 
 		jobID := "123"
-		job := &models.Job{
+		jobUpdate := &models.Job{
 			RecipeID: "123-234-456",
 			ID:       jobID,
 			State:    "submitted",
@@ -379,7 +379,7 @@ func TestService_UpdateJob_QueuesWhenSubmitted(t *testing.T) {
 
 		Convey("When update job is called", func() {
 
-			err := jobService.UpdateJob(ctx, jobID, job)
+			err := jobService.UpdateJob(ctx, jobID, jobUpdate)
 
 			Convey("The expected calls are made to dependencies", func() {
 				So(err, ShouldBeNil)

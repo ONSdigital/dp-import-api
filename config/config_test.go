@@ -12,8 +12,8 @@ func TestGetReturnsDefaultValues(t *testing.T) {
 	Convey("When a loading a configuration, default values are return", t, func() {
 		os.Clearenv()
 
-		configuration, error := Get()
-		So(error, ShouldBeNil)
+		configuration, err := Get()
+		So(err, ShouldBeNil)
 		So(configuration, ShouldResemble, &Configuration{
 			BindAddr:                              ":21800",
 			Host:                                  "http://localhost:21800",

@@ -50,8 +50,8 @@ type Queue interface {
 
 // DatasetAPIClient interface to the dataset API.
 type DatasetAPIClient interface {
-	PostInstance(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (i *dataset.Instance, eTag string, err error)
-	PutInstance(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, instanceID string, i dataset.UpdateInstance, ifMatch string) (eTag string, err error)
+	PostInstance(ctx context.Context, serviceAuthToken string, newInstance *dataset.NewInstance) (instance *dataset.Instance, eTag string, err error)
+	PutInstance(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, instanceID string, instance dataset.UpdateInstance, ifMatch string) (eTag string, err error)
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
 }
 
@@ -87,7 +87,7 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 	}
 
 	// Get details needed for instances from Recipe API
-	recipe, err := service.recipeAPIClient.GetRecipe(ctx, "", "", job.RecipeID)
+	jobRecipe, err := service.recipeAPIClient.GetRecipe(ctx, "", "", job.RecipeID)
 	if err != nil {
 		log.Event(ctx, "CreateJob: failed to get recipe details", log.ERROR, log.Error(err), logData)
 		return nil, ErrGetRecipeFailed
@@ -109,12 +109,12 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 
 	job.Processed = []models.ProcessedInstances{}
 
-	for _, oi := range recipe.OutputInstances {
+	for _, oi := range jobRecipe.OutputInstances {
 
 		// Create a new instance by sending a 'POST /instances' to dataset API
 		datasetPath := service.datasetAPIURL + "/datasets/" + oi.DatasetID
 		newInstance := models.CreateInstance(job, oi.DatasetID, datasetPath, oi.CodeLists)
-		newInstance.Type = recipe.Format
+		newInstance.Type = jobRecipe.Format
 		instance, _, err := service.datasetAPIClient.PostInstance(ctx, service.serviceAuthToken, newInstance)
 		if err != nil {
 			log.Event(ctx, "CreateJob: failed to create instance in datastore", log.ERROR, log.Error(err), log.Data{"job_id": job.ID, "job_url": job.Links.Self.HRef, "instance": oi})
@@ -185,7 +185,7 @@ func (service Service) prepareJob(ctx context.Context, jobID string) (*models.Im
 		return nil, err
 	}
 
-	recipe, err := service.recipeAPIClient.GetRecipe(ctx, "", "", importJob.RecipeID)
+	jobRecipe, err := service.recipeAPIClient.GetRecipe(ctx, "", "", importJob.RecipeID)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +208,7 @@ func (service Service) prepareJob(ctx context.Context, jobID string) (*models.Im
 	return &models.ImportData{
 		JobID:         jobID,
 		Recipe:        importJob.RecipeID,
-		Format:        recipe.Format,
+		Format:        jobRecipe.Format,
 		UploadedFiles: importJob.UploadedFiles,
 		InstanceIDs:   instanceIds,
 	}, nil

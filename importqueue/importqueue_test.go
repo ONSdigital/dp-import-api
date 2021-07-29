@@ -111,7 +111,8 @@ func TestQueueV4File(t *testing.T) {
 			bytes := <-v4Queue
 
 			var file events.InputFileAvailable
-			events.InputFileAvailableSchema.Unmarshal(bytes, &file)
+			err = events.InputFileAvailableSchema.Unmarshal(bytes, &file)
+			So(err, ShouldBeNil)
 
 			So(file, ShouldResemble, events.InputFileAvailable{
 				JobID:      job.JobID,
@@ -228,7 +229,8 @@ func TestQueueCantabularFile(t *testing.T) {
 			bytes := <-cantabularQueue
 
 			var cantabularEvent events.CantabularDatasetInstanceStarted
-			events.CantabularDatasetInstanceStartedSchema.Unmarshal(bytes, &cantabularEvent)
+			err = events.CantabularDatasetInstanceStartedSchema.Unmarshal(bytes, &cantabularEvent)
+			So(err, ShouldBeNil)
 
 			So(cantabularEvent, ShouldResemble, events.CantabularDatasetInstanceStarted{
 				JobID:          "jobId",
@@ -251,7 +253,8 @@ func TestQueueCantabularFile(t *testing.T) {
 			bytes := <-cantabularQueue
 
 			var cantabularEvent events.CantabularDatasetInstanceStarted
-			events.CantabularDatasetInstanceStartedSchema.Unmarshal(bytes, &cantabularEvent)
+			err = events.CantabularDatasetInstanceStartedSchema.Unmarshal(bytes, &cantabularEvent)
+			So(err, ShouldBeNil)
 
 			So(cantabularEvent, ShouldResemble, events.CantabularDatasetInstanceStarted{
 				JobID:          job.JobID,
