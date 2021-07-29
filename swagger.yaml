@@ -15,7 +15,13 @@ schemes:
 parameters:
   id:
     name: id
-    description: "A unique job id"
+    description: "A unique job identifier"
+    type: string
+    in: path
+    required: true
+  instance_id:
+    name: instance_id
+    description: "A unique instance identifier"
     type: string
     in: path
     required: true
@@ -166,6 +172,31 @@ paths:
           description: "JobId does not match any import jobs"
         500:
           $ref: '#/responses/InternalError'
+  /jobs/{id}/processed/{instance_id}:
+    put:
+      tags:
+      - "Import API"
+      summary: "Increase an instance processed counter"
+      description: "Increase the processed counter for the provided instance in the provided job. Calls to this endpoint are concurrency safe."
+      parameters:
+        - $ref: '#/parameters/id'
+        - $ref: '#/parameters/instance_id'
+      produces:
+        - "application/json"
+      security:
+        - FlorenceAPIKey: []
+      responses:
+        200:
+          description: "The job instance counter was successfully increased"
+          schema:
+            $ref: '#/definitions/ProcessedInstances'
+        400:
+          description: "The provided instance_id is not part of the import job"
+        404:
+          description: "JobId does not match any import jobs"
+        500:
+          $ref: '#/responses/InternalError'
+
 
 responses:
   InternalError:
@@ -254,3 +285,18 @@ definitions:
       href:
         description: "The full URL for the object"
         type: string
+  ProcessedInstances:
+    type: array
+    items:
+      $ref: '#/definitions/ProcessedInstance'
+    description: "A list of all instances processed counters corresponding to an import job"
+  ProcessedInstance:
+    type: object
+    properties:
+      id:
+        description: "The instance unique identifier"
+        type: string
+      required_count:
+        description: "The total number of dimensions that need to be processed for the instance import"
+      processed_count:
+        description: "The current number of dimensions that have been processed for the instance import"
