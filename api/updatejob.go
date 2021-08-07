@@ -23,7 +23,7 @@ func (api *ImportAPI) updateJobHandler(w http.ResponseWriter, r *http.Request) {
 		handleErr(ctx, w, err, logData)
 		return
 	}
-	log.Event(ctx, "job update completed successfully", log.INFO, logData)
+	log.Event(ctx, "job update successful", log.INFO, logData)
 }
 
 func (api *ImportAPI) updateJob(ctx context.Context, r *http.Request, jobID string, logData log.Data) (err error) {
