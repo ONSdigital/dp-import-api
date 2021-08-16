@@ -72,8 +72,8 @@ func (m *Mongo) AcquireInstanceLock(ctx context.Context, jobID string) (lockID s
 
 // UnlockInstance releases an exclusive mongoDB lock for the provided lockId (if it exists)
 // Note: the lock is currently only used to update processed_instances
-func (m *Mongo) UnlockInstance(lockID string) error {
-	return m.lockClient.Unlock(lockID)
+func (m *Mongo) UnlockInstance(lockID string) {
+	m.lockClient.Unlock(lockID)
 }
 
 // GetJobs retrieves all import documents matching filters

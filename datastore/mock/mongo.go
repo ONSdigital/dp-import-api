@@ -55,7 +55,7 @@ var _ datastore.DataStorer = &DataStorerMock{}
 //             GetJobsFunc: func(ctx context.Context, filters []string, offset int, limit int) (*models.JobResults, error) {
 // 	               panic("mock out the GetJobs method")
 //             },
-//             UnlockInstanceFunc: func(lockID string) error {
+//             UnlockInstanceFunc: func(lockID string)  {
 // 	               panic("mock out the UnlockInstance method")
 //             },
 //             UpdateJobFunc: func(jobID string, update *models.Job) error {
@@ -93,7 +93,7 @@ type DataStorerMock struct {
 	GetJobsFunc func(ctx context.Context, filters []string, offset int, limit int) (*models.JobResults, error)
 
 	// UnlockInstanceFunc mocks the UnlockInstance method.
-	UnlockInstanceFunc func(lockID string) error
+	UnlockInstanceFunc func(lockID string)
 
 	// UpdateJobFunc mocks the UpdateJob method.
 	UpdateJobFunc func(jobID string, update *models.Job) error
@@ -414,7 +414,7 @@ func (mock *DataStorerMock) GetJobsCalls() []struct {
 }
 
 // UnlockInstance calls UnlockInstanceFunc.
-func (mock *DataStorerMock) UnlockInstance(lockID string) error {
+func (mock *DataStorerMock) UnlockInstance(lockID string) {
 	if mock.UnlockInstanceFunc == nil {
 		panic("DataStorerMock.UnlockInstanceFunc: method is nil but DataStorer.UnlockInstance was just called")
 	}
@@ -426,7 +426,7 @@ func (mock *DataStorerMock) UnlockInstance(lockID string) error {
 	lockDataStorerMockUnlockInstance.Lock()
 	mock.calls.UnlockInstance = append(mock.calls.UnlockInstance, callInfo)
 	lockDataStorerMockUnlockInstance.Unlock()
-	return mock.UnlockInstanceFunc(lockID)
+	mock.UnlockInstanceFunc(lockID)
 }
 
 // UnlockInstanceCalls gets all the calls that were made to UnlockInstance.
