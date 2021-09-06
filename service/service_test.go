@@ -56,7 +56,10 @@ func TestInit(t *testing.T) {
 				return &kafka.ProducerChannels{}
 			},
 		}
-		getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
+		getKafkaProducer = func(ctx context.Context, cfg *config.Configuration, topic string) (kafka.IProducer, error) {
+			return kafkaMock, nil
+		}
+		getLegacyKafkaProducer = func(ctx context.Context, cfg *config.Configuration, topic string) (kafka.IProducer, error) {
 			return kafkaMock, nil
 		}
 
@@ -103,7 +106,7 @@ func TestInit(t *testing.T) {
 		})
 
 		Convey("Given that initialising DataBaker kafka producer returns an error", func() {
-			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
+			getKafkaProducer = func(ctx context.Context, cfg *config.Configuration, topic string) (kafka.IProducer, error) {
 				if topic == cfg.DatabakerImportTopic {
 					return nil, errKafka
 				}
@@ -123,7 +126,7 @@ func TestInit(t *testing.T) {
 		})
 
 		Convey("Given that initialising Kafka direct producer returns an error", func() {
-			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
+			getKafkaProducer = func(ctx context.Context, cfg *config.Configuration, topic string) (kafka.IProducer, error) {
 				if topic == cfg.InputFileAvailableTopic {
 					return nil, errKafka
 				}
@@ -143,7 +146,7 @@ func TestInit(t *testing.T) {
 		})
 
 		Convey("Given that initialising Kafka cantabular producer returns an error", func() {
-			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
+			getLegacyKafkaProducer = func(ctx context.Context, cfg *config.Configuration, topic string) (kafka.IProducer, error) {
 				if topic == cfg.CantabularDatasetInstanceStartedTopic {
 					return nil, errKafka
 				}

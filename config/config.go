@@ -12,12 +12,19 @@ import (
 type Configuration struct {
 	BindAddr                              string        `envconfig:"BIND_ADDR"`
 	Host                                  string        `envconfig:"HOST"`
-	Brokers                               []string      `envconfig:"KAFKA_ADDR"`
 	DatabakerImportTopic                  string        `envconfig:"DATABAKER_IMPORT_TOPIC"`
 	InputFileAvailableTopic               string        `envconfig:"INPUT_FILE_AVAILABLE_TOPIC"`
 	CantabularDatasetInstanceStartedTopic string        `envconfig:"CANTABULAR_DATASET_INSTANCE_STARTED_TOPIC"`
-	KafkaMaxBytes                         int           `envconfig:"KAFKA_MAX_BYTES"`
+	KafkaAddr                             []string      `envconfig:"KAFKA_ADDR"`
 	KafkaVersion                          string        `envconfig:"KAFKA_VERSION"`
+	KafkaLegacyAddr                       []string      `envconfig:"KAFKA_LEGACY_ADDR"`
+	KafkaLegacyVersion                    string        `envconfig:"KAFKA_LEGACY_VERSION"`
+	KafkaMaxBytes                         int           `envconfig:"KAFKA_MAX_BYTES"`
+	KafkaSecProtocol                      string        `envconfig:"KAFKA_SEC_PROTO"`
+	KafkaSecCACerts                       string        `envconfig:"KAFKA_SEC_CA_CERTS"`
+	KafkaSecClientCert                    string        `envconfig:"KAFKA_SEC_CLIENT_CERT"`
+	KafkaSecClientKey                     string        `envconfig:"KAFKA_SEC_CLIENT_KEY"        json:"-"`
+	KafkaSecSkipVerify                    bool          `envconfig:"KAFKA_SEC_SKIP_VERIFY"`
 	ServiceAuthToken                      string        `envconfig:"SERVICE_AUTH_TOKEN"          json:"-"`
 	MongoDBURL                            string        `envconfig:"MONGODB_IMPORTS_ADDR"        json:"-"`
 	MongoDBCollection                     string        `envconfig:"MONGODB_IMPORTS_COLLECTION"`
@@ -46,12 +53,14 @@ func Get() (*Configuration, error) {
 	cfg = &Configuration{
 		BindAddr:                              ":21800",
 		Host:                                  "http://localhost:21800",
-		Brokers:                               brokers,
 		DatabakerImportTopic:                  "data-bake-job-available",
 		InputFileAvailableTopic:               "input-file-available",
 		CantabularDatasetInstanceStartedTopic: "cantabular-dataset-instance-started",
-		KafkaMaxBytes:                         2000000,
+		KafkaAddr:                             brokers,
 		KafkaVersion:                          "1.0.2",
+		KafkaLegacyAddr:                       brokers,
+		KafkaLegacyVersion:                    "1.0.2",
+		KafkaMaxBytes:                         2000000,
 		MongoDBURL:                            "localhost:27017",
 		MongoDBDatabase:                       "imports",
 		MongoDBCollection:                     "imports",

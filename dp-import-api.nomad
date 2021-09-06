@@ -31,7 +31,7 @@ job "dp-import-api" {
       driver = "docker"
 
       artifact {
-        source = "s3::https://s3-eu-west-1.amazonaws.com/{{DEPLOYMENT_BUCKET}}/dp-import-api/{{REVISION}}.tar.gz"
+        source = "s3::https://s3-eu-west-1.amazonaws.com/{{DEPLOYMENT_BUCKET}}/dp-import-api/{{PROFILE}}/{{RELEASE}}.tar.gz"
       }
 
       config {
