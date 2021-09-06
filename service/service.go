@@ -57,7 +57,7 @@ var getKafkaProducer = func(ctx context.Context, cfg *config.Configuration, topi
 		MaxMessageBytes: &cfg.KafkaMaxBytes,
 	}
 
-	if cfg.KafkaSecProtocol == "TLS" {
+	if cfg.KafkaSecProtocol == config.KafkaSecProtocolTLS {
 		pConfig.SecurityConfig = kafka.GetSecurityConfig(
 			cfg.KafkaSecCACerts,
 			cfg.KafkaSecClientCert,

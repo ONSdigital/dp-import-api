@@ -1,12 +1,15 @@
 package config
 
 import (
+	"errors"
 	"time"
 
 	"encoding/json"
 
 	"github.com/kelseyhightower/envconfig"
 )
+
+const KafkaSecProtocolTLS = "TLS"
 
 // Configuration structure which hold information for configuring the import API
 type Configuration struct {
@@ -58,6 +61,7 @@ func Get() (*Configuration, error) {
 		CantabularDatasetInstanceStartedTopic: "cantabular-dataset-instance-started",
 		KafkaAddr:                             brokers,
 		KafkaVersion:                          "1.0.2",
+		KafkaSecProtocol:                      "",
 		KafkaLegacyAddr:                       brokers,
 		KafkaLegacyVersion:                    "1.0.2",
 		KafkaMaxBytes:                         2000000,
@@ -79,6 +83,10 @@ func Get() (*Configuration, error) {
 	err := envconfig.Process("", cfg)
 	if err != nil {
 		return nil, err
+	}
+
+	if cfg.KafkaSecProtocol != "" && cfg.KafkaSecProtocol != KafkaSecProtocolTLS {
+		return nil, errors.New("KAFKA_SEC_PROTO has invalid value")
 	}
 
 	return cfg, nil
