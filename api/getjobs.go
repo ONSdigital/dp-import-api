@@ -3,10 +3,11 @@ package api
 import (
 	"context"
 	"encoding/json"
-	errs "github.com/ONSdigital/dp-import-api/apierrors"
-	"github.com/ONSdigital/dp-import-api/utils"
 	"net/http"
 	"strings"
+
+	errs "github.com/ONSdigital/dp-import-api/apierrors"
+	"github.com/ONSdigital/dp-import-api/utils"
 
 	"github.com/ONSdigital/log.go/v2/log"
 )
@@ -52,8 +53,9 @@ func (api *ImportAPI) getJobsHandler(w http.ResponseWriter, r *http.Request) {
 
 	if limit > api.maxLimit {
 		logData["max_limit"] = api.maxLimit
-		log.Error(ctx, "limit is greater than the maximum allowed", logData)
-		handleCustomErr(ctx, w, errs.ErrorMaximumLimitReached(api.maxLimit), logData, http.StatusBadRequest)
+		err = errs.ErrorMaximumLimitReached(api.maxLimit)
+		log.Error(ctx, "limit is greater than the maximum allowed", err, logData)
+		handleCustomErr(ctx, w, err, logData, http.StatusBadRequest)
 		return
 	}
 
@@ -64,7 +66,7 @@ func (api *ImportAPI) getJobsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeResponse(ctx, w, http.StatusOK, b, "getJobs", logData)
-	log.Event(ctx, "getJobs endpoint: request successful", logData)
+	log.Info(ctx, "getJobs endpoint: request successful", logData)
 }
 
 func (api *ImportAPI) getJobs(ctx context.Context, filterList []string, offset int, limit int, logData log.Data) (b []byte, err error) {

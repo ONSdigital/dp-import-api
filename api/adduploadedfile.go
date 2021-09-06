@@ -33,7 +33,7 @@ func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	log.Event(ctx, "added uxploaded file to job", logData)
+	log.Info(ctx, "added uploaded file to job", logData)
 }
 
 func (api *ImportAPI) addUploadFile(ctx context.Context, uploadedFile *models.UploadedFile, jobID string, logData log.Data) (err error) {

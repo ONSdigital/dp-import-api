@@ -22,7 +22,7 @@ func (api *ImportAPI) getJobHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeResponse(ctx, w, http.StatusOK, b, "getJob", logData)
-	log.Event(ctx, "getJob endpoint: request successful", logData)
+	log.Info(ctx, "getJob endpoint: request successful", logData)
 }
 
 func (api *ImportAPI) getJob(ctx context.Context, jobID string, logData log.Data) (b []byte, err error) {
