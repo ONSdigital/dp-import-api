@@ -23,7 +23,7 @@ import (
 	dphandlers "github.com/ONSdigital/dp-net/handlers"
 	dphttp "github.com/ONSdigital/dp-net/http"
 	dprequest "github.com/ONSdigital/dp-net/request"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 	"github.com/pkg/errors"
@@ -85,27 +85,27 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 	// Get mongoDB connection (non-fatal)
 	svc.mongoDataStore, err = getMongoDataStore(ctx, svc.cfg)
 	if err != nil {
-		log.Event(ctx, "mongodb datastore error", log.ERROR, log.Error(err))
+		log.Error(ctx, "mongodb datastore error", err)
 	}
 
 	// Get data baker kafka producer
 	svc.dataBakerProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.DatabakerImportTopic, svc.cfg.KafkaMaxBytes, svc.cfg.KafkaVersion)
 	if err != nil {
-		log.Event(ctx, "databaker kafka producer error", log.FATAL, log.Error(err))
+		log.Fatal(ctx, "databaker kafka producer error", err)
 		return err
 	}
 
 	// Get input file available kafka producer
 	svc.inputFileAvailableProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.InputFileAvailableTopic, svc.cfg.KafkaMaxBytes, svc.cfg.KafkaVersion)
 	if err != nil {
-		log.Event(ctx, "direct kafka producer error", log.FATAL, log.Error(err))
+		log.Fatal(ctx, "direct kafka producer error", err)
 		return err
 	}
 
 	// Get Cantabular Dataset Instance Started kafka producer
 	svc.cantabularDatasetInstanceStartedProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.CantabularDatasetInstanceStartedTopic, svc.cfg.KafkaMaxBytes, svc.cfg.KafkaVersion)
 	if err != nil {
-		log.Event(ctx, "cantabular dataset instance started kafka producer error", log.FATAL, log.Error(err))
+		log.Fatal(ctx, "cantabular dataset instance started kafka producer error", err)
 		return err
 	}
 
@@ -119,7 +119,7 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 	// Get HealthCheck and register checkers
 	versionInfo, err := healthcheck.NewVersionInfo(buildTime, gitCommit, version)
 	if err != nil {
-		log.Event(ctx, "error creating version info", log.FATAL, log.Error(err))
+		log.Fatal(ctx, "error creating version info", err)
 		return err
 	}
 	svc.healthCheck = getHealthCheck(versionInfo, svc.cfg.HealthCheckCriticalTimeout, svc.cfg.HealthCheckInterval)
@@ -157,7 +157,7 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 
 	// Run the http server in a new go-routine
 	go func() {
-		log.Event(ctx, "Starting api...", log.INFO)
+		log.Info(ctx, "Starting api...")
 		if err := svc.server.ListenAndServe(); err != nil {
 			svcErrors <- errors.Wrap(err, "failure in http listen and serve")
 		}
@@ -177,7 +177,7 @@ func (svc *Service) createMiddleware(cfg *config.Configuration) alice.Chain {
 // Close gracefully shuts the service down in the required order, with timeout
 func (svc *Service) Close(ctx context.Context) error {
 	timeout := svc.cfg.GracefulShutdownTimeout
-	log.Event(ctx, "commencing graceful shutdown", log.Data{"graceful_shutdown_timeout": timeout}, log.INFO)
+	log.Info(ctx, "commencing graceful shutdown", log.Data{"graceful_shutdown_timeout": timeout})
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	hasShutdownError := false
 
@@ -193,43 +193,43 @@ func (svc *Service) Close(ctx context.Context) error {
 		// stop any incoming requests
 		if svc.server != nil {
 			if err := svc.server.Shutdown(ctx); err != nil {
-				log.Event(ctx, "failed to shutdown http server", log.ERROR, log.Error(err))
+				log.Error(ctx, "failed to shutdown http server", err)
 				hasShutdownError = true
 			}
 		}
 
 		// Close MongoDB (if it exists)
 		if svc.mongoDataStore != nil {
-			log.Event(ctx, "closing mongo data store", log.INFO)
+			log.Info(ctx, "closing mongo data store")
 			if err := svc.mongoDataStore.Close(ctx); err != nil {
-				log.Event(ctx, "unable to close mongo data store", log.ERROR, log.Error(err))
+				log.Error(ctx, "unable to close mongo data store", err)
 				hasShutdownError = true
 			}
 		}
 
 		// Close Data Baker Kafka Producer (it if exists)
 		if svc.dataBakerProducer != nil {
-			log.Event(ctx, "closing data baker producer", log.INFO)
+			log.Info(ctx, "closing data baker producer")
 			if err := svc.dataBakerProducer.Close(ctx); err != nil {
-				log.Event(ctx, "unable to close data baker producer", log.ERROR, log.Error(err))
+				log.Error(ctx, "unable to close data baker producer", err)
 				hasShutdownError = true
 			}
 		}
 
 		// Close Direct Kafka Producer (if it exists)
 		if svc.inputFileAvailableProducer != nil {
-			log.Event(ctx, "closing direct producer", log.INFO)
+			log.Info(ctx, "closing direct producer")
 			if err := svc.inputFileAvailableProducer.Close(ctx); err != nil {
-				log.Event(ctx, "unable to close direct producer", log.ERROR, log.Error(err))
+				log.Error(ctx, "unable to close direct producer", err)
 				hasShutdownError = true
 			}
 		}
 
 		// Close Cantabular Kafka Producer (if it exists)
 		if svc.cantabularDatasetInstanceStartedProducer != nil {
-			log.Event(ctx, "closing cantabular dataset instance started producer", log.INFO)
+			log.Info(ctx, "closing cantabular dataset instance started producer")
 			if err := svc.cantabularDatasetInstanceStartedProducer.Close(ctx); err != nil {
-				log.Event(ctx, "unable to close cantabular dataset instance started producer", log.ERROR, log.Error(err))
+				log.Error(ctx, "unable to close cantabular dataset instance started producer", err)
 				hasShutdownError = true
 			}
 		}
@@ -240,18 +240,18 @@ func (svc *Service) Close(ctx context.Context) error {
 
 	// timeout expired
 	if ctx.Err() == context.DeadlineExceeded {
-		log.Event(ctx, "shutdown timed out", log.ERROR, log.Error(ctx.Err()))
+		log.Error(ctx, "shutdown timed out", ctx.Err())
 		return ctx.Err()
 	}
 
 	// other error
 	if hasShutdownError {
 		err := errors.New("failed to shutdown gracefully")
-		log.Event(ctx, "failed to shutdown gracefully ", log.ERROR, log.Error(err))
+		log.Error(ctx, "failed to shutdown gracefully ", err)
 		return err
 	}
 
-	log.Event(ctx, "graceful shutdown was successful", log.INFO)
+	log.Info(ctx, "graceful shutdown was successful")
 	return nil
 }
 
@@ -270,7 +270,7 @@ func (svc *Service) registerCheckers(ctx context.Context) (err error) {
 	registerChecker := func(name string, dependency Dependency) {
 		if dependency != nil {
 			if err = svc.healthCheck.AddCheck(name, dependency.Checker); err != nil {
-				log.Event(ctx, fmt.Sprintf("error creating %s health check", strings.ToLower(name)), log.ERROR, log.Error(err))
+				log.Error(ctx, fmt.Sprintf("error creating %s health check", strings.ToLower(name)), err)
 				hasErrors = true
 			}
 		} else {
@@ -278,7 +278,7 @@ func (svc *Service) registerCheckers(ctx context.Context) (err error) {
 				message := fmt.Sprintf("%s not initialised", strings.ToLower(name))
 				return state.Update(healthcheck.StatusCritical, message, 0)
 			}); err != nil {
-				log.Event(ctx, fmt.Sprintf("error creating %s health check stub for unused (nil) dependency", strings.ToLower(name)), log.ERROR, log.Error(err))
+				log.Error(ctx, fmt.Sprintf("error creating %s health check stub for unused (nil) dependency", strings.ToLower(name)), err)
 				hasErrors = true
 			}
 		}

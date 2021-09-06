@@ -12,7 +12,7 @@ import (
 	mongo "github.com/ONSdigital/dp-mongodb"
 	mongolock "github.com/ONSdigital/dp-mongodb/dplock"
 	mongohealth "github.com/ONSdigital/dp-mongodb/health"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 )
@@ -88,7 +88,7 @@ func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit
 	query := s.DB(m.Database).C(m.Collection).Find(stateFilter)
 	totalCount, err := query.Count()
 	if err != nil {
-		log.Event(ctx, "error counting items", log.ERROR, log.Error(err))
+		log.Error(ctx, "error counting items", err)
 		if err == mgo.ErrNotFound {
 			return &models.JobResults{
 				Items:      []*models.Job{},
@@ -110,7 +110,7 @@ func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit
 		defer func() {
 			err := iter.Close()
 			if err != nil {
-				log.Event(ctx, "error closing job iterator", log.ERROR, log.Error(err), log.Data{"filter": stateFilter})
+				log.Error(ctx, "error closing job iterator", err, log.Data{"filter": stateFilter})
 			}
 		}()
 

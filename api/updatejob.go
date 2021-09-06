@@ -6,7 +6,7 @@ import (
 
 	"github.com/ONSdigital/dp-import-api/models"
 	dphttp "github.com/ONSdigital/dp-net/http"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 )
 
@@ -23,26 +23,26 @@ func (api *ImportAPI) updateJobHandler(w http.ResponseWriter, r *http.Request) {
 		handleErr(ctx, w, err, logData)
 		return
 	}
-	log.Event(ctx, "job update successful", log.INFO, logData)
+	log.Info(ctx, "job update successful", logData)
 }
 
 func (api *ImportAPI) updateJob(ctx context.Context, r *http.Request, jobID string, logData log.Data) (err error) {
 
 	job, err := models.CreateJob(r.Body)
 	if err != nil {
-		log.Event(ctx, "updateJob endpoint: failed to update job resource", log.ERROR, log.Error(err), logData)
+		log.Error(ctx, "updateJob endpoint: failed to update job resource", err, logData)
 		return
 	}
 	logData["job"] = job
 
 	if err = job.ValidateState(); err != nil {
 		logData["state"] = job.State
-		log.Event(ctx, "updateJob endpoint: failed to store updated job resource", log.ERROR, log.Error(err), logData)
+		log.Error(ctx, "updateJob endpoint: failed to store updated job resource", err, logData)
 		return
 	}
 
 	if err = api.jobService.UpdateJob(ctx, jobID, job); err != nil {
-		log.Event(ctx, "updateJob endpoint: failed to store updated job resource", log.ERROR, log.Error(err), logData)
+		log.Error(ctx, "updateJob endpoint: failed to store updated job resource", err, logData)
 	}
 
 	return
