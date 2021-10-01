@@ -50,13 +50,34 @@ var getMongoDataStore = func(ctx context.Context, cfg *config.Configuration) (da
 }
 
 // getKafkaProducer creates a new Kafka Producer
-var getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
+var getKafkaProducer = func(ctx context.Context, kafkaCfg *config.KafkaConfig, topic string) (kafka.IProducer, error) {
 	producerChannels := kafka.CreateProducerChannels()
 	pConfig := &kafka.ProducerConfig{
-		KafkaVersion:    &kafkaVersion,
-		MaxMessageBytes: &envMax,
+		KafkaVersion:    &kafkaCfg.Version,
+		MaxMessageBytes: &kafkaCfg.MaxBytes,
 	}
-	return kafka.NewProducer(ctx, kafkaBrokers, topic, producerChannels, pConfig)
+
+	if kafkaCfg.SecProtocol == config.KafkaSecProtocolTLS {
+		pConfig.SecurityConfig = kafka.GetSecurityConfig(
+			kafkaCfg.SecCACerts,
+			kafkaCfg.SecClientCert,
+			kafkaCfg.SecClientKey,
+			kafkaCfg.SecSkipVerify,
+		)
+	}
+
+	return kafka.NewProducer(ctx, kafkaCfg.Addr, topic, producerChannels, pConfig)
+}
+
+// getLegacyKafkaProducer creates a new Kafka Producer for legacy kafka
+var getLegacyKafkaProducer = func(ctx context.Context, kafkaCfg *config.KafkaConfig, topic string) (kafka.IProducer, error) {
+	producerChannels := kafka.CreateProducerChannels()
+	pConfig := &kafka.ProducerConfig{
+		KafkaVersion:    &kafkaCfg.LegacyVersion,
+		MaxMessageBytes: &kafkaCfg.MaxBytes,
+	}
+
+	return kafka.NewProducer(ctx, kafkaCfg.LegacyAddr, topic, producerChannels, pConfig)
 }
 
 // getHealthCheck returns a healthcheck
@@ -89,21 +110,21 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 	}
 
 	// Get data baker kafka producer
-	svc.dataBakerProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.DatabakerImportTopic, svc.cfg.KafkaMaxBytes, svc.cfg.KafkaVersion)
+	svc.dataBakerProducer, err = getKafkaProducer(ctx, &svc.cfg.KafkaConfig, svc.cfg.DatabakerImportTopic)
 	if err != nil {
 		log.Fatal(ctx, "databaker kafka producer error", err)
 		return err
 	}
 
 	// Get input file available kafka producer
-	svc.inputFileAvailableProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.InputFileAvailableTopic, svc.cfg.KafkaMaxBytes, svc.cfg.KafkaVersion)
+	svc.inputFileAvailableProducer, err = getKafkaProducer(ctx, &svc.cfg.KafkaConfig, svc.cfg.InputFileAvailableTopic)
 	if err != nil {
 		log.Fatal(ctx, "direct kafka producer error", err)
 		return err
 	}
 
 	// Get Cantabular Dataset Instance Started kafka producer
-	svc.cantabularDatasetInstanceStartedProducer, err = getKafkaProducer(ctx, svc.cfg.Brokers, svc.cfg.CantabularDatasetInstanceStartedTopic, svc.cfg.KafkaMaxBytes, svc.cfg.KafkaVersion)
+	svc.cantabularDatasetInstanceStartedProducer, err = getLegacyKafkaProducer(ctx, &svc.cfg.KafkaConfig, svc.cfg.CantabularDatasetInstanceStartedTopic)
 	if err != nil {
 		log.Fatal(ctx, "cantabular dataset instance started kafka producer error", err)
 		return err

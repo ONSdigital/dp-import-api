@@ -8,34 +8,83 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestGetReturnsDefaultValues(t *testing.T) {
-	Convey("When a loading a configuration, default values are return", t, func() {
-		os.Clearenv()
+var expectedConfig = &Configuration{
+	BindAddr: ":21800",
+	Host:     "http://localhost:21800",
+	KafkaConfig: KafkaConfig{
+		DatabakerImportTopic:                  "data-bake-job-available",
+		InputFileAvailableTopic:               "input-file-available",
+		CantabularDatasetInstanceStartedTopic: "cantabular-dataset-instance-started",
+		Addr:                                  []string{"localhost:9092"},
+		Version:                               "1.0.2",
+		LegacyAddr:                            []string{"localhost:9092"},
+		LegacyVersion:                         "1.0.2",
+		MaxBytes:                              2000000,
+		SecProtocol:                           "",
+	},
+	MongoDBURL:                 "localhost:27017",
+	MongoDBDatabase:            "imports",
+	MongoDBCollection:          "imports",
+	ServiceAuthToken:           "0C30662F-6CF6-43B0-A96A-954772267FF5",
+	DatasetAPIURL:              "http://localhost:22000",
+	RecipeAPIURL:               "http://localhost:22300",
+	GracefulShutdownTimeout:    time.Second * 5,
+	ZebedeeURL:                 "http://localhost:8082",
+	HealthCheckInterval:        30 * time.Second,
+	HealthCheckCriticalTimeout: 90 * time.Second,
+	DefaultLimit:               20,
+	DefaultMaxLimit:            1000,
+	DefaultOffset:              0,
+}
 
-		configuration, err := Get()
-		So(err, ShouldBeNil)
-		So(configuration, ShouldResemble, &Configuration{
-			BindAddr:                              ":21800",
-			Host:                                  "http://localhost:21800",
-			Brokers:                               []string{"localhost:9092"},
-			DatabakerImportTopic:                  "data-bake-job-available",
-			InputFileAvailableTopic:               "input-file-available",
-			CantabularDatasetInstanceStartedTopic: "cantabular-dataset-instance-started",
-			KafkaMaxBytes:                         2000000,
-			KafkaVersion:                          "1.0.2",
-			MongoDBURL:                            "localhost:27017",
-			MongoDBDatabase:                       "imports",
-			MongoDBCollection:                     "imports",
-			ServiceAuthToken:                      "0C30662F-6CF6-43B0-A96A-954772267FF5",
-			DatasetAPIURL:                         "http://localhost:22000",
-			RecipeAPIURL:                          "http://localhost:22300",
-			GracefulShutdownTimeout:               time.Second * 5,
-			ZebedeeURL:                            "http://localhost:8082",
-			HealthCheckInterval:                   30 * time.Second,
-			HealthCheckCriticalTimeout:            90 * time.Second,
-			DefaultLimit:                          20,
-			DefaultMaxLimit:                       1000,
-			DefaultOffset:                         0,
+func TestGetReturnsDefaultValues(t *testing.T) {
+	Convey("Given a clean environment", t, func() {
+		os.Clearenv()
+		cfg = nil
+
+		Convey("When default configuration is obtained", func() {
+			configuration, err := Get()
+
+			Convey("Then expected configuration is returned", func() {
+				So(err, ShouldBeNil)
+				So(configuration, ShouldResemble, expectedConfig)
+			})
+		})
+
+		Convey("When configuration is called with an invalid security protocol", func() {
+			os.Setenv("KAFKA_SEC_PROTO", "ssl")
+			configuration, err := Get()
+
+			Convey("Then an error is returned", func() {
+				So(configuration, ShouldBeNil)
+				So(err.Error(), ShouldEqual, "validation of config failed: KAFKA_SEC_PROTO has invalid value")
+			})
+		})
+
+		Convey("When configuration is called with an invalid cert setting", func() {
+			os.Setenv("KAFKA_SEC_CLIENT_KEY", "open sesame")
+			configuration, err := Get()
+
+			Convey("Then an error is returned", func() {
+				So(configuration, ShouldBeNil)
+				So(err.Error(), ShouldEqual, "validation of config failed: got a KAFKA_SEC_CLIENT_KEY value, so require KAFKA_SEC_CLIENT_CERT to have a value")
+			})
+		})
+
+		Convey("When configuration is called with a valid cert and key", func() {
+			secExpectedConfig := *expectedConfig
+			secExpectedConfig.KafkaConfig.SecClientKey = "open sesame"
+			secExpectedConfig.KafkaConfig.SecClientCert = "please"
+
+			os.Setenv("KAFKA_SEC_CLIENT_KEY", "open sesame")
+			os.Setenv("KAFKA_SEC_CLIENT_CERT", "please")
+
+			configuration, err := Get()
+
+			Convey("Then expected configuration is returned", func() {
+				So(err, ShouldBeNil)
+				So(configuration, ShouldResemble, &secExpectedConfig)
+			})
 		})
 	})
 }
