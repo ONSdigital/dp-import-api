@@ -7,6 +7,7 @@ import (
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
+	"github.com/ONSdigital/dp-import-api/config"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
 	mongo "github.com/ONSdigital/dp-mongodb"
@@ -21,23 +22,18 @@ var _ datastore.DataStorer = (*Mongo)(nil)
 
 // Mongo represents a simplistic MongoDB configuration
 type Mongo struct {
-	Collection   string
-	Database     string
-	URI          string
+	config.MongoConfig
+
 	Session      *mgo.Session
 	healthClient *mongohealth.CheckMongoClient
 	lockClient   *mongolock.Lock
 }
 
 // NewDatastore creates a new mgo.Session with a strong consistency and a write mode of "majority"
-func NewDatastore(ctx context.Context, uri, database, collection string) (m *Mongo, err error) {
+func NewDatastore(ctx context.Context, cfg config.MongoConfig) (m *Mongo, err error) {
+	m = &Mongo{MongoConfig: cfg}
 
-	m = &Mongo{
-		Collection: collection,
-		Database:   database,
-		URI:        uri}
-
-	m.Session, err = mgo.Dial(uri)
+	m.Session, err = mgo.Dial(m.URI)
 	if err != nil {
 		return nil, err
 	}
@@ -45,10 +41,10 @@ func NewDatastore(ctx context.Context, uri, database, collection string) (m *Mon
 	m.Session.EnsureSafe(&mgo.Safe{WMode: "majority"})
 	m.Session.SetMode(mgo.Strong, true)
 
-	importLocksCollection := fmt.Sprintf("%s_locks", collection)
+	importLocksCollection := fmt.Sprintf("%s_locks", m.Collection)
 
 	databaseCollectionBuilder := make(map[mongohealth.Database][]mongohealth.Collection)
-	databaseCollectionBuilder[(mongohealth.Database)(database)] = []mongohealth.Collection{(mongohealth.Collection)(collection), (mongohealth.Collection)(importLocksCollection)}
+	databaseCollectionBuilder[(mongohealth.Database)(m.Database)] = []mongohealth.Collection{(mongohealth.Collection)(m.Collection), (mongohealth.Collection)(importLocksCollection)}
 
 	// Create client and healthclient from session
 	client := mongohealth.NewClientWithCollections(m.Session, databaseCollectionBuilder)
@@ -57,7 +53,7 @@ func NewDatastore(ctx context.Context, uri, database, collection string) (m *Mon
 		Healthcheck: client.Healthcheck,
 	}
 
-	m.lockClient = mongolock.New(ctx, m.Session, database, collection)
+	m.lockClient = mongolock.New(ctx, m.Session, m.Database, m.Collection)
 
 	return m, nil
 }

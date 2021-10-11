@@ -45,8 +45,8 @@ type Service struct {
 }
 
 // getMongoDataStore creates a mongoDB connection
-var getMongoDataStore = func(ctx context.Context, cfg *config.Configuration) (datastore.DataStorer, error) {
-	return mongo.NewDatastore(ctx, cfg.MongoDBURL, cfg.MongoDBDatabase, cfg.MongoDBCollection)
+var getMongoDataStore = func(ctx context.Context, cfg config.MongoConfig) (datastore.DataStorer, error) {
+	return mongo.NewDatastore(ctx, cfg)
 }
 
 // getKafkaProducer creates a new Kafka Producer
@@ -104,7 +104,7 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 	svc.cfg = cfg
 
 	// Get mongoDB connection (non-fatal)
-	svc.mongoDataStore, err = getMongoDataStore(ctx, svc.cfg)
+	svc.mongoDataStore, err = getMongoDataStore(ctx, svc.cfg.MongoConfig)
 	if err != nil {
 		log.Error(ctx, "mongodb datastore error", err)
 	}
@@ -186,7 +186,7 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 }
 
 // CreateMiddleware creates an Alice middleware chain of handlers
-func (svc *Service) createMiddleware(cfg *config.Configuration) alice.Chain {
+func (svc *Service) createMiddleware(_ *config.Configuration) alice.Chain {
 	identityHandler := dphandlers.IdentityWithHTTPClient(svc.identityClient)
 	return alice.New(
 		middleware.Whitelist(middleware.HealthcheckFilter(svc.healthCheck.Handler)),

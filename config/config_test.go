@@ -9,8 +9,18 @@ import (
 )
 
 var expectedConfig = &Configuration{
-	BindAddr: ":21800",
-	Host:     "http://localhost:21800",
+	BindAddr:                   ":21800",
+	Host:                       "http://localhost:21800",
+	ServiceAuthToken:           "0C30662F-6CF6-43B0-A96A-954772267FF5",
+	DatasetAPIURL:              "http://localhost:22000",
+	RecipeAPIURL:               "http://localhost:22300",
+	GracefulShutdownTimeout:    time.Second * 5,
+	ZebedeeURL:                 "http://localhost:8082",
+	HealthCheckInterval:        30 * time.Second,
+	HealthCheckCriticalTimeout: 90 * time.Second,
+	DefaultLimit:               20,
+	DefaultMaxLimit:            1000,
+	DefaultOffset:              0,
 	KafkaConfig: KafkaConfig{
 		DatabakerImportTopic:                  "data-bake-job-available",
 		InputFileAvailableTopic:               "input-file-available",
@@ -22,19 +32,18 @@ var expectedConfig = &Configuration{
 		MaxBytes:                              2000000,
 		SecProtocol:                           "",
 	},
-	MongoDBURL:                 "localhost:27017",
-	MongoDBDatabase:            "imports",
-	MongoDBCollection:          "imports",
-	ServiceAuthToken:           "0C30662F-6CF6-43B0-A96A-954772267FF5",
-	DatasetAPIURL:              "http://localhost:22000",
-	RecipeAPIURL:               "http://localhost:22300",
-	GracefulShutdownTimeout:    time.Second * 5,
-	ZebedeeURL:                 "http://localhost:8082",
-	HealthCheckInterval:        30 * time.Second,
-	HealthCheckCriticalTimeout: 90 * time.Second,
-	DefaultLimit:               20,
-	DefaultMaxLimit:            1000,
-	DefaultOffset:              0,
+	MongoConfig: MongoConfig{
+		URI:                "localhost:27017",
+		Database:           "imports",
+		Collection:         "imports",
+		Username:           "",
+		Password:           "",
+		IsSSL:              false,
+		QueryTimeout:       15 * time.Second,
+		ConnectionTimeout:  5 * time.Second,
+		EnableReadConcern:  false,
+		EnableWriteConcern: true,
+	},
 }
 
 func TestGetReturnsDefaultValues(t *testing.T) {
@@ -52,7 +61,7 @@ func TestGetReturnsDefaultValues(t *testing.T) {
 		})
 
 		Convey("When configuration is called with an invalid security protocol", func() {
-			os.Setenv("KAFKA_SEC_PROTO", "ssl")
+			_ = os.Setenv("KAFKA_SEC_PROTO", "ssl")
 			configuration, err := Get()
 
 			Convey("Then an error is returned", func() {
@@ -62,7 +71,7 @@ func TestGetReturnsDefaultValues(t *testing.T) {
 		})
 
 		Convey("When configuration is called with an invalid cert setting", func() {
-			os.Setenv("KAFKA_SEC_CLIENT_KEY", "open sesame")
+			_ = os.Setenv("KAFKA_SEC_CLIENT_KEY", "open sesame")
 			configuration, err := Get()
 
 			Convey("Then an error is returned", func() {
@@ -76,8 +85,8 @@ func TestGetReturnsDefaultValues(t *testing.T) {
 			secExpectedConfig.KafkaConfig.SecClientKey = "open sesame"
 			secExpectedConfig.KafkaConfig.SecClientCert = "please"
 
-			os.Setenv("KAFKA_SEC_CLIENT_KEY", "open sesame")
-			os.Setenv("KAFKA_SEC_CLIENT_CERT", "please")
+			_ = os.Setenv("KAFKA_SEC_CLIENT_KEY", "open sesame")
+			_ = os.Setenv("KAFKA_SEC_CLIENT_CERT", "please")
 
 			configuration, err := Get()
 
