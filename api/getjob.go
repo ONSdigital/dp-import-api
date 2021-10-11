@@ -26,7 +26,7 @@ func (api *ImportAPI) getJobHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *ImportAPI) getJob(ctx context.Context, jobID string, logData log.Data) (b []byte, err error) {
-	job, err := api.dataStore.GetJob(jobID)
+	job, err := api.dataStore.GetJob(ctx, jobID)
 	if err != nil {
 		log.Error(ctx, "getJob endpoint: failed to find job", err, logData)
 		return

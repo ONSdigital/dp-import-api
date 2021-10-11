@@ -68,7 +68,7 @@ func (m *Mongo) AcquireInstanceLock(ctx context.Context, jobID string) (lockID s
 
 // UnlockInstance releases an exclusive mongoDB lock for the provided lockId (if it exists)
 // Note: the lock is currently only used to update processed_instances
-func (m *Mongo) UnlockInstance(lockID string) {
+func (m *Mongo) UnlockInstance(_ context.Context, lockID string) {
 	m.lockClient.Unlock(lockID)
 }
 
@@ -134,7 +134,7 @@ func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit
 }
 
 // GetJob retrieves a single import job
-func (m *Mongo) GetJob(id string) (*models.Job, error) {
+func (m *Mongo) GetJob(_ context.Context, id string) (*models.Job, error) {
 	s := m.Session.Copy()
 	defer s.Close()
 	var job models.Job
@@ -149,7 +149,7 @@ func (m *Mongo) GetJob(id string) (*models.Job, error) {
 }
 
 // AddJob adds an ImportJob document
-func (m *Mongo) AddJob(job *models.Job) (*models.Job, error) {
+func (m *Mongo) AddJob(ctx context.Context, job *models.Job) (*models.Job, error) {
 	s := m.Session.Copy()
 	defer s.Close()
 
@@ -164,11 +164,11 @@ func (m *Mongo) AddJob(job *models.Job) (*models.Job, error) {
 		return nil, err
 	}
 
-	return m.GetJob(job.ID)
+	return m.GetJob(ctx, job.ID)
 }
 
 // AddUploadedFile adds an UploadedFile to an import job
-func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile) error {
+func (m *Mongo) AddUploadedFile(_ context.Context, id string, file *models.UploadedFile) error {
 	s := m.Session.Copy()
 	defer s.Close()
 
@@ -206,7 +206,7 @@ func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile) error {
 }
 
 // UpdateJob adds or overides an existing import job
-func (m *Mongo) UpdateJob(id string, job *models.Job) (err error) {
+func (m *Mongo) UpdateJob(_ context.Context, id string, job *models.Job) (err error) {
 	s := m.Session.Copy()
 	defer s.Close()
 
@@ -232,7 +232,7 @@ func (m *Mongo) UpdateJob(id string, job *models.Job) (err error) {
 }
 
 // UpdateProcessedInstance overides the processed instances for an existing import job
-func (m *Mongo) UpdateProcessedInstance(id string, procInstances []models.ProcessedInstances) (err error) {
+func (m *Mongo) UpdateProcessedInstance(_ context.Context, id string, procInstances []models.ProcessedInstances) (err error) {
 	s := m.Session.Copy()
 	defer s.Close()
 
