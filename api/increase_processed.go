@@ -6,7 +6,7 @@ import (
 
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	dphttp "github.com/ONSdigital/dp-net/http"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 )
 
@@ -55,7 +55,7 @@ func (api *ImportAPI) increaseProcessedInstanceHandler(w http.ResponseWriter, r 
 		handleErr(ctx, w, err, logData)
 		return
 	}
-	log.Event(ctx, "job update completed successfully", log.INFO, logData)
+	log.Info(ctx, "job update completed successfully", logData)
 
 	// marshal full Processed array as a response
 	b, err := json.Marshal(job.Processed)
@@ -65,5 +65,5 @@ func (api *ImportAPI) increaseProcessedInstanceHandler(w http.ResponseWriter, r 
 	}
 
 	writeResponse(ctx, w, http.StatusOK, b, "increaseProcessedInstanceHandler", logData)
-	log.Event(ctx, "created new import job", log.INFO, logData)
+	log.Info(ctx, "created new import job", logData)
 }

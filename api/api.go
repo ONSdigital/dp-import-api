@@ -11,7 +11,7 @@ import (
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/dp-net/handlers"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 )
 
@@ -66,7 +66,7 @@ func writeResponse(ctx context.Context, w http.ResponseWriter, statusCode int, b
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	if _, err := w.Write(b); err != nil {
-		log.Event(ctx, fmt.Sprintf("%s endpoint: failed to write response body", action), log.ERROR, log.Error(err), logData)
+		log.Error(ctx, fmt.Sprintf("%s endpoint: failed to write response body", action), err, logData)
 	}
 }
 
@@ -102,5 +102,5 @@ func handleCustomErr(ctx context.Context, w http.ResponseWriter, err error, logD
 
 func logResponseStatus(ctx context.Context, logData log.Data, status int, err error) {
 	logData["responseStatus"] = status
-	log.Event(ctx, "request unsuccessful", log.ERROR, log.Error(err), logData)
+	log.Error(ctx, "request unsuccessful", err, logData)
 }

@@ -6,7 +6,7 @@ import (
 
 	"github.com/ONSdigital/dp-import-api/models"
 	"github.com/ONSdigital/dp-import/events"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 // block of constants corresponding to possible job formats
@@ -40,7 +40,7 @@ func (q *ImportQueue) Queue(ctx context.Context, job *models.ImportData) error {
 	case formatCantabularTable, formatCantabularBlob:
 		return q.queueCantabular(ctx, job)
 	default:
-		log.Event(ctx, "unrecognised job format, no action has been taken", log.WARN, log.Data{"job_format": job.Format})
+		log.Warn(ctx, "unrecognised job format, no action has been taken", log.Data{"job_format": job.Format})
 	}
 	return nil
 }
@@ -60,7 +60,7 @@ func (q *ImportQueue) queueV4(ctx context.Context, job *models.ImportData) error
 		URL:        (*job.UploadedFiles)[0].URL,
 	}
 
-	log.Event(ctx, "producing new input file available event", log.INFO, log.Data{"event": inputFileAvailableEvent, "format": formatV4})
+	log.Info(ctx, "producing new input file available event", log.Data{"event": inputFileAvailableEvent, "format": formatV4})
 
 	bytes, avroError := events.InputFileAvailableSchema.Marshal(inputFileAvailableEvent)
 	if avroError != nil {
@@ -87,7 +87,7 @@ func (q *ImportQueue) queueCantabular(ctx context.Context, job *models.ImportDat
 		CantabularType: job.Format,
 	}
 
-	log.Event(ctx, "producing new cantabular dataset instance started event", log.INFO, log.Data{"event": event})
+	log.Info(ctx, "producing new cantabular dataset instance started event", log.Data{"event": event})
 
 	bytes, avroError := events.CantabularDatasetInstanceStartedSchema.Marshal(event)
 	if avroError != nil {

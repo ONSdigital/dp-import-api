@@ -123,10 +123,8 @@ func (m *DataStorer) AcquireInstanceLock(ctx context.Context, jobID string) (loc
 	return testLockID, nil
 }
 
-func (m *DataStorer) UnlockInstance(lockID string) error {
+func (m *DataStorer) UnlockInstance(lockID string) {
 	if lockID == testLockID {
 		m.IsLocked = false
-		return nil
 	}
-	return errors.New("wrongLockID")
 }

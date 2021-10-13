@@ -6,7 +6,7 @@ import (
 
 	"github.com/ONSdigital/dp-import-api/models"
 	dphttp "github.com/ONSdigital/dp-net/http"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 )
 
@@ -21,7 +21,7 @@ func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Requ
 
 	uploadedFile, err := models.CreateUploadedFile(r.Body)
 	if err != nil {
-		log.Event(ctx, "addUploadFile endpoint: failed to create uploaded file resource", log.ERROR, log.Error(err), logData)
+		log.Error(ctx, "addUploadFile endpoint: failed to create uploaded file resource", err, logData)
 		handleErr(ctx, w, err, nil)
 		return
 	}
@@ -33,13 +33,13 @@ func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	log.Event(ctx, "added uxploaded file to job", logData)
+	log.Info(ctx, "added uploaded file to job", logData)
 }
 
 func (api *ImportAPI) addUploadFile(ctx context.Context, uploadedFile *models.UploadedFile, jobID string, logData log.Data) (err error) {
 
 	if err = api.dataStore.AddUploadedFile(jobID, uploadedFile); err != nil {
-		log.Event(ctx, "addUploadFile endpoint: failed to store uploaded file resource", log.ERROR, log.Error(err), logData)
+		log.Error(ctx, "addUploadFile endpoint: failed to store uploaded file resource", err, logData)
 	}
 
 	return

@@ -41,7 +41,7 @@ func TestNew(t *testing.T) {
 
 func TestInit(t *testing.T) {
 
-	Convey("Having a set of mocked dependencies", t, func() {
+	Convey("Given a set of mocked dependencies", t, func() {
 
 		cfg, err := config.Get()
 		So(err, ShouldBeNil)
@@ -56,7 +56,10 @@ func TestInit(t *testing.T) {
 				return &kafka.ProducerChannels{}
 			},
 		}
-		getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
+		getKafkaProducer = func(ctx context.Context, cfg *config.KafkaConfig, topic string) (kafka.IProducer, error) {
+			return kafkaMock, nil
+		}
+		getLegacyKafkaProducer = func(ctx context.Context, cfg *config.KafkaConfig, topic string) (kafka.IProducer, error) {
 			return kafkaMock, nil
 		}
 
@@ -74,7 +77,7 @@ func TestInit(t *testing.T) {
 
 		svc := &Service{}
 
-		Convey("Given that initialising MongoDB returns an error", func() {
+		Convey("When initialising MongoDB returns an error", func() {
 			getMongoDataStore = func(ctx context.Context, cfg *config.Configuration) (datastore.DataStorer, error) {
 				return nil, errMongo
 			}
@@ -102,9 +105,9 @@ func TestInit(t *testing.T) {
 			})
 		})
 
-		Convey("Given that initialising DataBaker kafka producer returns an error", func() {
-			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
-				if topic == cfg.DatabakerImportTopic {
+		Convey("When initialising DataBaker kafka producer returns an error", func() {
+			getKafkaProducer = func(ctx context.Context, kafkaCfg *config.KafkaConfig, topic string) (kafka.IProducer, error) {
+				if topic == kafkaCfg.DatabakerImportTopic {
 					return nil, errKafka
 				}
 				return kafkaMock, nil
@@ -122,9 +125,9 @@ func TestInit(t *testing.T) {
 			})
 		})
 
-		Convey("Given that initialising Kafka direct producer returns an error", func() {
-			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
-				if topic == cfg.InputFileAvailableTopic {
+		Convey("When initialising Kafka direct producer returns an error", func() {
+			getKafkaProducer = func(ctx context.Context, kafkaCfg *config.KafkaConfig, topic string) (kafka.IProducer, error) {
+				if topic == kafkaCfg.InputFileAvailableTopic {
 					return nil, errKafka
 				}
 				return kafkaMock, nil
@@ -142,9 +145,9 @@ func TestInit(t *testing.T) {
 			})
 		})
 
-		Convey("Given that initialising Kafka cantabular producer returns an error", func() {
-			getKafkaProducer = func(ctx context.Context, kafkaBrokers []string, topic string, envMax int, kafkaVersion string) (kafka.IProducer, error) {
-				if topic == cfg.CantabularDatasetInstanceStartedTopic {
+		Convey("When initialising Kafka cantabular producer returns an error", func() {
+			getLegacyKafkaProducer = func(ctx context.Context, kafkaCfg *config.KafkaConfig, topic string) (kafka.IProducer, error) {
+				if topic == kafkaCfg.CantabularDatasetInstanceStartedTopic {
 					return nil, errKafka
 				}
 				return kafkaMock, nil
@@ -163,7 +166,7 @@ func TestInit(t *testing.T) {
 			})
 		})
 
-		Convey("Given that healthcheck versionInfo cannot be created due to a wrong build time", func() {
+		Convey("When healthcheck versionInfo cannot be created due to a wrong build time", func() {
 			wrongBuildTime := "wrongFormat"
 
 			Convey("Then service Init fails with the same error and the flag is not set. No further initialisations are attempted", func() {
@@ -179,7 +182,7 @@ func TestInit(t *testing.T) {
 			})
 		})
 
-		Convey("Given that Checkers cannot be registered", func() {
+		Convey("When Checkers cannot be registered", func() {
 			hcMock.AddCheckFunc = func(name string, checker healthcheck.Checker) error { return errHealthcheck }
 
 			Convey("Then service Init fails with the expected error and no further initialisations are attempted", func() {
@@ -206,7 +209,7 @@ func TestInit(t *testing.T) {
 			})
 		})
 
-		Convey("Given that all dependencies are successfully initialised", func() {
+		Convey("When all dependencies are successfully initialised", func() {
 
 			Convey("Then service Init succeeds and all the flags are set", func() {
 				err := svc.Init(ctx, cfg, testBuildTime, testGitCommit, testVersion)
@@ -234,7 +237,7 @@ func TestInit(t *testing.T) {
 
 func TestStart(t *testing.T) {
 
-	Convey("Having a correctly initialised Service with mocked dependencies", t, func() {
+	Convey("Given a correctly initialised Service with mocked dependencies", t, func() {
 
 		cfg, err := config.Get()
 		So(err, ShouldBeNil)
@@ -307,7 +310,7 @@ func TestStart(t *testing.T) {
 
 func TestClose(t *testing.T) {
 
-	Convey("Having a correctly initialised service with mocked dependencies", t, func(c C) {
+	Convey("Given a correctly initialised service with mocked dependencies", t, func(c C) {
 
 		cfg, err := config.Get()
 		So(err, ShouldBeNil)
@@ -414,7 +417,7 @@ func TestClose(t *testing.T) {
 			So(len(cantabularKafkaProducer.CloseCalls()), ShouldEqual, 1)
 		})
 
-		Convey("Given that a dependency takes more time to close than the graceful shutdown timeout", func() {
+		Convey("When a dependency takes more time to close than the graceful shutdown timeout", func() {
 			cfg.GracefulShutdownTimeout = 1 * time.Millisecond
 			serverMock.ShutdownFunc = func(ctx context.Context) error {
 				time.Sleep(20 * time.Millisecond)

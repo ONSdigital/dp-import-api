@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 )
 
@@ -22,13 +22,13 @@ func (api *ImportAPI) getJobHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeResponse(ctx, w, http.StatusOK, b, "getJob", logData)
-	log.Event(ctx, "getJob endpoint: request successful", logData)
+	log.Info(ctx, "getJob endpoint: request successful", logData)
 }
 
 func (api *ImportAPI) getJob(ctx context.Context, jobID string, logData log.Data) (b []byte, err error) {
 	job, err := api.dataStore.GetJob(jobID)
 	if err != nil {
-		log.Event(ctx, "getJob endpoint: failed to find job", log.ERROR, log.Error(err), logData)
+		log.Error(ctx, "getJob endpoint: failed to find job", err, logData)
 		return
 	}
 
@@ -36,7 +36,7 @@ func (api *ImportAPI) getJob(ctx context.Context, jobID string, logData log.Data
 
 	b, err = json.Marshal(job)
 	if err != nil {
-		log.Event(ctx, "getJob endpoint: failed to marshal jobs resource into bytes", log.ERROR, log.Error(err), logData)
+		log.Error(ctx, "getJob endpoint: failed to marshal jobs resource into bytes", err, logData)
 	}
 	return
 }
