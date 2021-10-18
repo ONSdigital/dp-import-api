@@ -59,7 +59,7 @@ func TestInit(t *testing.T) {
 		getKafkaProducer = func(ctx context.Context, cfg *config.KafkaConfig, topic string) (kafka.IProducer, error) {
 			return kafkaMock, nil
 		}
-		getLegacyKafkaProducer = func(ctx context.Context, cfg *config.KafkaConfig, topic string) (kafka.IProducer, error) {
+		getKafkaProducer = func(ctx context.Context, cfg *config.KafkaConfig, topic string) (kafka.IProducer, error) {
 			return kafkaMock, nil
 		}
 
@@ -146,7 +146,7 @@ func TestInit(t *testing.T) {
 		})
 
 		Convey("When initialising Kafka cantabular producer returns an error", func() {
-			getLegacyKafkaProducer = func(ctx context.Context, kafkaCfg *config.KafkaConfig, topic string) (kafka.IProducer, error) {
+			getKafkaProducer = func(ctx context.Context, kafkaCfg *config.KafkaConfig, topic string) (kafka.IProducer, error) {
 				if topic == kafkaCfg.CantabularDatasetInstanceStartedTopic {
 					return nil, errKafka
 				}

@@ -24,8 +24,6 @@ Scripts for updating and debugging Kafka can be found [here](https://github.com/
 | HOST                         | `http://localhost:21800`                  | The host name used to build URLs
 | KAFKA_ADDR                   | `localhost:9092`                          | A list of kafka brokers (TLS-ready)
 | KAFKA_VERSION                | `1.0.2`                                   | The version of (TLS-ready) Kafka being used
-| KAFKA_LEGACY_ADDR            | `localhost:9092`                          | A list of pre-TLS kafka brokers
-| KAFKA_LEGACY_VERSION         | `1.0.2`                                   | The pre-TLS version of Kafka being used
 | KAFKA_MAX_BYTES              | `200000`                                  | The max message size for kafka producer
 | KAFKA_SEC_PROTO              | _unset_                                   | if set to `TLS`, kafka connections will use TLS ([ref-1])
 | KAFKA_SEC_CLIENT_KEY         | _unset_                                   | PEM for the client key ([ref-1])
