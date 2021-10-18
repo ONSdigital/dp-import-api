@@ -55,8 +55,6 @@ func Get() (*Configuration, error) {
 		return cfg, nil
 	}
 
-	brokers := []string{"localhost:9092"}
-
 	cfg = &Configuration{
 		BindAddr:                   ":21800",
 		Host:                       "http://localhost:21800",
@@ -74,7 +72,7 @@ func Get() (*Configuration, error) {
 		DefaultMaxLimit:            1000,
 		DefaultOffset:              0,
 		KafkaConfig: KafkaConfig{
-			Brokers:                               brokers,
+			Brokers:                               []string{"localhost:9092"},
 			DatabakerImportTopic:                  "data-bake-job-available",
 			InputFileAvailableTopic:               "input-file-available",
 			CantabularDatasetInstanceStartedTopic: "cantabular-dataset-instance-started",

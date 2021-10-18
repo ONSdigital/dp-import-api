@@ -2,6 +2,11 @@ module github.com/ONSdigital/dp-import-api
 
 go 1.17
 
+// workaround for insecurity
+// https://ossindex.sonatype.org/vulnerability/bba60acb-c7b5-4621-af69-f4085a8301d0?component-type=golang&component-name=github.com%2Fcoreos%2Fetcd&utm_source=nancy-client&utm_medium=integration&utm_content=1.0.22
+// CVE-2020-15136
+// CVE-2020-15115
+// CVE-2020-15114
 replace github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
 
 require (
