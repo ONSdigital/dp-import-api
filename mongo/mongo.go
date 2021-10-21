@@ -2,7 +2,6 @@ package mongo
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -46,13 +45,10 @@ func (m *Mongo) getConnectionConfig() *mongo.MongoConnectionConfig {
 	}
 }
 
-// NewDatastore creates a new mgo.Session with a strong consistency and a write mode of "majority"
+// NewDatastore creates a new mongodb.MongoConnection with the given configuration
 func NewDatastore(ctx context.Context, cfg config.MongoConfig) (m *Mongo, err error) {
 	m = &Mongo{MongoConfig: cfg}
 
-	if m.Connection != nil {
-		return nil, errors.New("datastore connection already exists")
-	}
 	m.Connection, err = mongo.Open(m.getConnectionConfig())
 	if err != nil {
 		return nil, err
@@ -92,16 +88,14 @@ func (m *Mongo) UnlockInstance(ctx context.Context, lockID string) {
 
 // GetJobs retrieves all import documents matching filters
 func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit int) (*models.JobResults, error) {
-	var (
-		stateFilter = bson.M{}
-		emptyResult = &models.JobResults{
-			Items:      []*models.Job{},
-			Count:      0,
-			TotalCount: 0,
-			Offset:     offset,
-			Limit:      limit,
-		}
-	)
+	stateFilter := bson.M{}
+	emptyResult := &models.JobResults{
+		Items:      []*models.Job{},
+		Count:      0,
+		TotalCount: 0,
+		Offset:     offset,
+		Limit:      limit,
+	}
 
 	if len(filters) > 0 {
 		stateFilter["state"] = bson.M{"$in": filters}
