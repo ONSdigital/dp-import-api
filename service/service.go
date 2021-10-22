@@ -66,18 +66,7 @@ var getKafkaProducer = func(ctx context.Context, kafkaCfg *config.KafkaConfig, t
 		)
 	}
 
-	return kafka.NewProducer(ctx, kafkaCfg.Addr, topic, producerChannels, pConfig)
-}
-
-// getLegacyKafkaProducer creates a new Kafka Producer for legacy kafka
-var getLegacyKafkaProducer = func(ctx context.Context, kafkaCfg *config.KafkaConfig, topic string) (kafka.IProducer, error) {
-	producerChannels := kafka.CreateProducerChannels()
-	pConfig := &kafka.ProducerConfig{
-		KafkaVersion:    &kafkaCfg.LegacyVersion,
-		MaxMessageBytes: &kafkaCfg.MaxBytes,
-	}
-
-	return kafka.NewProducer(ctx, kafkaCfg.LegacyAddr, topic, producerChannels, pConfig)
+	return kafka.NewProducer(ctx, kafkaCfg.Brokers, topic, producerChannels, pConfig)
 }
 
 // getHealthCheck returns a healthcheck
@@ -124,7 +113,7 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 	}
 
 	// Get Cantabular Dataset Instance Started kafka producer
-	svc.cantabularDatasetInstanceStartedProducer, err = getLegacyKafkaProducer(ctx, &svc.cfg.KafkaConfig, svc.cfg.CantabularDatasetInstanceStartedTopic)
+	svc.cantabularDatasetInstanceStartedProducer, err = getKafkaProducer(ctx, &svc.cfg.KafkaConfig, svc.cfg.CantabularDatasetInstanceStartedTopic)
 	if err != nil {
 		log.Fatal(ctx, "cantabular dataset instance started kafka producer error", err)
 		return err

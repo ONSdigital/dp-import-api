@@ -2,10 +2,17 @@ module github.com/ONSdigital/dp-import-api
 
 go 1.17
 
+// workaround for insecurity
+// https://ossindex.sonatype.org/vulnerability/bba60acb-c7b5-4621-af69-f4085a8301d0?component-type=golang&component-name=github.com%2Fcoreos%2Fetcd&utm_source=nancy-client&utm_medium=integration&utm_content=1.0.22
+// CVE-2020-15136
+// CVE-2020-15115
+// CVE-2020-15114
+replace github.com/coreos/etcd => github.com/coreos/etcd v3.3.24+incompatible
+
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0
 	github.com/ONSdigital/dp-api-clients-go/v2 v2.1.7-beta
-	github.com/ONSdigital/dp-healthcheck v1.1.2
+	github.com/ONSdigital/dp-healthcheck v1.1.3
 	github.com/ONSdigital/dp-import v1.2.1
 	github.com/ONSdigital/dp-kafka/v2 v2.4.1
 	github.com/ONSdigital/dp-mongodb/v3 v3.0.0-beta.1

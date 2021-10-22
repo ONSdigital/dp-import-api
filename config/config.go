@@ -14,10 +14,8 @@ const KafkaSecProtocolTLS = "TLS"
 
 // KafkaConfig contains all configuration relating to kafka
 type KafkaConfig struct {
-	Addr                                  []string `envconfig:"KAFKA_ADDR"`
+	Brokers                               []string `envconfig:"KAFKA_ADDR"`
 	Version                               string   `envconfig:"KAFKA_VERSION"`
-	LegacyAddr                            []string `envconfig:"KAFKA_LEGACY_ADDR"`
-	LegacyVersion                         string   `envconfig:"KAFKA_LEGACY_VERSION"`
 	MaxBytes                              int      `envconfig:"KAFKA_MAX_BYTES"`
 	SecProtocol                           string   `envconfig:"KAFKA_SEC_PROTO"`
 	SecCACerts                            string   `envconfig:"KAFKA_SEC_CA_CERTS"`
@@ -69,8 +67,6 @@ func Get() (*Configuration, error) {
 		return cfg, nil
 	}
 
-	brokers := []string{"localhost:9092"}
-
 	cfg = &Configuration{
 		BindAddr:                   ":21800",
 		Host:                       "http://localhost:21800",
@@ -85,14 +81,12 @@ func Get() (*Configuration, error) {
 		DefaultMaxLimit:            1000,
 		DefaultOffset:              0,
 		KafkaConfig: KafkaConfig{
+			Brokers:                               []string{"localhost:9092"},
 			DatabakerImportTopic:                  "data-bake-job-available",
 			InputFileAvailableTopic:               "input-file-available",
 			CantabularDatasetInstanceStartedTopic: "cantabular-dataset-instance-started",
-			Addr:                                  brokers,
 			Version:                               "1.0.2",
 			SecProtocol:                           "",
-			LegacyAddr:                            brokers,
-			LegacyVersion:                         "1.0.2",
 			MaxBytes:                              2000000,
 		},
 		MongoConfig: MongoConfig{
