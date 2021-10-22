@@ -4,7 +4,3 @@
 CVE-2021-3121
 # https://ossindex.sonatype.org/vulnerability/c16fb56d-9de6-4065-9fca-d2b4cfb13020?component-type=golang&component-name=github.com%2Fdgrijalva%2Fjwt-go&utm_source=nancy-client&utm_medium=integration&utm_content=1.0.22
 CVE-2020-26160
-# https://ossindex.sonatype.org/vulnerability/bba60acb-c7b5-4621-af69-f4085a8301d0?component-type=golang&component-name=github.com%2Fcoreos%2Fetcd&utm_source=nancy-client&utm_medium=integration&utm_content=1.0.22
-CVE-2020-15136
-CVE-2020-15115
-CVE-2020-15114
