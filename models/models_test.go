@@ -80,7 +80,7 @@ func TestCreateInstance(t *testing.T) {
 		hierarchy := true
 		notHierarchy := false
 
-		job := &Job{}
+		job := &Job{Links: &LinksMap{}}
 		datasetID := "123"
 		datasetURL := "/wut"
 		codelists := []recipe.CodeList{

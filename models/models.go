@@ -42,7 +42,7 @@ type Job struct {
 	RecipeID        string               `bson:"recipe,omitempty"              json:"recipe,omitempty"`
 	State           string               `bson:"state,omitempty"               json:"state,omitempty"`
 	UploadedFiles   *[]UploadedFile      `bson:"files,omitempty"               json:"files,omitempty"`
-	Links           LinksMap             `bson:"links,omitempty"               json:"links,omitempty"`
+	Links           *LinksMap            `bson:"links,omitempty"               json:"links,omitempty"`
 	Processed       []ProcessedInstances `bson:"processed_instances,omitempty" json:"processed_instances,omitempty"`
 	LastUpdated     time.Time            `bson:"last_updated,omitempty"        json:"last_updated,omitempty"`
 	UniqueTimestamp bsonprim.Timestamp   `bson:"unique_timestamp,omitempty"    json:"-"`
@@ -151,6 +151,7 @@ func CreateUploadedFile(reader io.Reader) (*UploadedFile, error) {
 }
 
 // CreateInstance from a job ID and the provided recipe CodeLists
+// Neither job nor job.Links can be nil
 func CreateInstance(job *Job, datasetID, datasetURL string, codelists []recipe.CodeList) *dataset.NewInstance {
 
 	buildHierarchyTasks := make([]*dataset.BuildHierarchyTask, 0)
