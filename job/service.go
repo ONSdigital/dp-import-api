@@ -102,9 +102,9 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 
 	// Update job ID and self link
 	job.ID = jobID.String()
-	if job.Links == nil {
-		job.Links = &models.LinksMap{}
-	}
+	// if job.Links == nil {
+	// 	job.Links = &models.LinksMap{}
+	// }
 	job.Links.Self = models.IDLink{
 		HRef: service.urlBuilder.GetJobURL(job.ID),
 		ID:   job.ID,
@@ -194,21 +194,21 @@ func (service Service) prepareJob(ctx context.Context, jobID string) (*models.Im
 	}
 
 	var instanceIds []string
-	if importJob.Links != nil {
-		for _, instanceRef := range importJob.Links.Instances {
-			instanceIds = append(instanceIds, instanceRef.ID)
+	//if importJob.Links != nil {
+	for _, instanceRef := range importJob.Links.Instances {
+		instanceIds = append(instanceIds, instanceRef.ID)
 
-			_, err = service.datasetAPIClient.PutInstance(ctx, "", service.serviceAuthToken, "", instanceRef.ID,
-				dataset.UpdateInstance{
-					State: dataset.StateSubmitted.String(),
-				},
-				headers.IfMatchAnyETag,
-			)
-			if err != nil {
-				return nil, err
-			}
+		_, err = service.datasetAPIClient.PutInstance(ctx, "", service.serviceAuthToken, "", instanceRef.ID,
+			dataset.UpdateInstance{
+				State: dataset.StateSubmitted.String(),
+			},
+			headers.IfMatchAnyETag,
+		)
+		if err != nil {
+			return nil, err
 		}
 	}
+	//}
 
 	return &models.ImportData{
 		JobID:         jobID,

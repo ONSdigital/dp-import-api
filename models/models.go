@@ -42,7 +42,7 @@ type Job struct {
 	RecipeID        string               `bson:"recipe,omitempty"              json:"recipe,omitempty"`
 	State           string               `bson:"state,omitempty"               json:"state,omitempty"`
 	UploadedFiles   *[]UploadedFile      `bson:"files,omitempty"               json:"files,omitempty"`
-	Links           *LinksMap            `bson:"links,omitempty"               json:"links,omitempty"`
+	Links           LinksMap             `bson:"links,omitempty"               json:"links,omitempty"`
 	Processed       []ProcessedInstances `bson:"processed_instances,omitempty" json:"processed_instances,omitempty"`
 	LastUpdated     time.Time            `bson:"last_updated,omitempty"        json:"last_updated,omitempty"`
 	UniqueTimestamp bsonprim.Timestamp   `bson:"unique_timestamp,omitempty"    json:"-"`
@@ -111,8 +111,8 @@ type DataBakerEvent struct {
 
 // IDLink holds the ID and a link to the resource
 type IDLink struct {
-	ID   string `json:"id"`
-	HRef string `json:"href"`
+	ID   string `bson:"id,omitempty" json:"id"`
+	HRef string `bson:"href,omitempty" json:"href"`
 }
 
 // ProcessedInstances holds the ID and the number of code lists that have been processed during an import process for an instance
