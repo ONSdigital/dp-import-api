@@ -31,7 +31,7 @@ debug:
 
 .PHONY: acceptance
 acceptance:
-	MONGODB_IMPORTS_DATABASE=test HUMAN_LOG=1 go run $(LDFLAGS) -race cmd/$(MAIN)/main.go
+	MONGODB_DATABASE=test HUMAN_LOG=1 go run $(LDFLAGS) -race cmd/$(MAIN)/main.go
 
 .PHONY: test
 test:

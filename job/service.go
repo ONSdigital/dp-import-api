@@ -102,6 +102,9 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 
 	// Update job ID and self link
 	job.ID = jobID.String()
+	if job.Links == nil {
+		job.Links = &models.LinksMap{}
+	}
 	job.Links.Self = models.IDLink{
 		HRef: service.urlBuilder.GetJobURL(job.ID),
 		ID:   job.ID,
@@ -140,7 +143,7 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 	}
 
 	// Add job to dataStore
-	createdJob, err := service.dataStore.AddJob(job)
+	createdJob, err := service.dataStore.AddJob(ctx, job)
 	if err != nil {
 		log.Error(ctx, "CreateJob: failed to create job in datastore", err, logData)
 		return nil, ErrSaveJobFailed
@@ -152,7 +155,7 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 // UpdateJob updates the job for the given jobID with the values in the given job model.
 func (service Service) UpdateJob(ctx context.Context, jobID string, job *models.Job) error {
 
-	err := service.dataStore.UpdateJob(jobID, job)
+	err := service.dataStore.UpdateJob(ctx, jobID, job)
 	if err != nil {
 		return err
 	}
@@ -180,7 +183,7 @@ func (service Service) UpdateJob(ctx context.Context, jobID string, job *models.
 // PrepareJob returns a format ready to send to downstream services via kafka
 func (service Service) prepareJob(ctx context.Context, jobID string) (*models.ImportData, error) {
 
-	importJob, err := service.dataStore.GetJob(jobID)
+	importJob, err := service.dataStore.GetJob(ctx, jobID)
 	if err != nil {
 		return nil, err
 	}
@@ -191,17 +194,19 @@ func (service Service) prepareJob(ctx context.Context, jobID string) (*models.Im
 	}
 
 	var instanceIds []string
-	for _, instanceRef := range importJob.Links.Instances {
-		instanceIds = append(instanceIds, instanceRef.ID)
+	if importJob.Links != nil {
+		for _, instanceRef := range importJob.Links.Instances {
+			instanceIds = append(instanceIds, instanceRef.ID)
 
-		_, err = service.datasetAPIClient.PutInstance(ctx, "", service.serviceAuthToken, "", instanceRef.ID,
-			dataset.UpdateInstance{
-				State: dataset.StateSubmitted.String(),
-			},
-			headers.IfMatchAnyETag,
-		)
-		if err != nil {
-			return nil, err
+			_, err = service.datasetAPIClient.PutInstance(ctx, "", service.serviceAuthToken, "", instanceRef.ID,
+				dataset.UpdateInstance{
+					State: dataset.StateSubmitted.String(),
+				},
+				headers.IfMatchAnyETag,
+			)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

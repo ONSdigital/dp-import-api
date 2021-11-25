@@ -26,10 +26,10 @@ func (api *ImportAPI) increaseProcessedInstanceHandler(w http.ResponseWriter, r 
 		handleErr(ctx, w, err, logData)
 		return
 	}
-	defer api.dataStore.UnlockInstance(lockID)
+	defer api.dataStore.UnlockInstance(ctx, lockID)
 
 	// Get import job from DB
-	job, err := api.dataStore.GetJob(jobID)
+	job, err := api.dataStore.GetJob(ctx, jobID)
 	if err != nil {
 		handleErr(ctx, w, err, logData)
 		return
@@ -51,7 +51,7 @@ func (api *ImportAPI) increaseProcessedInstanceHandler(w http.ResponseWriter, r 
 	}
 
 	// Update the processedInstance
-	if err := api.dataStore.UpdateProcessedInstance(jobID, job.Processed); err != nil {
+	if err := api.dataStore.UpdateProcessedInstance(ctx, jobID, job.Processed); err != nil {
 		handleErr(ctx, w, err, logData)
 		return
 	}

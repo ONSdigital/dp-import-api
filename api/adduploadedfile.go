@@ -38,7 +38,7 @@ func (api *ImportAPI) addUploadedFileHandler(w http.ResponseWriter, r *http.Requ
 
 func (api *ImportAPI) addUploadFile(ctx context.Context, uploadedFile *models.UploadedFile, jobID string, logData log.Data) (err error) {
 
-	if err = api.dataStore.AddUploadedFile(jobID, uploadedFile); err != nil {
+	if err = api.dataStore.AddUploadedFile(ctx, jobID, uploadedFile); err != nil {
 		log.Error(ctx, "addUploadFile endpoint: failed to store uploaded file resource", err, logData)
 	}
 

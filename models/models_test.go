@@ -1,6 +1,7 @@
 package models
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -8,7 +9,24 @@ import (
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/mocks"
 	. "github.com/smartystreets/goconvey/convey"
+	"go.mongodb.org/mongo-driver/bson"
 )
+
+// Regression test for new official golang driver which conforms to golang json spec on marshalling zero value structs.
+func TestBSONMarshalJob_ZeroValues(t *testing.T) {
+	goldenJob := Job{State: SubmittedState}
+	// This is the golden BSON value for the above job, where all zero value attributes that have the 'omitempty' BSON tag are indeed
+	// omitted. If other, zero value attributes that are tagged as 'omitempty' are marshalled, this is an error
+	goldenBSON := []byte{26, 0, 0, 0, 2, 115, 116, 97, 116, 101, 0, 10, 0, 0, 0, 115, 117, 98, 109, 105, 116, 116, 101, 100, 0, 0}
+
+	bsn, e := bson.Marshal(goldenJob)
+	if e != nil {
+		t.Fatalf("failed to marshal goldenJob to bson: %v", e)
+	}
+	if !bytes.Equal(bsn, goldenBSON) {
+		t.Errorf("Job incorrectly marshalled to BSON")
+	}
+}
 
 func TestCreateJobWithNoBody(t *testing.T) {
 	Convey("When a job message has no body, an error is returned", t, func() {
@@ -80,7 +98,7 @@ func TestCreateInstance(t *testing.T) {
 		hierarchy := true
 		notHierarchy := false
 
-		job := &Job{}
+		job := &Job{Links: &LinksMap{}}
 		datasetID := "123"
 		datasetURL := "/wut"
 		codelists := []recipe.CodeList{

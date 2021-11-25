@@ -9,7 +9,7 @@ import (
 	"github.com/ONSdigital/dp-api-clients-go/v2/dataset"
 	"github.com/ONSdigital/dp-api-clients-go/v2/recipe"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
-	"github.com/globalsign/mgo/bson"
+	bsonprim "go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // CreatedState represents one possible state of the job resource
@@ -42,10 +42,10 @@ type Job struct {
 	RecipeID        string               `bson:"recipe,omitempty"              json:"recipe,omitempty"`
 	State           string               `bson:"state,omitempty"               json:"state,omitempty"`
 	UploadedFiles   *[]UploadedFile      `bson:"files,omitempty"               json:"files,omitempty"`
-	Links           LinksMap             `bson:"links,omitempty"               json:"links,omitempty"`
+	Links           *LinksMap            `bson:"links,omitempty"               json:"links,omitempty"`
 	Processed       []ProcessedInstances `bson:"processed_instances,omitempty" json:"processed_instances,omitempty"`
 	LastUpdated     time.Time            `bson:"last_updated,omitempty"        json:"last_updated,omitempty"`
-	UniqueTimestamp bson.MongoTimestamp  `bson:"unique_timestamp,omitempty"    json:"-"`
+	UniqueTimestamp bsonprim.Timestamp   `bson:"unique_timestamp,omitempty"    json:"-"`
 }
 
 // LinksMap represents a list of links related to a job resource
@@ -151,6 +151,7 @@ func CreateUploadedFile(reader io.Reader) (*UploadedFile, error) {
 }
 
 // CreateInstance from a job ID and the provided recipe CodeLists
+// Neither job nor job.Links can be nil
 func CreateInstance(job *Job, datasetID, datasetURL string, codelists []recipe.CodeList) *dataset.NewInstance {
 
 	buildHierarchyTasks := make([]*dataset.BuildHierarchyTask, 0)

@@ -45,8 +45,8 @@ type Service struct {
 }
 
 // getMongoDataStore creates a mongoDB connection
-var getMongoDataStore = func(ctx context.Context, cfg *config.Configuration) (datastore.DataStorer, error) {
-	return mongo.NewDatastore(ctx, cfg.MongoDBURL, cfg.MongoDBDatabase, cfg.MongoDBCollection)
+var getMongoDataStore = func(ctx context.Context, cfg config.MongoConfig) (datastore.DataStorer, error) {
+	return mongo.NewDatastore(ctx, cfg)
 }
 
 // getKafkaProducer creates a new Kafka Producer
@@ -66,18 +66,7 @@ var getKafkaProducer = func(ctx context.Context, kafkaCfg *config.KafkaConfig, t
 		)
 	}
 
-	return kafka.NewProducer(ctx, kafkaCfg.Addr, topic, producerChannels, pConfig)
-}
-
-// getLegacyKafkaProducer creates a new Kafka Producer for legacy kafka
-var getLegacyKafkaProducer = func(ctx context.Context, kafkaCfg *config.KafkaConfig, topic string) (kafka.IProducer, error) {
-	producerChannels := kafka.CreateProducerChannels()
-	pConfig := &kafka.ProducerConfig{
-		KafkaVersion:    &kafkaCfg.LegacyVersion,
-		MaxMessageBytes: &kafkaCfg.MaxBytes,
-	}
-
-	return kafka.NewProducer(ctx, kafkaCfg.LegacyAddr, topic, producerChannels, pConfig)
+	return kafka.NewProducer(ctx, kafkaCfg.Brokers, topic, producerChannels, pConfig)
 }
 
 // getHealthCheck returns a healthcheck
@@ -104,7 +93,7 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 	svc.cfg = cfg
 
 	// Get mongoDB connection (non-fatal)
-	svc.mongoDataStore, err = getMongoDataStore(ctx, svc.cfg)
+	svc.mongoDataStore, err = getMongoDataStore(ctx, svc.cfg.MongoConfig)
 	if err != nil {
 		log.Error(ctx, "mongodb datastore error", err)
 	}
@@ -124,7 +113,7 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 	}
 
 	// Get Cantabular Dataset Instance Started kafka producer
-	svc.cantabularDatasetInstanceStartedProducer, err = getLegacyKafkaProducer(ctx, &svc.cfg.KafkaConfig, svc.cfg.CantabularDatasetInstanceStartedTopic)
+	svc.cantabularDatasetInstanceStartedProducer, err = getKafkaProducer(ctx, &svc.cfg.KafkaConfig, svc.cfg.CantabularDatasetInstanceStartedTopic)
 	if err != nil {
 		log.Fatal(ctx, "cantabular dataset instance started kafka producer error", err)
 		return err
@@ -186,7 +175,7 @@ func (svc *Service) Start(ctx context.Context, svcErrors chan error) {
 }
 
 // CreateMiddleware creates an Alice middleware chain of handlers
-func (svc *Service) createMiddleware(cfg *config.Configuration) alice.Chain {
+func (svc *Service) createMiddleware(_ *config.Configuration) alice.Chain {
 	identityHandler := dphandlers.IdentityWithHTTPClient(svc.identityClient)
 	return alice.New(
 		middleware.Whitelist(middleware.HealthcheckFilter(svc.healthCheck.Handler)),

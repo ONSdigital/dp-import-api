@@ -119,7 +119,7 @@ func TestService_CreateJob(t *testing.T) {
 
 			Convey("Then the provided job is mutated with the expected ID and link values", func() {
 				So(jobModel.ID, ShouldNotBeBlank)
-				So(jobModel.Links, ShouldResemble, models.LinksMap{
+				So(jobModel.Links, ShouldResemble, &models.LinksMap{
 					Self: models.IDLink{
 						ID:   jobModel.ID,
 						HRef: "http://import-api/jobs/" + jobModel.ID,

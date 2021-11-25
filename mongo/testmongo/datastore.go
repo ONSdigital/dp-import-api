@@ -21,23 +21,23 @@ type DataStorer struct {
 }
 
 // CreatedJob represents a job returned by AddJob
-var CreatedJob models.Job = models.Job{ID: "34534543543"}
+var CreatedJob = models.Job{ID: "34534543543"}
 
-func (ds *DataStorer) AddJob(importJob *models.Job) (*models.Job, error) {
+func (ds *DataStorer) AddJob(_ context.Context, _ *models.Job) (*models.Job, error) {
 	if ds.InternalError {
 		return &models.Job{}, InternalError
 	}
 	return &CreatedJob, nil
 }
 
-func (ds *DataStorer) GetJobs(ctx context.Context, filter []string, offset int, limit int) (*models.JobResults, error) {
+func (ds *DataStorer) GetJobs(_ context.Context, _ []string, _ int, _ int) (*models.JobResults, error) {
 	if ds.InternalError {
 		return &models.JobResults{Items: []*models.Job{}}, InternalError
 	}
 	return &models.JobResults{Items: []*models.Job{{ID: "34534543543"}}}, nil
 }
 
-func (ds *DataStorer) GetJob(jobID string) (*models.Job, error) {
+func (ds *DataStorer) GetJob(_ context.Context, _ string) (*models.Job, error) {
 	if ds.InternalError {
 		return &models.Job{}, InternalError
 	}
@@ -56,7 +56,7 @@ func (ds *DataStorer) GetJob(jobID string) (*models.Job, error) {
 	}, nil
 }
 
-func (ds *DataStorer) AddInstance(jobID string) (string, error) {
+func (ds *DataStorer) AddInstance(_ context.Context, _ string) (string, error) {
 	if ds.NotFound {
 		return "", errs.ErrJobNotFound
 	}
@@ -66,7 +66,7 @@ func (ds *DataStorer) AddInstance(jobID string) (string, error) {
 	return "123", nil
 }
 
-func (ds *DataStorer) UpdateJob(string, *models.Job) error {
+func (ds *DataStorer) UpdateJob(_ context.Context, _ string, _ *models.Job) error {
 	if ds.NotFound {
 		return errs.ErrJobNotFound
 	}
@@ -76,7 +76,7 @@ func (ds *DataStorer) UpdateJob(string, *models.Job) error {
 	return nil
 }
 
-func (ds *DataStorer) UpdateJobState(string, string) error {
+func (ds *DataStorer) UpdateJobState(_ context.Context, _ string, _ string) error {
 	if ds.NotFound {
 		return errs.ErrJobNotFound
 	}
@@ -86,7 +86,7 @@ func (ds *DataStorer) UpdateJobState(string, string) error {
 	return nil
 }
 
-func (ds *DataStorer) AddUploadedFile(jobID string, message *models.UploadedFile) error {
+func (ds *DataStorer) AddUploadedFile(_ context.Context, _ string, _ *models.UploadedFile) error {
 	if ds.NotFound {
 		return errs.ErrJobNotFound
 	}
@@ -96,7 +96,7 @@ func (ds *DataStorer) AddUploadedFile(jobID string, message *models.UploadedFile
 	return nil
 }
 
-func (ds *DataStorer) UpdateProcessedInstance(id string, procInstances []models.ProcessedInstances) (err error) {
+func (ds *DataStorer) UpdateProcessedInstance(_ context.Context, _ string, _ []models.ProcessedInstances) (err error) {
 	if ds.NotFound {
 		return errs.ErrJobNotFound
 	}
@@ -106,25 +106,25 @@ func (ds *DataStorer) UpdateProcessedInstance(id string, procInstances []models.
 	return nil
 }
 
-func (m *DataStorer) Close(ctx context.Context) error {
+func (ds *DataStorer) Close(_ context.Context) error {
 	return nil
 }
 
-func (m *DataStorer) Checker(ctx context.Context, state *healthcheck.CheckState) error {
+func (ds *DataStorer) Checker(_ context.Context, _ *healthcheck.CheckState) error {
 	return nil
 }
 
-func (m *DataStorer) AcquireInstanceLock(ctx context.Context, jobID string) (lockID string, err error) {
-	if m.IsLocked {
+func (ds *DataStorer) AcquireInstanceLock(_ context.Context, _ string) (lockID string, err error) {
+	if ds.IsLocked {
 		return "", errors.New("already locked")
 	}
-	m.IsLocked = true
-	m.HasBeenLocked = true
+	ds.IsLocked = true
+	ds.HasBeenLocked = true
 	return testLockID, nil
 }
 
-func (m *DataStorer) UnlockInstance(lockID string) {
+func (ds *DataStorer) UnlockInstance(_ context.Context, lockID string) {
 	if lockID == testLockID {
-		m.IsLocked = false
+		ds.IsLocked = false
 	}
 }

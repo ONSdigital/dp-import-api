@@ -11,14 +11,14 @@ import (
 
 // DataStorer is an interface used to store import jobs
 type DataStorer interface {
-	AddJob(importJob *models.Job) (*models.Job, error)
-	GetJob(jobID string) (*models.Job, error)
+	AddJob(ctx context.Context, importJob *models.Job) (*models.Job, error)
+	GetJob(ctx context.Context, jobID string) (*models.Job, error)
 	GetJobs(ctx context.Context, filters []string, offset int, limit int) (*models.JobResults, error)
-	UpdateJob(jobID string, update *models.Job) error
-	UpdateProcessedInstance(id string, procInstances []models.ProcessedInstances) error
-	AddUploadedFile(jobID string, message *models.UploadedFile) error
+	UpdateJob(ctx context.Context, jobID string, update *models.Job) error
+	UpdateProcessedInstance(ctx context.Context, id string, procInstances []models.ProcessedInstances) error
+	AddUploadedFile(ctx context.Context, jobID string, message *models.UploadedFile) error
 	Close(context.Context) error
 	Checker(context.Context, *healthcheck.CheckState) error
 	AcquireInstanceLock(ctx context.Context, jobID string) (lockID string, err error)
-	UnlockInstance(lockID string)
+	UnlockInstance(ctx context.Context, lockID string)
 }

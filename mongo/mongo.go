@@ -7,57 +7,67 @@ import (
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	errs "github.com/ONSdigital/dp-import-api/apierrors"
+	"github.com/ONSdigital/dp-import-api/config"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
-	mongo "github.com/ONSdigital/dp-mongodb"
-	mongolock "github.com/ONSdigital/dp-mongodb/dplock"
-	mongohealth "github.com/ONSdigital/dp-mongodb/health"
+	mongolock "github.com/ONSdigital/dp-mongodb/v3/dplock"
+	mongohealth "github.com/ONSdigital/dp-mongodb/v3/health"
+	mongo "github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/ONSdigital/log.go/v2/log"
-	"github.com/globalsign/mgo"
-	"github.com/globalsign/mgo/bson"
+	"go.mongodb.org/mongo-driver/bson"
+	bsonprim "go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var _ datastore.DataStorer = (*Mongo)(nil)
 
 // Mongo represents a simplistic MongoDB configuration
 type Mongo struct {
-	Collection   string
-	Database     string
-	URI          string
-	Session      *mgo.Session
+	config.MongoConfig
+
+	Connection   *mongo.MongoConnection
 	healthClient *mongohealth.CheckMongoClient
 	lockClient   *mongolock.Lock
 }
 
-// NewDatastore creates a new mgo.Session with a strong consistency and a write mode of "majority"
-func NewDatastore(ctx context.Context, uri, database, collection string) (m *Mongo, err error) {
+func (m *Mongo) getConnectionConfig() *mongo.MongoConnectionConfig {
+	return &mongo.MongoConnectionConfig{
+		IsSSL:                   m.IsSSL,
+		ConnectTimeoutInSeconds: m.ConnectionTimeout,
+		QueryTimeoutInSeconds:   m.QueryTimeout,
 
-	m = &Mongo{
-		Collection: collection,
-		Database:   database,
-		URI:        uri}
+		Username:                      m.Username,
+		Password:                      m.Password,
+		ClusterEndpoint:               m.URI,
+		Database:                      m.Database,
+		Collection:                    m.Collection,
+		IsWriteConcernMajorityEnabled: m.EnableWriteConcern,
+		IsStrongReadConcernEnabled:    m.EnableReadConcern,
+	}
+}
 
-	m.Session, err = mgo.Dial(uri)
+// NewDatastore creates a new mongodb.MongoConnection with the given configuration
+func NewDatastore(ctx context.Context, cfg config.MongoConfig) (m *Mongo, err error) {
+	m = &Mongo{MongoConfig: cfg}
+
+	m.Connection, err = mongo.Open(m.getConnectionConfig())
 	if err != nil {
 		return nil, err
 	}
 
-	m.Session.EnsureSafe(&mgo.Safe{WMode: "majority"})
-	m.Session.SetMode(mgo.Strong, true)
-
-	importLocksCollection := fmt.Sprintf("%s_locks", collection)
+	m.lockClient = mongolock.New(ctx, m.Connection, m.Collection)
+	// At present there is no way to get the collection name that mongolock uses for locking
+	// It is hard code here
+	importLocksCollection := fmt.Sprintf("%s_locks", m.Collection)
 
 	databaseCollectionBuilder := make(map[mongohealth.Database][]mongohealth.Collection)
-	databaseCollectionBuilder[(mongohealth.Database)(database)] = []mongohealth.Collection{(mongohealth.Collection)(collection), (mongohealth.Collection)(importLocksCollection)}
+	databaseCollectionBuilder[(mongohealth.Database)(m.Database)] = []mongohealth.Collection{(mongohealth.Collection)(m.Collection), (mongohealth.Collection)(importLocksCollection)}
 
 	// Create client and healthclient from session
-	client := mongohealth.NewClientWithCollections(m.Session, databaseCollectionBuilder)
+	client := mongohealth.NewClientWithCollections(m.Connection, databaseCollectionBuilder)
 	m.healthClient = &mongohealth.CheckMongoClient{
 		Client:      *client,
 		Healthcheck: client.Healthcheck,
 	}
-
-	m.lockClient = mongolock.New(ctx, m.Session, database, collection)
 
 	return m, nil
 }
@@ -72,31 +82,30 @@ func (m *Mongo) AcquireInstanceLock(ctx context.Context, jobID string) (lockID s
 
 // UnlockInstance releases an exclusive mongoDB lock for the provided lockId (if it exists)
 // Note: the lock is currently only used to update processed_instances
-func (m *Mongo) UnlockInstance(lockID string) {
-	m.lockClient.Unlock(lockID)
+func (m *Mongo) UnlockInstance(ctx context.Context, lockID string) {
+	m.lockClient.Unlock(ctx, lockID)
 }
 
 // GetJobs retrieves all import documents matching filters
 func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit int) (*models.JobResults, error) {
-	s := m.Session.Copy()
-	defer s.Close()
-
-	var stateFilter bson.M
-	if len(filters) > 0 {
-		stateFilter = bson.M{"state": bson.M{"$in": filters}}
+	stateFilter := bson.M{}
+	emptyResult := &models.JobResults{
+		Items:      []*models.Job{},
+		Count:      0,
+		TotalCount: 0,
+		Offset:     offset,
+		Limit:      limit,
 	}
-	query := s.DB(m.Database).C(m.Collection).Find(stateFilter)
-	totalCount, err := query.Count()
+
+	if len(filters) > 0 {
+		stateFilter["state"] = bson.M{"$in": filters}
+	}
+	query := m.Connection.GetConfiguredCollection().Find(stateFilter)
+	totalCount, err := query.Count(ctx)
 	if err != nil {
 		log.Error(ctx, "error counting items", err)
-		if err == mgo.ErrNotFound {
-			return &models.JobResults{
-				Items:      []*models.Job{},
-				Count:      0,
-				TotalCount: 0,
-				Offset:     offset,
-				Limit:      limit,
-			}, nil
+		if mongo.IsErrNoDocumentFound(err) {
+			return emptyResult, nil
 		}
 		return nil, err
 	}
@@ -104,25 +113,13 @@ func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit
 		return nil, errs.ErrJobNotFound
 	}
 
+	// Amazon DocumentDB does not guarantee implicit result sort ordering of result sets. To ensure the ordering of a result set,
+	// explicitly specify a sort order using sort()
 	var jobItems []*models.Job
 	if limit > 0 {
-		iter := query.Sort().Skip(offset).Limit(limit).Iter()
-		defer func() {
-			err := iter.Close()
-			if err != nil {
-				log.Error(ctx, "error closing job iterator", err, log.Data{"filter": stateFilter})
-			}
-		}()
-
-		if err := iter.All(&jobItems); err != nil {
-			if err == mgo.ErrNotFound {
-				return &models.JobResults{
-					Items:      []*models.Job{},
-					Count:      0,
-					TotalCount: totalCount,
-					Offset:     offset,
-					Limit:      limit,
-				}, nil
+		if err = query.Sort(bson.M{"_id": 1}).Skip(offset).Limit(limit).IterAll(ctx, &jobItems); err != nil {
+			if mongo.IsErrNoDocumentFound(err) {
+				return emptyResult, nil
 			}
 			return nil, err
 		}
@@ -138,45 +135,47 @@ func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit
 }
 
 // GetJob retrieves a single import job
-func (m *Mongo) GetJob(id string) (*models.Job, error) {
-	s := m.Session.Copy()
-	defer s.Close()
+func (m *Mongo) GetJob(ctx context.Context, id string) (*models.Job, error) {
 	var job models.Job
-	err := s.DB(m.Database).C(m.Collection).Find(bson.M{"id": id}).One(&job)
-	if err != nil {
-		if err == mgo.ErrNotFound {
+	if err := m.Connection.GetConfiguredCollection().FindOne(ctx, bson.M{"id": id}, &job); err != nil {
+		if mongo.IsErrNoDocumentFound(err) {
 			return nil, errs.ErrJobNotFound
 		}
 		return nil, err
 	}
+
 	return &job, nil
 }
 
-// AddJob adds an ImportJob document
-func (m *Mongo) AddJob(job *models.Job) (*models.Job, error) {
-	s := m.Session.Copy()
-	defer s.Close()
-
+// AddJob adds an ImportJob document - the ID is assumed to be set
+func (m *Mongo) AddJob(ctx context.Context, job *models.Job) (*models.Job, error) {
 	currentTime := time.Now().UTC()
 	job.LastUpdated = currentTime
-	// Replace line below with
-	// job.UniqueTimestamp = bson.NewMongoTimestamp(currentTime, 1)
-	// once mgo has been updated with new function `NewMongoTimestamp`
-	job.UniqueTimestamp = 1
+	// TODO find method to set the timestamp value
+	job.UniqueTimestamp = bsonprim.Timestamp{}
 
-	if err := s.DB(m.Database).C(m.Collection).Insert(job); err != nil {
+	if _, err := m.Connection.GetConfiguredCollection().Insert(ctx, job); err != nil {
 		return nil, err
 	}
 
-	return m.GetJob(job.ID)
+	return m.GetJob(ctx, job.ID)
+}
+
+// updateByID is a helper function to update a job given an update operator
+func (m *Mongo) updateByID(ctx context.Context, id string, update bson.M) (err error) {
+	if _, err = m.Connection.GetConfiguredCollection().Must().Update(ctx, bson.M{"id": id}, update); err != nil {
+		if mongo.IsErrNoDocumentFound(err) {
+			return errs.ErrJobNotFound
+		}
+		return err
+	}
+
+	return nil
 }
 
 // AddUploadedFile adds an UploadedFile to an import job
-func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile) error {
-	s := m.Session.Copy()
-	defer s.Close()
-
-	update := bson.M{
+func (m *Mongo) AddUploadedFile(ctx context.Context, id string, file *models.UploadedFile) error {
+	return m.updateByID(ctx, id, bson.M{
 		"$addToSet": bson.M{
 			"files": bson.M{
 				"alias_name": file.AliasName,
@@ -189,32 +188,12 @@ func (m *Mongo) AddUploadedFile(id string, file *models.UploadedFile) error {
 				"$type": "timestamp",
 			},
 		},
-	}
-
-	// Replace above with below once go-ns mongo package has been updated
-	// update := bson.M{
-	// 	"$addToSet": bson.M{
-	// 		"files": bson.M{
-	// 			"alias_name": file.AliasName,
-	// 			"url":        file.URL,
-	// 		},
-	// 	},
-	// }
-	// mongo.WithUpdates(update)
-	err := s.DB(m.Database).C(m.Collection).Update(bson.M{"id": id}, update)
-	if err != nil && err == mgo.ErrNotFound {
-		return errs.ErrJobNotFound
-	}
-
-	return nil
+	})
 }
 
 // UpdateJob adds or overides an existing import job
-func (m *Mongo) UpdateJob(id string, job *models.Job) (err error) {
-	s := m.Session.Copy()
-	defer s.Close()
-
-	update := bson.M{
+func (m *Mongo) UpdateJob(ctx context.Context, id string, job *models.Job) (err error) {
+	return m.updateByID(ctx, id, bson.M{
 		"$set": job,
 		"$currentDate": bson.M{
 			"last_updated": true,
@@ -222,25 +201,12 @@ func (m *Mongo) UpdateJob(id string, job *models.Job) (err error) {
 				"$type": "timestamp",
 			},
 		},
-	}
-
-	// Replace above with below once go-ns mongo package has been updated
-	//mongo.WithUpdates(bson.M{"$set": job})
-	err = s.DB(m.Database).C(m.Collection).Update(bson.M{"id": id}, update)
-
-	if err != nil && err == mgo.ErrNotFound {
-		return errs.ErrJobNotFound
-	}
-
-	return nil
+	})
 }
 
 // UpdateProcessedInstance overides the processed instances for an existing import job
-func (m *Mongo) UpdateProcessedInstance(id string, procInstances []models.ProcessedInstances) (err error) {
-	s := m.Session.Copy()
-	defer s.Close()
-
-	update := bson.M{
+func (m *Mongo) UpdateProcessedInstance(ctx context.Context, id string, procInstances []models.ProcessedInstances) (err error) {
+	return m.updateByID(ctx, id, bson.M{
 		"$set": bson.M{"processed_instances": procInstances},
 		"$currentDate": bson.M{
 			"last_updated": true,
@@ -248,15 +214,7 @@ func (m *Mongo) UpdateProcessedInstance(id string, procInstances []models.Proces
 				"$type": "timestamp",
 			},
 		},
-	}
-
-	err = s.DB(m.Database).C(m.Collection).Update(bson.M{"id": id}, update)
-
-	if err != nil && err == mgo.ErrNotFound {
-		return errs.ErrJobNotFound
-	}
-
-	return nil
+	})
 }
 
 // Checker is called by the healthcheck library to check the health state of this mongoDB instance
@@ -266,5 +224,5 @@ func (m *Mongo) Checker(ctx context.Context, state *healthcheck.CheckState) erro
 
 // Close disconnects the mongo session
 func (m *Mongo) Close(ctx context.Context) error {
-	return mongo.Close(ctx, m.Session)
+	return m.Connection.Close(ctx)
 }

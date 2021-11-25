@@ -14,10 +14,8 @@ const KafkaSecProtocolTLS = "TLS"
 
 // KafkaConfig contains all configuration relating to kafka
 type KafkaConfig struct {
-	Addr                                  []string `envconfig:"KAFKA_ADDR"`
+	Brokers                               []string `envconfig:"KAFKA_ADDR"`
 	Version                               string   `envconfig:"KAFKA_VERSION"`
-	LegacyAddr                            []string `envconfig:"KAFKA_LEGACY_ADDR"`
-	LegacyVersion                         string   `envconfig:"KAFKA_LEGACY_VERSION"`
 	MaxBytes                              int      `envconfig:"KAFKA_MAX_BYTES"`
 	SecProtocol                           string   `envconfig:"KAFKA_SEC_PROTO"`
 	SecCACerts                            string   `envconfig:"KAFKA_SEC_CA_CERTS"`
@@ -29,14 +27,25 @@ type KafkaConfig struct {
 	CantabularDatasetInstanceStartedTopic string   `envconfig:"CANTABULAR_DATASET_INSTANCE_STARTED_TOPIC"`
 }
 
+// MongoConfig contains the config required to connect to MongoDB.
+type MongoConfig struct {
+	URI                string        `envconfig:"MONGODB_BIND_ADDR"   json:"-"`
+	Collection         string        `envconfig:"MONGODB_COLLECTION"`
+	Database           string        `envconfig:"MONGODB_DATABASE"`
+	Username           string        `envconfig:"MONGODB_USERNAME"    json:"-"`
+	Password           string        `envconfig:"MONGODB_PASSWORD"    json:"-"`
+	IsSSL              bool          `envconfig:"MONGODB_IS_SSL"`
+	EnableReadConcern  bool          `envconfig:"MONGODB_ENABLE_READ_CONCERN"`
+	EnableWriteConcern bool          `envconfig:"MONGODB_ENABLE_WRITE_CONCERN"`
+	QueryTimeout       time.Duration `envconfig:"MONGODB_QUERY_TIMEOUT"`
+	ConnectionTimeout  time.Duration `envconfig:"MONGODB_CONNECT_TIMEOUT"`
+}
+
 // Configuration structure which hold information for configuring the import API
 type Configuration struct {
 	BindAddr                   string        `envconfig:"BIND_ADDR"`
 	Host                       string        `envconfig:"HOST"`
 	ServiceAuthToken           string        `envconfig:"SERVICE_AUTH_TOKEN"            json:"-"`
-	MongoDBURL                 string        `envconfig:"MONGODB_IMPORTS_ADDR"          json:"-"`
-	MongoDBCollection          string        `envconfig:"MONGODB_IMPORTS_COLLECTION"`
-	MongoDBDatabase            string        `envconfig:"MONGODB_IMPORTS_DATABASE"`
 	DatasetAPIURL              string        `envconfig:"DATASET_API_URL"`
 	RecipeAPIURL               string        `envconfig:"RECIPE_API_URL"`
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
@@ -47,6 +56,7 @@ type Configuration struct {
 	DefaultMaxLimit            int           `envconfig:"DEFAULT_MAXIMUM_LIMIT"`
 	DefaultOffset              int           `envconfig:"DEFAULT_OFFSET"`
 	KafkaConfig
+	MongoConfig
 }
 
 var cfg *Configuration
@@ -57,14 +67,9 @@ func Get() (*Configuration, error) {
 		return cfg, nil
 	}
 
-	brokers := []string{"localhost:9092"}
-
 	cfg = &Configuration{
 		BindAddr:                   ":21800",
 		Host:                       "http://localhost:21800",
-		MongoDBURL:                 "localhost:27017",
-		MongoDBDatabase:            "imports",
-		MongoDBCollection:          "imports",
 		ServiceAuthToken:           "0C30662F-6CF6-43B0-A96A-954772267FF5",
 		DatasetAPIURL:              "http://localhost:22000",
 		RecipeAPIURL:               "http://localhost:22300",
@@ -76,15 +81,25 @@ func Get() (*Configuration, error) {
 		DefaultMaxLimit:            1000,
 		DefaultOffset:              0,
 		KafkaConfig: KafkaConfig{
+			Brokers:                               []string{"localhost:9092"},
 			DatabakerImportTopic:                  "data-bake-job-available",
 			InputFileAvailableTopic:               "input-file-available",
 			CantabularDatasetInstanceStartedTopic: "cantabular-dataset-instance-started",
-			Addr:                                  brokers,
 			Version:                               "1.0.2",
 			SecProtocol:                           "",
-			LegacyAddr:                            brokers,
-			LegacyVersion:                         "1.0.2",
 			MaxBytes:                              2000000,
+		},
+		MongoConfig: MongoConfig{
+			URI:                "localhost:27017",
+			Database:           "imports",
+			Collection:         "imports",
+			Username:           "",
+			Password:           "",
+			IsSSL:              false,
+			QueryTimeout:       15 * time.Second,
+			ConnectionTimeout:  5 * time.Second,
+			EnableReadConcern:  false,
+			EnableWriteConcern: true,
 		},
 	}
 

@@ -9,22 +9,8 @@ import (
 )
 
 var expectedConfig = &Configuration{
-	BindAddr: ":21800",
-	Host:     "http://localhost:21800",
-	KafkaConfig: KafkaConfig{
-		DatabakerImportTopic:                  "data-bake-job-available",
-		InputFileAvailableTopic:               "input-file-available",
-		CantabularDatasetInstanceStartedTopic: "cantabular-dataset-instance-started",
-		Addr:                                  []string{"localhost:9092"},
-		Version:                               "1.0.2",
-		LegacyAddr:                            []string{"localhost:9092"},
-		LegacyVersion:                         "1.0.2",
-		MaxBytes:                              2000000,
-		SecProtocol:                           "",
-	},
-	MongoDBURL:                 "localhost:27017",
-	MongoDBDatabase:            "imports",
-	MongoDBCollection:          "imports",
+	BindAddr:                   ":21800",
+	Host:                       "http://localhost:21800",
 	ServiceAuthToken:           "0C30662F-6CF6-43B0-A96A-954772267FF5",
 	DatasetAPIURL:              "http://localhost:22000",
 	RecipeAPIURL:               "http://localhost:22300",
@@ -35,6 +21,27 @@ var expectedConfig = &Configuration{
 	DefaultLimit:               20,
 	DefaultMaxLimit:            1000,
 	DefaultOffset:              0,
+	KafkaConfig: KafkaConfig{
+		Brokers:                               []string{"localhost:9092"},
+		DatabakerImportTopic:                  "data-bake-job-available",
+		InputFileAvailableTopic:               "input-file-available",
+		CantabularDatasetInstanceStartedTopic: "cantabular-dataset-instance-started",
+		Version:                               "1.0.2",
+		MaxBytes:                              2000000,
+		SecProtocol:                           "",
+	},
+	MongoConfig: MongoConfig{
+		URI:                "localhost:27017",
+		Database:           "imports",
+		Collection:         "imports",
+		Username:           "",
+		Password:           "",
+		IsSSL:              false,
+		QueryTimeout:       15 * time.Second,
+		ConnectionTimeout:  5 * time.Second,
+		EnableReadConcern:  false,
+		EnableWriteConcern: true,
+	},
 }
 
 func TestGetReturnsDefaultValues(t *testing.T) {
@@ -52,7 +59,7 @@ func TestGetReturnsDefaultValues(t *testing.T) {
 		})
 
 		Convey("When configuration is called with an invalid security protocol", func() {
-			os.Setenv("KAFKA_SEC_PROTO", "ssl")
+			_ = os.Setenv("KAFKA_SEC_PROTO", "ssl")
 			configuration, err := Get()
 
 			Convey("Then an error is returned", func() {
@@ -62,7 +69,7 @@ func TestGetReturnsDefaultValues(t *testing.T) {
 		})
 
 		Convey("When configuration is called with an invalid cert setting", func() {
-			os.Setenv("KAFKA_SEC_CLIENT_KEY", "open sesame")
+			_ = os.Setenv("KAFKA_SEC_CLIENT_KEY", "open sesame")
 			configuration, err := Get()
 
 			Convey("Then an error is returned", func() {
@@ -76,8 +83,8 @@ func TestGetReturnsDefaultValues(t *testing.T) {
 			secExpectedConfig.KafkaConfig.SecClientKey = "open sesame"
 			secExpectedConfig.KafkaConfig.SecClientCert = "please"
 
-			os.Setenv("KAFKA_SEC_CLIENT_KEY", "open sesame")
-			os.Setenv("KAFKA_SEC_CLIENT_CERT", "please")
+			_ = os.Setenv("KAFKA_SEC_CLIENT_KEY", "open sesame")
+			_ = os.Setenv("KAFKA_SEC_CLIENT_CERT", "please")
 
 			configuration, err := Get()
 
