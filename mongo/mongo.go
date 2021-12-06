@@ -31,7 +31,9 @@ type Mongo struct {
 
 func (m *Mongo) getConnectionConfig() *mongo.MongoConnectionConfig {
 	return &mongo.MongoConnectionConfig{
-		IsSSL:                   m.IsSSL,
+		TLSConnectionConfig: mongo.TLSConnectionConfig{
+			IsSSL: m.IsSSL,
+		},
 		ConnectTimeoutInSeconds: m.ConnectionTimeout,
 		QueryTimeoutInSeconds:   m.QueryTimeout,
 
@@ -62,13 +64,8 @@ func NewDatastore(ctx context.Context, cfg config.MongoConfig) (m *Mongo, err er
 	databaseCollectionBuilder := make(map[mongohealth.Database][]mongohealth.Collection)
 	databaseCollectionBuilder[(mongohealth.Database)(m.Database)] = []mongohealth.Collection{(mongohealth.Collection)(m.Collection), (mongohealth.Collection)(importLocksCollection)}
 
-	// Create client and healthclient from session
-	client := mongohealth.NewClientWithCollections(m.Connection, databaseCollectionBuilder)
-	m.healthClient = &mongohealth.CheckMongoClient{
-		Client:      *client,
-		Healthcheck: client.Healthcheck,
-	}
-
+	// Create healthclient from session
+	m.healthClient = mongohealth.NewClientWithCollections(m.Connection, databaseCollectionBuilder)
 	return m, nil
 }
 
