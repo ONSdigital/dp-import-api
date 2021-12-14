@@ -22,7 +22,7 @@ var expectedConfig = &Configuration{
 	DefaultMaxLimit:            1000,
 	DefaultOffset:              0,
 	KafkaConfig: KafkaConfig{
-		Brokers:                               []string{"localhost:9092"},
+		Brokers:                               []string{"localhost:9092", "localhost:9093", "localhost:9094"},
 		DatabakerImportTopic:                  "data-bake-job-available",
 		InputFileAvailableTopic:               "input-file-available",
 		CantabularDatasetInstanceStartedTopic: "cantabular-dataset-instance-started",
