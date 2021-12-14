@@ -15,8 +15,8 @@ github.com/ONSdigital/dp-healthcheck v1.2.1/go.mod h1:XUhXoDIWPCdletDtpDOoXhmDFc
 github.com/ONSdigital/dp-import v1.2.1 h1:IySfrNsrsWaqFAVgZSaOEaE5StVUJ1TJIZgVAFdBIxk=
 github.com/ONSdigital/dp-import v1.2.1/go.mod h1:WTsFDrvob+eTEj/JIuzUWdwLhHPRf3KETVDT9fEK+88=
 github.com/ONSdigital/dp-kafka/v2 v2.2.0/go.mod h1:lFw9GGYpW8N6dG7g2wLQgCJL9vpo17RvOzCsdMRCapQ=
-github.com/ONSdigital/dp-kafka/v2 v2.4.1 h1:e4nTpfsqb/gRRF3ZgstZ8mEjONvt+QPoWKbZoRg5dU8=
-github.com/ONSdigital/dp-kafka/v2 v2.4.1/go.mod h1:W7BZ0zUmIuOMne18Pe3I4V/nF41Ynwy0N5A4+s7ahaw=
+github.com/ONSdigital/dp-kafka/v2 v2.4.3 h1:Sb5nc4M3RsDMDmclsTqyjTMP6IBD7dRkv3kaIM26LLs=
+github.com/ONSdigital/dp-kafka/v2 v2.4.3/go.mod h1:W7BZ0zUmIuOMne18Pe3I4V/nF41Ynwy0N5A4+s7ahaw=
 github.com/ONSdigital/dp-mocking v0.0.0-20190905163309-fee2702ad1b9 h1:+WXVfTDyWXY1DQRDFSmt1b/ORKk5c7jGiPu7NoeaM/0=
 github.com/ONSdigital/dp-mocking v0.0.0-20190905163309-fee2702ad1b9/go.mod h1:BcIRgitUju//qgNePRBmNjATarTtynAgc0yV29VpLEk=
 github.com/ONSdigital/dp-mongodb-in-memory v1.1.0 h1:EjUU1zpIU1LElhiTMAG7qxy7Rq9+VTUtt3/lyA+K7jI=
