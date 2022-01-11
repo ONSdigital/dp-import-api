@@ -2,10 +2,11 @@ package mongo
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	errs "github.com/ONSdigital/dp-import-api/apierrors"
+	"github.com/ONSdigital/dp-import-api/apierrors"
 	"github.com/ONSdigital/dp-import-api/config"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
@@ -22,31 +23,30 @@ import (
 var _ datastore.DataStorer = (*Mongo)(nil)
 
 type Mongo struct {
-	mongodriver.MongoConnectionConfig
+	mongodriver.MongoDriverConfig
 
 	connection   *mongodriver.MongoConnection
 	healthClient *mongohealth.CheckMongoClient
 	lockClient   *mongolock.Lock
 }
 
-const (
-	importsLockCollection = "imports_locks"
-)
-
 // NewDatastore creates a new mongodb.MongoConnection with the given configuration
 func NewDatastore(ctx context.Context, cfg config.MongoConfig) (m *Mongo, err error) {
-	m = &Mongo{MongoConnectionConfig: cfg}
+	m = &Mongo{MongoDriverConfig: cfg}
 
-	m.connection, err = mongodriver.Open(&m.MongoConnectionConfig)
+	m.connection, err = mongodriver.Open(&m.MongoDriverConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	databaseCollectionBuilder := map[mongohealth.Database][]mongohealth.Collection{
-		(mongohealth.Database)(m.Database): {(mongohealth.Collection)(m.Collection), importsLockCollection},
+		mongohealth.Database(m.Database): {
+			mongohealth.Collection(m.ActualCollectionName(config.ImportsCollection)),
+			mongohealth.Collection(m.ActualCollectionName(config.ImportsLockCollection)),
+		},
 	}
 	m.healthClient = mongohealth.NewClientWithCollections(m.connection, databaseCollectionBuilder)
-	m.lockClient = mongolock.New(ctx, m.connection, m.Collection)
+	m.lockClient = mongolock.New(ctx, m.connection, config.ImportsCollection)
 
 	return m, nil
 }
@@ -68,37 +68,19 @@ func (m *Mongo) UnlockInstance(ctx context.Context, lockID string) {
 // GetJobs retrieves all import documents matching filters
 func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit int) (*models.JobResults, error) {
 	stateFilter := bson.M{}
-	emptyResult := &models.JobResults{
-		Items:      []*models.Job{},
-		Count:      0,
-		TotalCount: 0,
-		Offset:     offset,
-		Limit:      limit,
-	}
-
 	if len(filters) > 0 {
 		stateFilter["state"] = bson.M{"$in": filters}
 	}
-	query := m.connection.GetConfiguredCollection().Find(stateFilter)
-	totalCount, err := query.Count(ctx)
+
+	var jobItems []*models.Job
+	totalCount, err := m.connection.Collection(m.ActualCollectionName(config.ImportsCollection)).Find(ctx, stateFilter, &jobItems,
+		mongodriver.Sort(bson.M{"_id": 1}), mongodriver.Offset(offset), mongodriver.Limit(limit))
 	if err != nil {
-		log.Error(ctx, "error counting items", err)
+		log.Error(ctx, "error finding items", err)
 		return nil, err
 	}
 	if totalCount < 1 {
-		return nil, errs.ErrJobNotFound
-	}
-
-	// Amazon DocumentDB does not guarantee implicit result sort ordering of result sets. To ensure the ordering of a result set,
-	// explicitly specify a sort order using sort()
-	var jobItems []*models.Job
-	if limit > 0 {
-		if err = query.Sort(bson.M{"_id": 1}).Skip(offset).Limit(limit).IterAll(ctx, &jobItems); err != nil {
-			if mongodriver.IsErrNoDocumentFound(err) {
-				return emptyResult, nil
-			}
-			return nil, err
-		}
+		return nil, apierrors.ErrJobNotFound
 	}
 
 	return &models.JobResults{
@@ -113,9 +95,9 @@ func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit
 // GetJob retrieves a single import job
 func (m *Mongo) GetJob(ctx context.Context, id string) (*models.Job, error) {
 	var job models.Job
-	if err := m.connection.GetConfiguredCollection().FindOne(ctx, bson.M{"id": id}, &job); err != nil {
-		if mongodriver.IsErrNoDocumentFound(err) {
-			return nil, errs.ErrJobNotFound
+	if err := m.connection.Collection(m.ActualCollectionName(config.ImportsCollection)).FindOne(ctx, bson.M{"id": id}, &job); err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			return nil, apierrors.ErrJobNotFound
 		}
 		return nil, err
 	}
@@ -129,7 +111,7 @@ func (m *Mongo) AddJob(ctx context.Context, job *models.Job) (*models.Job, error
 	job.LastUpdated = currentTime
 	job.UniqueTimestamp = bsonprim.Timestamp{T: uint32(time.Now().Unix())}
 
-	if _, err := m.connection.GetConfiguredCollection().Insert(ctx, job); err != nil {
+	if _, err := m.connection.Collection(m.ActualCollectionName(config.ImportsCollection)).Insert(ctx, job); err != nil {
 		return nil, err
 	}
 
@@ -138,9 +120,9 @@ func (m *Mongo) AddJob(ctx context.Context, job *models.Job) (*models.Job, error
 
 // updateByID is a helper function to update a job given an update operator
 func (m *Mongo) updateByID(ctx context.Context, id string, update bson.M) (err error) {
-	if _, err = m.connection.GetConfiguredCollection().Must().Update(ctx, bson.M{"id": id}, update); err != nil {
-		if mongodriver.IsErrNoDocumentFound(err) {
-			return errs.ErrJobNotFound
+	if _, err = m.connection.Collection(m.ActualCollectionName(config.ImportsCollection)).Must().Update(ctx, bson.M{"id": id}, update); err != nil {
+		if errors.Is(err, mongodriver.ErrNoDocumentFound) {
+			return apierrors.ErrJobNotFound
 		}
 		return err
 	}

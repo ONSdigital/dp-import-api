@@ -29,7 +29,7 @@ type KafkaConfig struct {
 	CantabularDatasetInstanceStartedTopic string   `envconfig:"CANTABULAR_DATASET_INSTANCE_STARTED_TOPIC"`
 }
 
-type MongoConfig = mongodb.MongoConnectionConfig
+type MongoConfig = mongodb.MongoDriverConfig
 
 // Configuration structure which hold information for configuring the import API
 type Configuration struct {
@@ -50,6 +50,11 @@ type Configuration struct {
 }
 
 var cfg *Configuration
+
+const (
+	ImportsCollection     = "ImportsCollection"
+	ImportsLockCollection = "ImportsLockCollection"
+)
 
 // Get the application and returns the configuration structure
 func Get() (*Configuration, error) {
@@ -84,12 +89,12 @@ func Get() (*Configuration, error) {
 			Username:                      "",
 			Password:                      "",
 			Database:                      "imports",
-			Collection:                    "imports",
+			Collections:                   map[string]string{ImportsCollection: "imports", ImportsLockCollection: "imports_locks"},
 			ReplicaSet:                    "",
 			IsStrongReadConcernEnabled:    false,
 			IsWriteConcernMajorityEnabled: true,
-			ConnectTimeoutInSeconds:       5 * time.Second,
-			QueryTimeoutInSeconds:         15 * time.Second,
+			ConnectTimeout:                5 * time.Second,
+			QueryTimeout:                  15 * time.Second,
 			TLSConnectionConfig: mongodb.TLSConnectionConfig{
 				IsSSL: false,
 			},
