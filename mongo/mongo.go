@@ -2,7 +2,6 @@ package mongo
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
@@ -10,62 +9,45 @@ import (
 	"github.com/ONSdigital/dp-import-api/config"
 	"github.com/ONSdigital/dp-import-api/datastore"
 	"github.com/ONSdigital/dp-import-api/models"
+	"github.com/ONSdigital/log.go/v2/log"
+
 	mongolock "github.com/ONSdigital/dp-mongodb/v3/dplock"
 	mongohealth "github.com/ONSdigital/dp-mongodb/v3/health"
-	mongo "github.com/ONSdigital/dp-mongodb/v3/mongodb"
-	"github.com/ONSdigital/log.go/v2/log"
+	mongodriver "github.com/ONSdigital/dp-mongodb/v3/mongodb"
+
 	"go.mongodb.org/mongo-driver/bson"
 	bsonprim "go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var _ datastore.DataStorer = (*Mongo)(nil)
 
-// Mongo represents a simplistic MongoDB configuration
 type Mongo struct {
-	config.MongoConfig
+	mongodriver.MongoConnectionConfig
 
-	Connection   *mongo.MongoConnection
+	connection   *mongodriver.MongoConnection
 	healthClient *mongohealth.CheckMongoClient
 	lockClient   *mongolock.Lock
 }
 
-func (m *Mongo) getConnectionConfig() *mongo.MongoConnectionConfig {
-	return &mongo.MongoConnectionConfig{
-		TLSConnectionConfig: mongo.TLSConnectionConfig{
-			IsSSL: m.IsSSL,
-		},
-		ConnectTimeoutInSeconds: m.ConnectionTimeout,
-		QueryTimeoutInSeconds:   m.QueryTimeout,
-
-		Username:                      m.Username,
-		Password:                      m.Password,
-		ClusterEndpoint:               m.URI,
-		Database:                      m.Database,
-		Collection:                    m.Collection,
-		IsWriteConcernMajorityEnabled: m.EnableWriteConcern,
-		IsStrongReadConcernEnabled:    m.EnableReadConcern,
-	}
-}
+const (
+	importsLockCollection = "imports_locks"
+)
 
 // NewDatastore creates a new mongodb.MongoConnection with the given configuration
 func NewDatastore(ctx context.Context, cfg config.MongoConfig) (m *Mongo, err error) {
-	m = &Mongo{MongoConfig: cfg}
+	m = &Mongo{MongoConnectionConfig: cfg}
 
-	m.Connection, err = mongo.Open(m.getConnectionConfig())
+	m.connection, err = mongodriver.Open(&m.MongoConnectionConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	m.lockClient = mongolock.New(ctx, m.Connection, m.Collection)
-	// At present there is no way to get the collection name that mongolock uses for locking
-	// It is hard code here
-	importLocksCollection := fmt.Sprintf("%s_locks", m.Collection)
+	databaseCollectionBuilder := map[mongohealth.Database][]mongohealth.Collection{
+		(mongohealth.Database)(m.Database): {(mongohealth.Collection)(m.Collection), importsLockCollection},
+	}
+	m.healthClient = mongohealth.NewClientWithCollections(m.connection, databaseCollectionBuilder)
+	m.lockClient = mongolock.New(ctx, m.connection, m.Collection)
 
-	databaseCollectionBuilder := make(map[mongohealth.Database][]mongohealth.Collection)
-	databaseCollectionBuilder[(mongohealth.Database)(m.Database)] = []mongohealth.Collection{(mongohealth.Collection)(m.Collection), (mongohealth.Collection)(importLocksCollection)}
-
-	// Create healthclient from session
-	m.healthClient = mongohealth.NewClientWithCollections(m.Connection, databaseCollectionBuilder)
 	return m, nil
 }
 
@@ -97,13 +79,10 @@ func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit
 	if len(filters) > 0 {
 		stateFilter["state"] = bson.M{"$in": filters}
 	}
-	query := m.Connection.GetConfiguredCollection().Find(stateFilter)
+	query := m.connection.GetConfiguredCollection().Find(stateFilter)
 	totalCount, err := query.Count(ctx)
 	if err != nil {
 		log.Error(ctx, "error counting items", err)
-		if mongo.IsErrNoDocumentFound(err) {
-			return emptyResult, nil
-		}
 		return nil, err
 	}
 	if totalCount < 1 {
@@ -115,7 +94,7 @@ func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit
 	var jobItems []*models.Job
 	if limit > 0 {
 		if err = query.Sort(bson.M{"_id": 1}).Skip(offset).Limit(limit).IterAll(ctx, &jobItems); err != nil {
-			if mongo.IsErrNoDocumentFound(err) {
+			if mongodriver.IsErrNoDocumentFound(err) {
 				return emptyResult, nil
 			}
 			return nil, err
@@ -134,8 +113,8 @@ func (m *Mongo) GetJobs(ctx context.Context, filters []string, offset int, limit
 // GetJob retrieves a single import job
 func (m *Mongo) GetJob(ctx context.Context, id string) (*models.Job, error) {
 	var job models.Job
-	if err := m.Connection.GetConfiguredCollection().FindOne(ctx, bson.M{"id": id}, &job); err != nil {
-		if mongo.IsErrNoDocumentFound(err) {
+	if err := m.connection.GetConfiguredCollection().FindOne(ctx, bson.M{"id": id}, &job); err != nil {
+		if mongodriver.IsErrNoDocumentFound(err) {
 			return nil, errs.ErrJobNotFound
 		}
 		return nil, err
@@ -148,10 +127,9 @@ func (m *Mongo) GetJob(ctx context.Context, id string) (*models.Job, error) {
 func (m *Mongo) AddJob(ctx context.Context, job *models.Job) (*models.Job, error) {
 	currentTime := time.Now().UTC()
 	job.LastUpdated = currentTime
-	// TODO find method to set the timestamp value
-	job.UniqueTimestamp = bsonprim.Timestamp{}
+	job.UniqueTimestamp = bsonprim.Timestamp{T: uint32(time.Now().Unix())}
 
-	if _, err := m.Connection.GetConfiguredCollection().Insert(ctx, job); err != nil {
+	if _, err := m.connection.GetConfiguredCollection().Insert(ctx, job); err != nil {
 		return nil, err
 	}
 
@@ -160,8 +138,8 @@ func (m *Mongo) AddJob(ctx context.Context, job *models.Job) (*models.Job, error
 
 // updateByID is a helper function to update a job given an update operator
 func (m *Mongo) updateByID(ctx context.Context, id string, update bson.M) (err error) {
-	if _, err = m.Connection.GetConfiguredCollection().Must().Update(ctx, bson.M{"id": id}, update); err != nil {
-		if mongo.IsErrNoDocumentFound(err) {
+	if _, err = m.connection.GetConfiguredCollection().Must().Update(ctx, bson.M{"id": id}, update); err != nil {
+		if mongodriver.IsErrNoDocumentFound(err) {
 			return errs.ErrJobNotFound
 		}
 		return err
@@ -221,5 +199,5 @@ func (m *Mongo) Checker(ctx context.Context, state *healthcheck.CheckState) erro
 
 // Close disconnects the mongo session
 func (m *Mongo) Close(ctx context.Context) error {
-	return m.Connection.Close(ctx)
+	return m.connection.Close(ctx)
 }
