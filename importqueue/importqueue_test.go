@@ -150,6 +150,17 @@ func TestQueueCantabularFile(t *testing.T) {
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "cantabular queue (kafka producer) is not available")
 		})
+
+		Convey("Then importing a 'cantabular_flexible_table' recipe results in the expected error being returned", func() {
+			err := importer.Queue(ctx, &models.ImportData{
+				JobID:       "jobId",
+				InstanceIDs: []string{"InstanceId"},
+				Recipe:      testRecipeID,
+				Format:      formatCantabularFlexibleTable,
+			})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "cantabular queue (kafka producer) is not available")
+		})
 	})
 
 	Convey("Given a mocked importQueue with a valid cantabular queue", t, func() {
@@ -180,6 +191,15 @@ func TestQueueCantabularFile(t *testing.T) {
 			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
 		})
 
+		Convey("Then importing a 'cantabular_flexible_table' recipe with nil instanceIDs fails with the expected error", func() {
+			err := importer.Queue(ctx, &models.ImportData{
+				InstanceIDs: nil,
+				Recipe:      testRecipeID,
+				Format:      formatCantabularFlexibleTable})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
+		})
+
 		Convey("Then importing a 'cantabular_blob' recipe with empty instanceIDs fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs: []string{},
@@ -198,6 +218,15 @@ func TestQueueCantabularFile(t *testing.T) {
 			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
 		})
 
+		Convey("Then importing a 'cantabular_flexible_table' recipe with empty instanceIDs fails with the expected error", func() {
+			err := importer.Queue(ctx, &models.ImportData{
+				InstanceIDs: []string{},
+				Recipe:      testRecipeID,
+				Format:      formatCantabularFlexibleTable})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
+		})
+
 		Convey("Then importing a 'cantabular_blob' recipe with multiple instanceIDs fails with the expected error", func() {
 			err := importer.Queue(ctx, &models.ImportData{
 				InstanceIDs: []string{"1", "2"},
@@ -212,6 +241,15 @@ func TestQueueCantabularFile(t *testing.T) {
 				InstanceIDs: []string{"1", "2"},
 				Recipe:      testRecipeID,
 				Format:      formatCantabularTable})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
+		})
+
+		Convey("Then importing a 'cantabular_flexible_table' recipe with multiple instanceIDs fails with the expected error", func() {
+			err := importer.Queue(ctx, &models.ImportData{
+				InstanceIDs: []string{"1", "2"},
+				Recipe:      testRecipeID,
+				Format:      formatCantabularFlexibleTable})
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
 		})
@@ -261,6 +299,30 @@ func TestQueueCantabularFile(t *testing.T) {
 				RecipeID:       testRecipeID,
 				InstanceID:     job.InstanceIDs[0],
 				CantabularType: formatCantabularTable,
+			})
+		})
+
+		Convey("Then importing a 'cantabular_flexible_table' recipe sends the expected import event to the cantabular queue", func() {
+			job := &models.ImportData{
+				JobID:       "jobId",
+				InstanceIDs: []string{"InstanceId"},
+				Recipe:      testRecipeID,
+				Format:      formatCantabularFlexibleTable,
+			}
+			err := importer.Queue(ctx, job)
+			So(err, ShouldBeNil)
+
+			bytes := <-cantabularQueue
+
+			var cantabularEvent events.CantabularDatasetInstanceStarted
+			err = events.CantabularDatasetInstanceStartedSchema.Unmarshal(bytes, &cantabularEvent)
+			So(err, ShouldBeNil)
+
+			So(cantabularEvent, ShouldResemble, events.CantabularDatasetInstanceStarted{
+				JobID:          job.JobID,
+				RecipeID:       testRecipeID,
+				InstanceID:     job.InstanceIDs[0],
+				CantabularType: formatCantabularFlexibleTable,
 			})
 		})
 	})
