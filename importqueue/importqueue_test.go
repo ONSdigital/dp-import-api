@@ -254,7 +254,7 @@ func TestQueueCantabularFile(t *testing.T) {
 			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
 		})
 
-		Convey("Then importing a 'cantabular_blob' recipe sends the expected import event to the cantabular queue", func() {
+		Convey("Then importing a 'cantabular_blob' recipe with a 'correct' instanceID sends the expected import event to the cantabular queue", func() {
 			job := &models.ImportData{
 				JobID:       "jobId",
 				InstanceIDs: []string{"InstanceId"},
@@ -278,7 +278,7 @@ func TestQueueCantabularFile(t *testing.T) {
 			})
 		})
 
-		Convey("Then importing a 'cantabular_table' recipe sends the expected import event to the cantabular queue", func() {
+		Convey("Then importing a 'cantabular_table' recipe with a 'correct' instanceID sends the expected import event to the cantabular queue", func() {
 			job := &models.ImportData{
 				JobID:       "jobId",
 				InstanceIDs: []string{"InstanceId"},
@@ -302,7 +302,7 @@ func TestQueueCantabularFile(t *testing.T) {
 			})
 		})
 
-		Convey("Then importing a 'cantabular_flexible_table' recipe sends the expected import event to the cantabular queue", func() {
+		Convey("Then importing a 'cantabular_flexible_table' recipe with a 'correct' instanceID sends the expected import event to the cantabular queue", func() {
 			job := &models.ImportData{
 				JobID:       "jobId",
 				InstanceIDs: []string{"InstanceId"},
