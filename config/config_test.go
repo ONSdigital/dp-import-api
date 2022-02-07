@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ONSdigital/dp-mongodb/v3/mongodb"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -31,16 +33,19 @@ var expectedConfig = &Configuration{
 		SecProtocol:                           "",
 	},
 	MongoConfig: MongoConfig{
-		URI:                "localhost:27017",
-		Database:           "imports",
-		Collection:         "imports",
-		Username:           "",
-		Password:           "",
-		IsSSL:              false,
-		QueryTimeout:       15 * time.Second,
-		ConnectionTimeout:  5 * time.Second,
-		EnableReadConcern:  false,
-		EnableWriteConcern: true,
+		ClusterEndpoint:               "localhost:27017",
+		Username:                      "",
+		Password:                      "",
+		Database:                      "imports",
+		Collections:                   map[string]string{ImportsCollection: "imports", ImportsLockCollection: "imports_locks"},
+		ReplicaSet:                    "",
+		IsStrongReadConcernEnabled:    false,
+		IsWriteConcernMajorityEnabled: true,
+		ConnectTimeout:                5 * time.Second,
+		QueryTimeout:                  15 * time.Second,
+		TLSConnectionConfig: mongodb.TLSConnectionConfig{
+			IsSSL: false,
+		},
 	},
 }
 

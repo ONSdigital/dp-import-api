@@ -82,26 +82,15 @@ func TestInit(t *testing.T) {
 				return nil, errMongo
 			}
 
-			Convey("Then service Init succeeds, mongoDataStore dependency is not set and further initialisations are attempted", func() {
+			Convey("Then service Init fails with the same error and the flag is not set. No further initialisations are attempted", func() {
 				err := svc.Init(ctx, cfg, testBuildTime, testGitCommit, testVersion)
-				So(err, ShouldBeNil)
+				So(err, ShouldResemble, errMongo)
 				So(svc.mongoDataStore, ShouldBeNil)
-				So(svc.dataBakerProducer, ShouldResemble, kafkaMock)
-				So(svc.inputFileAvailableProducer, ShouldResemble, kafkaMock)
-				So(svc.cantabularDatasetInstanceStartedProducer, ShouldResemble, kafkaMock)
-				So(svc.healthCheck, ShouldResemble, hcMock)
-				So(svc.server, ShouldResemble, serverMock)
-
-				Convey("But all checks try to register", func() {
-					So(len(hcMock.AddCheckCalls()), ShouldEqual, 7)
-					So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Kafka Data Baker Producer")
-					So(hcMock.AddCheckCalls()[1].Name, ShouldResemble, "Kafka Input File Available Producer")
-					So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "Kafka Cantabular Dataset Instance Started Producer")
-					So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Zebedee")
-					So(hcMock.AddCheckCalls()[4].Name, ShouldResemble, "Mongo DB")
-					So(hcMock.AddCheckCalls()[5].Name, ShouldResemble, "Dataset API")
-					So(hcMock.AddCheckCalls()[6].Name, ShouldResemble, "Recipe API")
-				})
+				So(svc.dataBakerProducer, ShouldBeNil)
+				So(svc.inputFileAvailableProducer, ShouldBeNil)
+				So(svc.cantabularDatasetInstanceStartedProducer, ShouldBeNil)
+				So(svc.healthCheck, ShouldBeNil)
+				So(svc.server, ShouldBeNil)
 			})
 		})
 

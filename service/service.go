@@ -92,10 +92,10 @@ func (svc *Service) Init(ctx context.Context, cfg *config.Configuration, buildTi
 
 	svc.cfg = cfg
 
-	// Get mongoDB connection (non-fatal)
 	svc.mongoDataStore, err = getMongoDataStore(ctx, svc.cfg.MongoConfig)
 	if err != nil {
 		log.Error(ctx, "mongodb datastore error", err)
+		return err
 	}
 
 	// Get data baker kafka producer
