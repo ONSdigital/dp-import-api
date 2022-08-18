@@ -11,10 +11,11 @@ import (
 
 // block of constants corresponding to possible job formats
 const (
-	formatV4                      = "v4"
-	formatCantabularBlob          = "cantabular_blob"
-	formatCantabularTable         = "cantabular_table"
-	formatCantabularFlexibleTable = "cantabular_flexible_table"
+	formatV4                          = "v4"
+	formatCantabularBlob              = "cantabular_blob"
+	formatCantabularTable             = "cantabular_table"
+	formatCantabularFlexibleTable     = "cantabular_flexible_table"
+	formatCantabularMultiVariateTable = "cantabular_multivariate_table"
 )
 
 // ImportQueue used to send import jobs via kafka topic
@@ -38,7 +39,7 @@ func (q *ImportQueue) Queue(ctx context.Context, job *models.ImportData) error {
 	switch job.Format {
 	case formatV4:
 		return q.queueV4(ctx, job)
-	case formatCantabularTable, formatCantabularBlob, formatCantabularFlexibleTable:
+	case formatCantabularTable, formatCantabularBlob, formatCantabularFlexibleTable, formatCantabularMultiVariateTable:
 		return q.queueCantabular(ctx, job)
 	default:
 		log.Warn(ctx, "unrecognised job format, no action has been taken", log.Data{"job_format": job.Format})

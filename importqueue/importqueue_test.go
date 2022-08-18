@@ -161,6 +161,17 @@ func TestQueueCantabularFile(t *testing.T) {
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldEqual, "cantabular queue (kafka producer) is not available")
 		})
+		Convey("Then importing a 'cantabular_multivariate_table' recipe results in the expected error being returned", func() {
+			err := importer.Queue(ctx, &models.ImportData{
+				JobID:       "jobId",
+				InstanceIDs: []string{"InstanceId"},
+				Recipe:      testRecipeID,
+				Format:      formatCantabularMultiVariateTable,
+			})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "cantabular queue (kafka producer) is not available")
+		})
+
 	})
 
 	Convey("Given a mocked importQueue with a valid cantabular queue", t, func() {
@@ -254,6 +265,15 @@ func TestQueueCantabularFile(t *testing.T) {
 			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
 		})
 
+		Convey("Then importing a 'multivariate_table' recipe with multiple instanceIDs fails with the expected error", func() {
+			err := importer.Queue(ctx, &models.ImportData{
+				InstanceIDs: []string{"1", "2"},
+				Recipe:      testRecipeID,
+				Format:      formatCantabularMultiVariateTable})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldEqual, "InstanceIds must have length 1")
+		})
+
 		Convey("Then importing a 'cantabular_blob' recipe with a 'correct' instanceID sends the expected import event to the cantabular queue", func() {
 			job := &models.ImportData{
 				JobID:       "jobId",
@@ -323,6 +343,29 @@ func TestQueueCantabularFile(t *testing.T) {
 				RecipeID:       testRecipeID,
 				InstanceID:     job.InstanceIDs[0],
 				CantabularType: formatCantabularFlexibleTable,
+			})
+		})
+		Convey("Then importing a 'cantabular_multivariate_table' recipe with a 'correct' instanceID sends the expected import event to the cantabular queue", func() {
+			job := &models.ImportData{
+				JobID:       "jobId",
+				InstanceIDs: []string{"InstanceId"},
+				Recipe:      testRecipeID,
+				Format:      formatCantabularMultiVariateTable,
+			}
+			err := importer.Queue(ctx, job)
+			So(err, ShouldBeNil)
+
+			bytes := <-cantabularQueue
+
+			var cantabularEvent events.CantabularDatasetInstanceStarted
+			err = events.CantabularDatasetInstanceStartedSchema.Unmarshal(bytes, &cantabularEvent)
+			So(err, ShouldBeNil)
+
+			So(cantabularEvent, ShouldResemble, events.CantabularDatasetInstanceStarted{
+				JobID:          job.JobID,
+				RecipeID:       testRecipeID,
+				InstanceID:     job.InstanceIDs[0],
+				CantabularType: formatCantabularMultiVariateTable,
 			})
 		})
 	})
