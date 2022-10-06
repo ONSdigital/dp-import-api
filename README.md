@@ -44,7 +44,6 @@ Scripts for updating and debugging Kafka can be found [here](https://github.com/
 | MONGODB_QUERY_TIMEOUT        | 15s                                                            | The timeout for querying MongoDB (`time.Duration` format)                                            |
 | MONGODB_IS_SSL               | false                                                          | Switch to use (or not) TLS when connecting to mongodb                                                |
 | DATASET_API_URL              | `http://localhost:22000`                                       | The URL for the DatasetAPI                                                                           |
-| DATASET_API_AUTH_TOKEN       | `FD0108EA-825D-411C-9B1D-41EF7727F465`                         | The Auth Token for the DatasetAPI                                                                    |
 | RECIPE_API_URL               | `http://localhost:22300`                                       | The URL for the RecipeAPI                                                                            |
 | ZEBEDEE_URL                  | `http://localhost:8082`                                        | The URL Zebedee                                                                                      |
 | SERVICE_AUTH_TOKEN           | `0C30662F-6CF6-43B0-A96A-954772267FF5`                         | The token used to identify this service when authenticating                                          |
