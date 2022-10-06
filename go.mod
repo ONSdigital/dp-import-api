@@ -5,8 +5,10 @@ go 1.18
 // to avoid 'sonatype-2021-4899' non-CVE Vulnerability
 exclude github.com/gorilla/sessions v1.2.1
 
-// to avoid 'sonatype-2020-0584' non-CVE vulnerability
-replace github.com/yuin/goldmark v1.1.32 => github.com/yuin/goldmark v1.4.12
+// to avoid the following vulnerabilities:
+//     - CVE-2022-29153 # pkg:golang/github.com/hashicorp/consul/api@v1.1.0
+//     - sonatype-2021-1401 # pkg:golang/github.com/miekg/dns@v1.0.14
+replace github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0
