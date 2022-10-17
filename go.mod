@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-import-api
 
-go 1.18
+go 1.19
 
 // to avoid 'sonatype-2021-4899' non-CVE Vulnerability
 exclude github.com/gorilla/sessions v1.2.1
@@ -9,6 +9,9 @@ exclude github.com/gorilla/sessions v1.2.1
 //     - CVE-2022-29153 # pkg:golang/github.com/hashicorp/consul/api@v1.1.0
 //     - sonatype-2021-1401 # pkg:golang/github.com/miekg/dns@v1.0.14
 replace github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
+
+// to avoid [CVE-2022-32149] CWE-400: Uncontrolled Resource Consumption ('Resource Exhaustion')
+replace golang.org/x/text => golang.org/x/text v0.3.8
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0
