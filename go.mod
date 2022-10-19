@@ -10,9 +10,6 @@ exclude github.com/gorilla/sessions v1.2.1
 //     - sonatype-2021-1401 # pkg:golang/github.com/miekg/dns@v1.0.14
 replace github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
 
-// to avoid [CVE-2022-32149] CWE-400: Uncontrolled Resource Consumption ('Resource Exhaustion')
-replace golang.org/x/text => golang.org/x/text v0.3.8
-
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0
 	github.com/ONSdigital/dp-api-clients-go/v2 v2.185.0
@@ -73,5 +70,5 @@ require (
 	golang.org/x/net v0.0.0-20221004154528-8021a29435af // indirect
 	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0 // indirect
 	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/text v0.3.8 // indirect
 )
