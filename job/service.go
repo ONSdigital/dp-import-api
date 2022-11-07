@@ -113,11 +113,11 @@ func (service Service) CreateJob(ctx context.Context, job *models.Job) (*models.
 	job.Processed = []models.ProcessedInstances{}
 
 	for _, oi := range jobRecipe.OutputInstances {
-
 		// Create a new instance by sending a 'POST /instances' to dataset API
 		datasetPath := service.datasetAPIURL + "/datasets/" + oi.DatasetID
 		newInstance := models.CreateInstance(job, oi.DatasetID, datasetPath, oi.CodeLists)
 		newInstance.Type = jobRecipe.Format
+		newInstance.LowestGeography = oi.LowestGeography
 		instance, _, err := service.datasetAPIClient.PostInstance(ctx, service.serviceAuthToken, newInstance)
 		if err != nil {
 			log.Error(ctx, "CreateJob: failed to create instance in datastore", err, log.Data{"job_id": job.ID, "job_url": job.Links.Self.HRef, "instance": oi})
