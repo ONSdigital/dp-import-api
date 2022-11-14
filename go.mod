@@ -12,7 +12,7 @@ replace github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.185.0
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.197.0
 	github.com/ONSdigital/dp-healthcheck v1.3.0
 	github.com/ONSdigital/dp-import v1.3.1
 	github.com/ONSdigital/dp-kafka/v2 v2.7.3

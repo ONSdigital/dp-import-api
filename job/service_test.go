@@ -25,8 +25,9 @@ var (
 		Alias: "alias",
 		OutputInstances: []recipe.Instance{
 			{
-				DatasetID: "dataset1",
-				CodeLists: []recipe.CodeList{{ID: "codelist11"}, {ID: "codelist12"}},
+				DatasetID:       "dataset1",
+				CodeLists:       []recipe.CodeList{{ID: "codelist11"}, {ID: "codelist12"}},
+				LowestGeography: "lowest_geo",
 			},
 			{
 				DatasetID: "dataset2",
@@ -74,6 +75,7 @@ func expectedNewInstance(jobID, datasetID string) *dataset.NewInstance {
 	}
 	if datasetID == "dataset1" {
 		newInstance.Dimensions = []dataset.CodeList{{ID: "codelist11"}, {ID: "codelist12"}}
+		newInstance.LowestGeography = "lowest_geo"
 	} else if datasetID == "dataset2" {
 		newInstance.Dimensions = []dataset.CodeList{{ID: "codelist21"}, {ID: "codelist22"}, {ID: "codelist23"}}
 	}
