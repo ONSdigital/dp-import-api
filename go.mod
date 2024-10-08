@@ -1,17 +1,9 @@
 module github.com/ONSdigital/dp-import-api
 
-go 1.20
+go 1.23.2
 
-// to avoid 'sonatype-2021-4899' non-CVE Vulnerability
-exclude github.com/gorilla/sessions v1.2.1
-
-// to avoid the following vulnerabilities:
-//     - CVE-2022-29153 # pkg:golang/github.com/hashicorp/consul/api@v1.1.0
-//     - sonatype-2021-1401 # pkg:golang/github.com/miekg/dns@v1.0.14
-replace github.com/spf13/cobra => github.com/spf13/cobra v1.4.0
-
-// [CVE-2023-39325] CWE-770: Allocation of Resources Without Limits or Throttling
-replace golang.org/x/net => golang.org/x/net v0.23.0
+//to avoid  [CVE-2022-29153] CWE-918: Server-Side Request Forgery (SSRF)
+exclude github.com/hashicorp/consul/api v1.1.0
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0
@@ -43,7 +35,8 @@ require (
 	github.com/go-avro/avro v0.0.0-20171219232920-444163702c11 // indirect
 	github.com/go-test/deep v1.0.7 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/uuid v1.3.0 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -69,9 +62,12 @@ require (
 	github.com/xdg-go/scram v1.1.1 // indirect
 	github.com/xdg-go/stringprep v1.0.3 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
-	golang.org/x/crypto v0.21.0 // indirect
-	golang.org/x/net v0.21.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/crypto v0.28.0 // indirect
+	golang.org/x/net v0.30.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241007155032-5fefd90f89a9 // indirect
+	google.golang.org/grpc v1.67.1 // indirect
+	google.golang.org/protobuf v1.35.1 // indirect
 )
